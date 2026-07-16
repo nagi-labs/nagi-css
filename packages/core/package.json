@@ -1,0 +1,34 @@
+{
+  "name": "@nagi-labs/nagi-css-core",
+  "version": "0.1.0",
+  "description": "Shared configuration, vocabulary tables, and template analysis for the Nagi CSS contract.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nagi-labs/nagi-css.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/nagi-labs/nagi-css#readme",
+  "keywords": [
+    "css",
+    "css-architecture",
+    "semantic-css",
+    "nagi"
+  ],
+  "type": "module",
+  "exports": "./src/index.mjs",
+  "files": [
+    "src"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "dependencies": {
+    "@vue/compiler-sfc": "^3.5.0",
+    "postcss": "^8.5.0",
+    "postcss-selector-parser": "^7.1.0"
+  }
+}

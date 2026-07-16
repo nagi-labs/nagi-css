@@ -1,0 +1,1188 @@
+# Nagi CSS Contract
+
+## Introduction
+
+Nagi CSS is a styling contract for structuring and writing HTML and CSS in modern web applications.
+
+It is designed for component-based development, AI-assisted implementation, and long-lived codebases where styling must remain readable, stable, and reviewable over time.
+
+It is **not** a universal rule for the entire rendered tree. Instead, it defines strict rules for styling **owned DOM inside a styling surface**, and lighter contract-based rules for everything outside that boundary.
+
+The contract is built on six principles:
+
+### Semantic
+
+Class names should reflect stable UI meaning rather than raw visual appearance or incidental implementation details.
+
+### Structured
+
+Owned DOM should be understandable from the markup and CSS structure alone, using predictable naming and nesting patterns.
+
+### Scoped
+
+Styling rules should apply only where the component truly owns the DOM structure. Public contracts should be used across non-owned boundaries.
+
+### State-aware
+
+Runtime state should be expressed through native states, ARIA attributes, and `data-*` attributes rather than state classes.
+
+### Standard-first
+
+The contract should work with standard HTML and CSS, while remaining compatible with modern features such as CSS nesting, container queries, CSS custom properties, Shadow DOM, and framework components.
+
+### Deterministic
+
+Naming and structure inside owned DOM must be reproducible by rule, not by taste. Given the same markup, two authors — or an AI agent — should arrive at the same class names. The contract achieves this by collapsing naming into fixed lookup tables and confining judgment to a single residual case (`div`/`span` that no table covers). Determinism is what makes the rules machine-verifiable.
+
+---
+
+## Core contract at a glance
+
+1. Give every styled surface a static identity class derived from its Vue file.
+2. Keep non-surface class names in the configured element, component, anatomy,
+   STN, slot-surface, or explicit `role` vocabulary.
+3. Connect styled owned parent-child edges with `>` and target owned elements
+   through classes.
+4. Treat configured UI component roots as opaque boundaries. Cross them with a
+   descendant step, never `>`.
+5. Resume owned `>` nesting at a declared slot sub-surface.
+6. Prefix each slot sub-surface with its owning component slot prefix.
+7. Represent runtime state with native, ARIA, or `data-*` attributes.
+8. Keep teleported slot surfaces top-level only when explicitly configured as detached.
+9. Keep static `-variant` tokens alphabetical.
+10. Keep `-variant` names outside the protocol vocabulary; variants modify an
+    anchor, they never name what an element is.
+
+The rest of this document defines each rule precisely and explains the
+reasoning behind it.
+
+---
+
+## Document set
+
+This contract is delivered as three layers with distinct audiences:
+
+- **CONTRACT.md (this document)** — the canonical source: concepts *and* method, with rationale. Long by design; read once to understand *why*. [FAQ.md](FAQ.md) answers common objections.
+- **Skill (`skills/nagi-css`)** — the short mechanical procedure and the lookup tables, loaded during work. It is a faithful projection of this document; when they disagree, this document wins.
+- **Linter (`packages/*`)** — the executable form: an ESLint plugin for template and cross-block rules, a Stylelint plugin for selector rules, and a CLI that runs both from an external configuration. It ships the built-in Element Class Table and enforces the rules; the project config declares the Library Component Class Table and may override any built-in element mapping.
+
+---
+
+## Technical Requirements
+
+Nagi CSS assumes the following capabilities:
+
+### Required
+
+- **Component-based architecture**: UI is split into dedicated components or subcomponents.
+- **CSS nesting support**: Native CSS nesting or equivalent preprocessing.
+
+### Recommended
+
+- **Scoped CSS support**: Style isolation where available.
+- **CSS custom properties**: For design tokens and theming.
+- **Container queries**: For component-level responsive behavior.
+
+---
+
+## Core Concepts
+
+Nagi CSS is built on four core concepts.
+
+- Owned DOM
+- Styling Surface
+- Style Elements
+- Style Variants
+
+### Owned DOM
+
+Owned DOM is the DOM structure that a component or styling surface fully controls and can guarantee.
+
+Controllable means the surface can decide and preserve:
+
+- which elements exist
+- which classes and attributes they receive
+- how state is represented
+- when the structure may change
+
+Example of controllable DOM:
+
+```html
+<div class="dialog-panel">
+  <header class="header">
+    <h2 class="title">Delete item</h2>
+  </header>
+  <p class="text">Are you sure?</p>
+</div>
+```
+
+Here, `dialog-panel` owns `header`, `title`, and `text` because their structure and class names are part of the surface implementation.
+
+Example of uncontrollable DOM:
+
+```html
+<custom-dialog-panel class="dialog-panel">
+  <h2 slot="title">Delete item</h2>
+  <third-party-calendar></third-party-calendar>
+</custom-dialog-panel>
+```
+
+Here, `dialog-panel` may own its own component template, but it does not own the assigned slotted title content or the internal DOM of `third-party-calendar`.
+
+The `<slot>` element itself is owned only when it appears inside the component template. The nodes assigned to that slot are non-owned.
+
+Inside owned DOM, strict naming and CSS authoring rules apply.
+
+Outside owned DOM, styling must rely on public contracts rather than internal structure.
+
+Examples and detailed guidance for uncontrollable DOM are collected in the Appendix: Non-owned Boundaries.
+
+### Styling Surface
+
+A styling surface is a public styling boundary over owned DOM.
+
+A styling surface may correspond to:
+
+- a component root
+- a subcomponent
+- a slot container
+- a stable public part of a larger UI
+
+A styling surface is the unit that owns a local styling contract.
+
+Example:
+
+```html
+<section class="settings-panel">
+  ...
+</section>
+```
+
+Here, `settings-panel` is the styling surface class. It is the public boundary where the local styling contract begins.
+
+### Style Elements
+
+Style elements are named sub-parts inside the owned DOM of a styling surface.
+
+They represent stable UI-semantic or structural units that the surface is responsible for styling.
+
+Example:
+
+```html
+<section class="settings-panel">
+  <header class="header">
+    <h2 class="title">Notification settings</h2>
+  </header>
+  <div class="zone">...</div>
+  <footer class="footer">...</footer>
+</section>
+```
+
+Here, `header`, `title`, `zone`, and `footer` are style elements owned by `settings-panel`.
+
+### Style Variants
+
+Style variants express stylistic differences that apply to a styling surface or one of its style elements.
+
+They do not represent runtime state.
+
+Example:
+
+```html
+<section class="settings-panel -compact">
+  <header class="header">
+    <h2 class="title -muted">Notification settings</h2>
+  </header>
+</section>
+```
+
+Here, `-compact` is a variant of the `settings-panel` surface, and `-muted` is a variant of the `title` element.
+
+Variants modify an anchor; they never name what an element *is*. A variant name
+must therefore stay outside the protocol vocabulary: element classes, component
+classes, anatomy, STN tiers, slot surfaces, banned generic names, and rendered
+HTML element names are all rejected as variant stems (`-title`, `-header`,
+`-wrapper`, `-span`). Wanting a vocabulary word as a variant is a signal that
+the element wants that tag or class instead — a "link-styled button" is a
+design error (links navigate, buttons operate), and a title *bar* is not a
+`-title` variant but a differently named element.
+
+---
+
+## Scope of the Contract
+
+Nagi CSS applies strictly **inside owned DOM**.
+
+It does **not** directly govern:
+
+- slotted content owned by a parent
+- internal DOM of third-party UI libraries
+- portal destinations
+- shadow-internal DOM that is not publicly exposed
+
+This distinction is essential.
+
+The contract should be treated as:
+
+- **strict inside owned DOM**
+- **contract-based at non-owned boundaries**
+
+---
+
+## HTML Class Rules
+
+### 1. Styling Surface
+
+Each styling surface must have one class that identifies the surface.
+
+**The surface root name is derived from the file, not chosen (deterministic):**
+
+- a **component** (`…/components/Foo.vue`) → the file basename in kebab-case (`invoice-payment-section.vue` → `.invoice-payment-section`).
+- a **page** (`…/pages/…`) → `<name>-page`, where `<name>` is the file basename, or — when the basename is `index` or a dynamic `[param]` — the nearest meaningful ancestor directory (`procedure/error.vue` → `.error-page`, `procedure/[key]/index.vue` → `.procedure-page`).
+
+Rules:
+
+- lowercase, kebab-case, stable
+- there is one surface root per file, and it sits on the template's root element
+
+Examples:
+
+- `search-form`
+- `dialog-panel`
+- `user-profile`
+- `app-menu`
+
+### 2. Style Elements
+
+Style elements are named sub-parts inside owned DOM.
+
+Rules:
+
+- lowercase
+- single word
+- UI-semantic where possible
+- stable across implementation changes
+
+Preferred examples:
+
+- `header`
+- `title`
+- `body`
+- `footer`
+- `button`
+- `label`
+- `input`
+- `icon`
+- `field`
+- `value`
+
+Avoid vague names such as:
+
+- `wrapper`
+- `inner`
+- `box`
+- `container`
+- `thing`
+- `content-area`
+
+### 3. Style Variants
+
+Variants must:
+
+- start with `-`
+- be lowercase
+- represent stylistic meaning, role, density, size, or domain-specific distinction
+- may be combined when multiple distinctions apply
+
+Examples:
+
+- `-primary`
+- `-compact`
+- `-success`
+- `-avatar`
+- `-sidebar`
+- `-toolbar`
+- `-sr-only`
+
+Variants are for styling differences, not runtime state.
+
+Multiple variants may be applied to the same styling surface or style element, and **must be written in alphabetical order** (`-sr-only -toolbar`, not `-toolbar -sr-only`) so the ordering is deterministic.
+
+Example:
+
+```html
+<footer class="footer -sr-only -toolbar">...</footer>
+```
+
+---
+
+## Semantics
+
+Nagi CSS separates three kinds of semantics.
+
+This distinction is important because class names are styling contracts. A class name should make the UI structure deterministic, not mix UI structure with business data.
+
+### Accessibility Semantics
+
+Accessibility Semantics come from native element roles, ARIA roles, and common interaction roles.
+
+They describe what an element is or does in the accessible interface.
+
+Sources:
+
+- native element roles
+- ARIA roles
+- common interaction roles
+
+Examples:
+
+- `button`
+- `label`
+- `input`
+- `header`
+- `footer`
+- `dialog`
+- `tab`
+- `tabpanel`
+- `tooltip`
+- `menu`
+- `option`
+- `status`
+- `alert`
+
+Example:
+
+```html
+<button class="button">Open</button>
+<div class="tabpanel" role="tabpanel">...</div>
+```
+
+### UI Anatomy Semantics
+
+UI Anatomy Semantics are contract-defined names for common UI parts that are not directly covered by Accessibility Semantics.
+
+They are not open-ended. The contract ships a deliberately tiny default allowlist, and a project must decide which additional UI anatomy semantic names are allowed.
+
+Example:
+
+```html
+<article class="card">
+  <header class="header">
+    <h3 class="title">Invoice</h3>
+  </header>
+  <p class="text">...</p>
+</article>
+```
+
+### Domain Semantics
+
+Domain Semantics describe business concepts, product concepts, data fields, or domain values.
+
+Domain Semantics may appear in Styling Surface names when they identify the whole surface. Inside a surface, Domain Semantics must be expressed as variants when they affect styling.
+
+Examples:
+
+- `user`
+- `profile`
+- `invoice`
+- `order`
+- `shipping-address`
+
+Example:
+
+```html
+<article class="card -invoice">
+  <header class="header">
+    <h3 class="title">Invoice</h3>
+  </header>
+</article>
+```
+
+```html
+<div class="field -user">
+  <label class="label">User</label>
+  <input class="input" />
+</div>
+```
+
+A surface may use Domain Semantics as its identity:
+
+```html
+<article class="invoice-card">
+  <header class="header">
+    <h3 class="title">Invoice</h3>
+  </header>
+</article>
+```
+
+Avoid putting Domain Semantics into internal style element names:
+
+```html
+<article class="invoice-card">
+  <div class="invoice-header">
+    <h3 class="invoice-title">Invoice</h3>
+  </div>
+</article>
+```
+
+---
+
+## Naming Strategy
+
+The naming procedure is **deterministic and table-first**. Apply the steps in order and stop at the first that matches; judgment is permitted only at the final step (`div`/`span` that no table covers).
+
+```
+Is the element a styling surface root?      → name by surface identity (HTML Class Rules §1)
+Is it an HTML element other than div/span?  → Element Class Table          (no judgment)
+Is it a configured UI library component?    → Library Component Class Table (no judgment)
+It is a div / span                          → apply the Semantics model: 1 → 2 → 3
+```
+
+Domain meaning is never mixed into a style element name; it lives in the surface identity or in a variant.
+
+### Element Class Table (HTML elements, excluding `div`/`span`)
+
+An HTML element other than `div`/`span`, appearing as an **internal style element**, takes a fixed class. The rule is total: **every rendered element self-maps by default — its class is its own tag name** (`<dialog>` → `dialog`, `<form>` → `form`, `<summary>` → `summary`) — and this table lists only the **meaning-bearing overrides**, where the tag name encodes HTML history rather than stable UI meaning (`<h1>` → `title`, `<dd>` → `definition`, `<img>` → `image`). No element is ever left without a legal class. This removes naming judgment for semantic HTML and confines decisions to `div`/`span`. *When* the class must be present is governed by the linter's `emitPolicy`: **`when-styled`** (default) requires it only where the class is actually referenced in the component's `<style>` (an unstyled subtree carries none), while **`always`** requires it on every matching element for maximum uniformity. Either way the *name* is fixed by rule. Multiple same-tag elements share the base class and are differentiated by variants.
+
+| Element | class | Notes |
+|---|---|---|
+| `<h1>`–`<h6>` | `title` | heading level is not encoded in the class; multiple titles are separated by surface or variant |
+| `<p>` | `text` | |
+| `<small>` | `note` | side comments and fine print |
+| `<a>` | `link` | |
+| `<img>` | `image` | |
+| `<ul>` `<ol>` `<dl>` | `list` | description list is `list -description` |
+| `<li>` | `item` | |
+| `<dt>` | `term` | |
+| `<dd>` | `definition` | matches the HTML-AAM role, paired with `term` |
+| `<thead>` | `rowgroup -head` | a mapping may fix a variant alongside its base |
+| `<tbody>` | `rowgroup` | |
+| `<tfoot>` | `rowgroup -foot` | |
+| `<tr>` | `row` | |
+| `<th>` | `cell -head` | |
+| `<td>` | `cell` | |
+
+Everything else self-maps: `<header>` → `header`, `<section>` → `section`,
+`<button>` → `button`, `<dialog>` → `dialog` (a top-layer surface, and a
+surface root when natural), `<details>` → `details`, `<form>` → `form`,
+`<select>` → `select`, `<thead>` → `thead`, and so on for every rendered
+element. Notes that survive the trimming:
+
+- `<section>` vagueness is resolved by a variant (`section -payment`), and an
+  internal `<article>` that is actually a surface root is named by identity
+  (`card`, …).
+- `<button>` means the native element only; library button components use
+  their configured boundary class.
+- `<svg>` self-maps; a glyph-sized svg is usually better named with the
+  anatomy class `icon`. Decorative internal `<path>` etc. are not style
+  elements.
+- `<select>`/`<textarea>` self-map; a shared control skin targets
+  `:is(.input, .select, .textarea)`.
+- The table-row mappings expand HTML's abbreviations and fix a variant where
+  the tag encodes position: a header row group is always
+  `.rowgroup.-head > .row > .cell.-head`. The fixed variant is part of the
+  mapping — `<thead class="rowgroup">` without `-head` is a violation.
+- A mapping fixes a variant **only for distinctions a selector cannot reach**:
+  `thead` and `tbody` differ by tag, and bare tag selectors are forbidden.
+  Distinctions that live in an attribute are selected through the attribute —
+  `<input>` kinds take plain `input` and are styled as
+  `.input[type=checkbox]`, `.input[type=radio]`, never through a class copy
+  of the `type`.
+- A mapping-fixed variant is legal only in compound with its base
+  (`.rowgroup.-head` conforms; `.zone.-head` is judged as an ordinary
+  variant).
+- ARIA role `menu` on a `div`/`span` still requires an explicit `role`
+  attribute; the class `menu` on `<menu>` comes from the self-map.
+
+**Override is rule-based, never taste-based.** If the default is semantically wrong, either (a) the element is actually a surface root → name it by identity, or (b) add a variant. Never rename the base class.
+
+**Reserved-element-name rule (machine-enforced).** A class name that equals a **rendered** HTML element name may appear **only** on that element, or on an element the tables deliberately map to it (e.g. `title` on `<h1>`–`<h6>`). So `.button` on a `<div>` is forbidden; `.header` belongs to `<header>` alone. UI library components should not borrow an element-table class just because they render similar markup: a library data-table component should use its configured boundary class, not `table`.
+
+There is no blanket exemption for document-only element names. `body` belongs to `<body>` and is invalid on a `div` or `span`. Deliberate Element Class Table mappings remain valid: headings use `title`, and anchors use `link`. Names not present in the table, anatomy allowlist, accessibility semantics, or STN ladder are not available merely because their native elements normally sit outside a component surface.
+
+### Library Component Class Table (configured components)
+
+A UI library component root that you place in your own markup takes a fixed class from the project's configured table (declared in the linter config, enforced by the linter). A project table should list only opaque third-party/UI-library components the project actually uses. Application-owned Vue components are not listed: each owns the surface root derived from its filename.
+
+When a configured library component does not provide an explicit class value, its class is deterministic: the default `pv-` prefix plus the component name in kebab-case (`DataTable` → `pv-data-table`). `componentClassPrefix` changes the prefix, and an explicit `componentClasses` object value overrides the derived name.
+
+```js
+componentClasses: ["DataTable", "Column"]
+// pv-data-table, pv-column
+
+componentClasses: {
+  DataTable: null,                 // pv-data-table
+  LegacyGrid: "legacy-grid-root", // explicit override
+}
+```
+
+This class is a **UI Library Boundary Class**: an anchor on the component root, not a licence to reach inside. Determinism applies to the *name* and to selector edges around it, not to the library's internal DOM. Style the component's internal DOM only through the non-owned contracts in the Appendix (props → Pass Through → CSS custom properties → `::part()`); never descend from this class into library-owned internals with `>`. See CSS Authoring Rule §4 and the Appendix.
+
+Project config should distinguish:
+
+- boundary classes: application-owned classes placed on UI library component roots;
+- internal classes: library-owned classes exposed by the UI library, whether public or private.
+
+The linter receives boundary prefixes separately from internal prefixes so selector edges are deterministic. `libraryBoundaryPrefixes` declares additional opaque root families; `libraryInternalPrefixes` declares library-owned internal classes.
+
+Do not use `componentClasses` as a registry of owned components. Parent layout around an owned child belongs to a parent-owned wrapper or to the child's own surface; this contract does not define a non-opaque `ownedComponentClasses` mapping.
+
+### The Semantics model (applies only to `div`/`span`)
+
+The following three steps name a `div`/`span` — the only elements the tables do not cover.
+
+### 1. Accessibility Semantics
+
+Use Accessibility Semantics as the first source for base names inside owned DOM.
+
+This includes native element roles, ARIA roles, and common interaction roles. A class equal to an **ARIA role name** (`toolbar`, `tablist`, `tab`, `tabpanel`, `menu`, `option`, `alert`, `status`, `dialog`, …) is permitted **only when the element carries the matching `role="X"` attribute** — this removes the judgment of whether a role is "implied," and guarantees the accessibility attribute actually exists. No explicit `role` → fall back to a UI Anatomy name or STN.
+
+Example:
+
+```html
+<div class="dialog-panel">
+  <header class="header">
+    <h2 class="title">Delete item</h2>
+  </header>
+  <footer class="footer">...</footer>
+</div>
+```
+
+```html
+<div class="tabs">
+  <button class="tab" role="tab" aria-selected="true">Details</button>
+  <div class="tabpanel" role="tabpanel">...</div>
+</div>
+```
+
+### 2. UI Anatomy Semantics
+
+Use UI Anatomy Semantics only when the name is part of the project or contract allowlist.
+
+Default allowlist — deliberately tiny. Each has a crisp definition; anything that does not match exactly falls back to STN.
+
+- `field` — a wrapper pairing a label with its control
+- `value` — the read-only display of a single datum
+- `actions` — a group/row of buttons or action controls
+- `media` — a wrapper for an image / figure / illustration
+- `icon` — a glyph-sized pictogram, whatever element renders it (`<svg>`, `<i>`, `<span>`)
+
+Dropped names route elsewhere: `title`/`body` → element table or STN; `list`/`item` → `<ul>`/`<ol>`/`<li>`; `card`/`panel` → STN + a `-card` variant; `status` → a `-success`/`-error` variant or `role="status"`; `trigger`/`overlay`/`viewport` → `role=` or a variant.
+
+Example:
+
+```html
+<article class="card">
+  <header class="header">
+    <h3 class="title">Invoice</h3>
+  </header>
+  <p class="text">...</p>
+</article>
+```
+
+### 3. Structural Tier Names (STN)
+
+Use STN only for a `div`/`span` that no Accessibility Semantics or allowlisted UI Anatomy name fits — the structural fallback for elements that would otherwise become `wrapper`, `inner`, or `box`.
+
+The tier ladder, coarse → fine: `stratum` · `region` · `block` · `zone` · `seg` · `fr` · `g`.
+
+STN is **leaf-anchored with a zone floor**. The deepest tier is `g`; shallow chains start at `zone` and go `zone → seg → fr → g`. A chain reaches above `zone` (into `block → region → stratum`) only when it is deep enough to also bottom out at `g`. So the coarse names (`stratum`/`region`/`block`) appear **only in genuinely deep surfaces** — seeing one is a signal the surface is deep (and probably should be split). Depth is counted along the **STN chain** (nearest-STN-ancestor → nearest-STN-descendant), not raw DOM depth: semantic elements and components between STN nodes don't count, so the more semantic the markup, the fewer and shallower the STN names.
+
+The scheme is enforced by three **local relations** — no global depth computation, no absolute "tier = depth":
+
+- **Consecutive (no skip).** A STN element is exactly one tier finer than its nearest STN ancestor (`zone → seg → fr → g`). No skipping, no inversion. Siblings therefore share a tier.
+- **Floor.** The shallowest STN in a surface (no STN ancestor) is `zone` or coarser — never `seg`/`fr`/`g` at the top.
+- **Reach-g.** If a surface uses any tier coarser than `zone` (`block`/`region`/`stratum`), it must also use `g`. "`block` without `g`" is illegal: a coarse tier only appears when the chain is long enough to reach the leaf.
+
+These three uniquely determine the tiers for any tree and are machine-checkable per surface (parent/child adjacency + a per-surface "is `g` present?" check). A slot sub-surface is its own surface and resets the chain.
+
+- Restore local meaning with a variant (`zone -toolbar`), never by changing the tier.
+
+(`zone` and `g` are used rather than the more natural `area` and `u`, which collide with the rendered elements `<area>`/`<u>`.)
+
+Example (a shallow surface: two nested STN divs plus an isolated one — all start at `zone`):
+
+```html
+<section class="settings-panel">
+  <div class="zone -toolbar">
+    <div class="seg -search">...</div>
+  </div>
+  <div class="zone -footer">...</div>
+</section>
+```
+
+> Determinism note: the tier is still fully determined by the tree (no "size" / "start anywhere" judgment) — it is anchored at the leaf (`g`) with a `zone` floor instead of at the root. That keeps it machine-checkable, and makes the coarse tiers a rare "this is deep" signal rather than the default outermost name. (Anchoring `tier = depth-from-root` instead would make `block` appear in shallow trees that never reach `g`.)
+
+#### Depth is capped — component splitting is the one non-deterministic step
+
+Everything else in this contract is mechanical: given the markup, the surface
+root name, the element/component/anatomy/role tables, and the depth→tier
+mapping each yield exactly one answer. The **single** place the contract relies
+on human judgment is **where to draw component (styling-surface) boundaries** —
+when to stop nesting inside one surface and extract a child component with its
+own surface root. The contract *requires* appropriate splitting; it does not,
+and cannot, fully mechanize it.
+
+- **STN depth is capped at 7 by design.** The seven tiers are finite headroom,
+  not a vocabulary. Reaching the deepest tiers means a surface is carrying a lot
+  of structure; a genuinely 7-deep surface should be **rare and reserved for
+  special, irreducibly deep decoration**. **Depth 8 is not allowed** — split the
+  block into its own component/surface instead of inventing an eighth tier.
+- **Deterministic split triggers:** a block that is rendered repeatedly
+  (`v-for` with its own styled internals), reused across files, or would nest
+  past depth 7 **must** become its own surface. These are not judgment calls.
+- **The judgment (non-deterministic) part:** beyond those triggers, choosing to
+  extract a component *to keep surfaces shallow and readable* is a design
+  decision — two authors may reasonably draw the boundaries differently. Prefer
+  shallow surfaces; deep nesting is a smell and extraction is the cure. This is
+  the contract's only irreducibly non-deterministic step, so it is the one thing
+  a linter cannot decide for you — it can only flag "you have gone too deep."
+- Tier names grow less familiar as depth increases, so a deep surface *looks*
+  uncomfortable on purpose — treat that discomfort as the prompt to split.
+
+### 4. Composition
+
+Composition combines a base name with variants.
+
+The base name must come from Accessibility Semantics, allowlisted UI Anatomy Semantics, or STN.
+
+The variant may express additional UI role, styling role, density, size, or Domain Semantics.
+
+Domain Semantics are allowed in two places only:
+
+- Styling Surface names, when they identify the whole surface
+- variants, when a domain distinction affects styling inside a surface
+
+Examples:
+
+```html
+<button class="button -trigger">Open</button>
+<div class="dialog -confirm">...</div>
+<div class="zone -filters">...</div>
+<div class="card -order">...</div>
+<article class="invoice-card">...</article>
+```
+
+This keeps the base class deterministic while allowing local meaning to be restored through variants.
+
+Avoid putting Domain Semantics into internal style element names:
+
+```html
+<article class="invoice-card">
+  <div class="invoice-header">
+    <h3 class="invoice-title">Invoice</h3>
+  </div>
+</article>
+```
+
+---
+
+## State Rule
+
+Runtime state must **not** be represented by classes.
+
+State should be expressed using the following order of preference:
+
+### 1. Native state and pseudo-classes
+
+Examples:
+
+- `:disabled`
+- `:checked`
+- `:open`
+
+### 2. ARIA state attributes
+
+Examples:
+
+- `aria-disabled`
+- `aria-invalid`
+- `aria-busy`
+- `aria-expanded`
+
+Use ARIA state attributes when the accessibility state is required. Do not add ARIA attributes only to create styling hooks.
+
+### 3. `data-*` attributes
+
+Examples:
+
+- `data-state`
+- `data-size`
+- `data-orientation`
+- `data-tone`
+
+Use `data-*` attributes only when native or ARIA state is not appropriate and the state is an explicit styling contract of the surface.
+
+Example:
+
+```html
+<button class="button -primary" aria-disabled="true">Save</button>
+<div class="tabs" data-orientation="horizontal"></div>
+```
+
+Avoid state classes such as:
+
+- `is-disabled`
+- `has-error`
+- `-loading`
+
+---
+
+## Structure Rule
+
+Inside owned DOM:
+
+- a styling surface has one class that identifies the surface
+- internal styled parts are style elements
+- variants may be applied to the surface or elements
+- structure should remain readable from markup alone
+
+Example:
+
+```html
+<div class="dialog-panel -compact">
+  <header class="header">
+    <h2 class="title">Delete item</h2>
+  </header>
+  <p class="text">Are you sure?</p>
+  <footer class="footer">
+    <button class="button -secondary">Cancel</button>
+    <button class="button -danger">Delete</button>
+  </footer>
+</div>
+```
+
+---
+
+## CSS Authoring Rules
+
+### 1. Surfaces are anchored by their nearest owned scope
+
+A file's main styling surface starts at CSS top level. Additional owned surfaces inside that file should be written where their ownership is clearest:
+
+- if the surface is actually inside the main surface in the rendered DOM, nest it under the nearest owned parent surface;
+- if a library boundary, slot insertion, portal, or Shadow DOM means there is no direct `>` path, the nested surface selector may be a descendant selector from that parent surface;
+- if the surface is teleported or otherwise not under the main surface in the rendered DOM, write it at CSS top level, declare it as detached in the linter config, and keep its class specific enough to be an explicit contract.
+
+This keeps the CSS structure close to the ownership structure instead of flattening every surface to the root of the stylesheet.
+
+### 2. Elements nested under the surface
+
+Style elements should be written inside the surface block using CSS nesting.
+
+### 3. Direct-child structure inside owned DOM is REQUIRED
+
+Inside owned DOM, a parent and its styled child **MUST** be connected with the direct-child combinator `>`. This is not a preference: it is what bounds the blast radius of a style element. A generic name like `.title` is safe only because it is always anchored to its surface through a `>` chain — `.dialog-panel > .header > .title` cannot collide with `.card > .title`.
+
+A parent/child relationship that **cannot** be expressed with `>` is, by definition, a boundary (a nested surface, a library component's internals, a slot, a portal, or Shadow DOM) — see rule §4. There is no third case inside owned DOM: `>` is mandatory for styled parent→child steps. Descendant combinators (whitespace) are allowed only to anchor an owned nested surface across such a boundary; they are not allowed for ordinary style-element traversal. Bare style-element selectors at CSS top level are not permitted inside owned DOM.
+
+For UI library boundary classes, the edge rule is mechanical:
+
+- owned surface/element → UI library boundary class: use `>`.
+- UI library boundary class → anything exposed beyond the library boundary: use a descendant step, never `>`.
+- once the selector reaches an owned slot/sub-surface again, resume `>`.
+
+Example:
+
+```css
+.runtime-page {
+  > .lib-data-table .column-cell {
+    > .value {
+      font-weight: 600;
+    }
+  }
+}
+```
+
+Here `.runtime-page → .lib-data-table` is owned markup and uses `>`. `.lib-data-table → .column-cell` crosses library internal DOM or slot insertion and uses a descendant step. `.column-cell → .value` is owned DOM again and uses `>`. The `lib-*` prefix is illustrative; actual boundary prefixes are project-configured.
+
+Example:
+
+```css
+.dialog-panel {
+  padding: 1rem;
+  border-radius: 0.5rem;
+
+  > .header {
+    margin-bottom: 0.75rem;
+  }
+
+  > .text {
+    margin-bottom: 1rem;
+  }
+
+  > .footer {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+  }
+}
+```
+
+### 4. Do not force `>` across non-owned boundaries
+
+Across slots, third-party library internals, portals, or shadow boundaries, `>` must not be assumed.
+
+### 5. Use readable nesting, not arbitrary flattening
+
+Nesting should reinforce the owned structure of the surface.
+
+---
+
+## Responsibility Rule
+
+A styling surface should contain its own visual skin, but not external layout responsibility.
+
+This rule is machine-enforced (`surface-external-layout`): the linter reports
+`position`, inset, and `margin` declarations in a surface root's own rule,
+with the top-layer and anchored exception below.
+
+### Avoid on the surface element
+
+- `position`
+- `top`, `right`, `bottom`, `left`
+- `margin`
+- context-dependent `width` and `height`
+
+These belong to the parent layout.
+
+### Allowed on the surface element
+
+- `padding`
+- `border`
+- `background`
+- `border-radius`
+- `box-shadow`
+- intrinsic sizing when it is part of the surface’s own meaning
+
+### Exception: top-layer and anchored surfaces
+
+A surface rendered in the top layer (`<dialog>`, a `popover` element) has no
+parent layout that could own its placement. For such a surface, anchored
+placement is part of its own skin: `position-anchor`, `position-area`,
+`position-try-*`, and the inset properties that resolve against its anchor are
+allowed on the surface element itself.
+
+This preserves the rule's intent rather than weakening it: placement belongs
+to whoever owns the coordinate context. In normal flow that is the parent; in
+the top layer it is the surface itself.
+
+In short:
+
+> layout outside, skin inside
+
+---
+
+## Compound Component Rule
+
+A compound UI should not be treated as one giant styling tree.
+
+Each owned styling surface applies the contract independently.
+
+Related components should still be treated as separate styling surfaces unless one surface truly owns the other's DOM structure.
+
+**When to split a block into its own surface (deterministic trigger):** split only when the block is **rendered repeatedly** (a `v-for` with its own styled internals), is **reused across files**, or would nest past **STN depth 7**. Internal complexity alone is *not* a reason to split — a one-off block, however elaborate, stays nested under its surface. (For example: an invoice row rendered by `v-for` becomes its own `InvoiceCard` surface; a one-off section header does not.)
+
+Example:
+
+- `dialog-trigger`
+- `dialog-panel`
+- `dialog-title`
+
+Each may have its own owned DOM and internal naming structure.
+
+The contract does not require the entire compound UI to collapse into one root.
+
+This keeps component relationships simple: a parent does not need to know whether a child exposes pass-through classes, custom properties, or internal wrapper elements in order to style the compound UI correctly.
+
+Preferred example:
+
+```html
+<div class="dialog-panel">
+  <header class="header">...</header>
+  <p class="text">...</p>
+</div>
+
+<h2 class="dialog-title">Delete item</h2>
+```
+
+In this example, `dialog-panel` and `dialog-title` are related, but each is its own styling surface.
+
+---
+
+## Slot Rule
+
+Slots are API boundaries, not guaranteed owned DOM.
+
+When a surface accepts slotted content:
+
+- style the slot container if owned
+- style the inserted content only through public hooks or explicit class contracts
+- do not assume internal structure of slotted content
+
+This keeps owned and non-owned responsibility separate.
+
+### Library-component slot sub-surfaces
+
+The hard case is **owned content you place into a library component's slot** (e.g. a `<div>` inside a card-like component's content slot). It is owned by you, but it sits behind the library's non-owned internal wrappers, so it cannot nest under the file's surface root with `>` — and forcing it there means chasing library internals with `:deep(...)`, which is brittle.
+
+The resolution is a **declared sub-surface**, configured per library component + slot (`componentSlots` in the linter config):
+
+```
+componentSlots: {
+  Card: { title: "card-title", content: "card-content", footer: "card-footer" },
+}
+```
+
+Each slot surface class must start with its owning component's slot prefix; declare `componentSlotPrefixes` when the prefix is more specific than the component's root class.
+
+The owned wrapper inside each slot carries that class, and it is treated as its **own styling surface**: its children nest under it with `>` — no `:deep()` into library internals, so it is robust to the library's DOM. Multiple instances are distinguished with a variant.
+
+```html
+<Card>                                <!-- library root: unstyled here → no class -->
+  <template #content>
+    <div class="card-content -address">   <!-- declared sub-surface + variant -->
+      <div class="field"> … </div>
+    </div>
+  </template>
+</Card>
+```
+```css
+.procedure-page {
+  > .lib-card .card-content.-address { /* descendant crosses the library boundary */
+    > .field { … }
+  }
+}
+```
+
+If that slot content is teleported and no longer sits below `.procedure-page` in the rendered DOM, keep the slot surface at top level and declare it in `detachedSlotSurfaces` — the linter rejects a top-level slot surface that is not explicitly configured as detached:
+
+```css
+.card-content.-address {
+  > .field { … }
+}
+```
+
+These slot→class maps are library-specific and shippable as presets; for a library not yet mapped, generate the `componentSlots` entries from its slot API. To style the library's *own* wrapper spacing, that is a non-owned adjustment via `:deep()` — see the Appendix — distinct from styling your owned slot content.
+
+**Only introduce the sub-surface wrapper when you actually style that slot's content.** If the library's slot already lays the content out and you add no owned styles (e.g. a Dialog `#footer` of bare buttons the library right-aligns), leave it unwrapped — adding a wrapper there displaces the library's own layout and forces you to re-create it (a guess, and a regression risk). The sub-surface is for owned content you style, not a blanket requirement on every slot.
+
+---
+
+## Responsive Rule
+
+### Prefer container queries
+
+Responsive behavior should be defined at the styling surface level using container queries whenever possible.
+
+Example:
+
+```css
+.card {
+  container-type: inline-size;
+
+  @container (inline-size >= 40rem) {
+    > .footer {
+      justify-content: space-between;
+    }
+  }
+}
+```
+
+### Reserve viewport media queries for layout-level changes
+
+Global `@media` rules should primarily handle page-level layout decisions rather than local component behavior.
+
+### Avoid responsive size classes
+
+Do not encode breakpoint behavior into class names such as `-sm`, `-md`, or `-lg` when the concern is responsive layout.
+
+---
+
+## Design Tokens and Utilities
+
+### Design Tokens
+
+Color, spacing, radius, shadow, and typography should be defined through CSS custom properties.
+
+### Utilities
+
+Standalone utility classes are not allowed.
+
+Utility-like concerns must be expressed as variants on a styling surface or style element.
+
+Example:
+
+```html
+<footer class="footer -sr-only -toolbar">...</footer>
+```
+
+In this example, `footer` remains the style element, while `-sr-only` and `-toolbar` express local styling concerns as variants.
+
+Nagi CSS preserves readable styling surfaces rather than collapsing meaning into flat utility composition.
+
+---
+
+## Conformance
+
+### MUST
+
+- each styling surface has one class that identifies the surface
+- strict rules apply only inside owned DOM
+- state is expressed via native states, ARIA, or `data-*`, not state classes
+- style elements are nested under the surface block in CSS
+- `>` MUST connect every parent/child inside owned DOM; a relationship that cannot use `>` marks a non-owned boundary
+- every HTML element other than `div`/`span` carries its fixed class from the Element Class Table
+- every configured UI library component carries its fixed class from the Library Component Class Table, and that class never descends into library internals
+- vague structural names should be avoided when stable UI semantics exist
+- STN are fallback names only, and their tiers obey the floor, consecutive-tier, and reach-`g` relations
+- external layout responsibility must remain outside the surface
+
+### SHOULD
+
+- prefer native or UI-semantic names over structural fallback names
+- prefer container queries over viewport rules for local behavior
+- prefer public styling contracts over DOM chasing
+- keep surface structure readable from markup alone
+- use CSS custom properties for tokens and theming
+
+---
+
+## Anti-patterns
+
+Avoid the following:
+
+- treating the entire application DOM as one owned styling tree
+- using classes for runtime state
+- naming everything `wrapper`, `inner`, or `box`
+- overusing STN where UI-semantic names would work
+- styling third-party internals as if they were owned DOM
+- pushing external layout concerns into reusable surfaces
+- collapsing all styling meaning into utility class strings
+
+---
+
+## Appendix: Non-owned Boundaries
+
+Non-owned DOM is outside the strict naming and nesting rules of this contract.
+
+When styling third-party UI, slotted content, portal content, or Shadow DOM components, use public contracts in this order:
+
+1. CSS custom properties
+2. documented class / slot / pass-through APIs
+3. `data-*` attributes
+4. `::part()`
+5. descendant selectors only when necessary
+
+Do not treat library internals as owned DOM.
+
+Apply the contract again only after styling returns to a surface you own.
+
+### CSS custom properties
+
+CSS custom properties are useful when a component exposes styling inputs that affect internal or child DOM.
+
+This is not DOM ownership. It is a public contract: the owning component decides what the variable means and where it is consumed.
+
+Use this when a component explicitly supports it:
+
+```css
+.date-picker {
+  --date-picker-accent-color: var(--color-primary);
+}
+```
+
+Avoid chasing internal descendants when a variable is available.
+
+### Class and pass-through APIs
+
+Some components expose a documented `className`, slot class, or pass-through API.
+
+Use those APIs to attach styling to the exposed root or slot target. This is especially appropriate for external layout responsibility, because parent surfaces own placement while child surfaces own their own skin.
+
+Pass-through APIs should not be the default strategy for styling related components that are owned by the same codebase. In that case, prefer splitting the related pieces into independent styling surfaces and applying the contract to each surface separately.
+
+Good use cases for pass-through classes are narrow:
+
+- third-party UI libraries that expose the class as an official styling hook
+- reusable leaf components placed inside a parent layout grid or flex container
+- parent-owned external layout adjustments such as margin, grid placement, or flex alignment
+
+Example:
+
+```html
+<UserProfile>
+  <SharedAvatar className="avatar" />
+</UserProfile>
+```
+
+```css
+.user-profile {
+  > .avatar {
+    margin-inline-end: 0.75rem;
+  }
+}
+```
+
+The passed class should not be used to override arbitrary internal DOM of the child component.
+
+### `data-*` attributes
+
+Use `data-*` attributes across non-owned boundaries only when the component or library exposes them as a public state contract.
+
+Example:
+
+```css
+.accordion {
+  &[data-state="open"] {
+    border-color: var(--color-primary);
+  }
+}
+```
+
+Do not invent selectors against private attributes that are not part of the component contract.
+
+### `::part()`
+
+For Shadow DOM, use `::part()` only when the custom element exposes parts intentionally.
+
+Prefer giving the custom element itself a styling surface class, then style the exposed parts from that surface.
+
+```html
+<div class="video-section">
+  <custom-video-player class="video-player">
+    #shadow-root
+      <button part="play-button">Play</button>
+      <div part="timeline">...</div>
+  </custom-video-player>
+</div>
+```
+
+```css
+.video-player {
+  &::part(play-button) {
+    background-color: red;
+  }
+}
+```
+
+This keeps the custom element as the styling surface instead of letting an unrelated parent reach too far into its internals.
+
+### Descendant selectors
+
+Use descendant selectors across non-owned boundaries only as a last resort.
+
+They are acceptable only when the target structure is stable enough for the project and no better public contract exists.
+
+---
+
+## Summary
+
+Nagi CSS is a strict local styling contract for **owned DOM inside a styling surface**.
+
+It preserves the strengths of semantic class naming and nested CSS while adapting them to modern UI realities such as compound components, slots, third-party libraries, and AI-assisted implementation.
+
+Its core rule is simple:
+
+> Apply strict semantic structure where DOM is owned.
+> Use public contracts where DOM is not owned.

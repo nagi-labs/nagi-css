@@ -1,0 +1,43 @@
+{
+  "name": "@nagi-labs/nagi-css",
+  "version": "0.1.0",
+  "description": "CSS, after the wind. External-config CLI for the Nagi CSS contract: runs the ESLint and Stylelint checks against a target application.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nagi-labs/nagi-css.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/nagi-labs/nagi-css#readme",
+  "keywords": [
+    "css",
+    "css-architecture",
+    "lint",
+    "eslint",
+    "stylelint",
+    "vue",
+    "semantic-css",
+    "nagi"
+  ],
+  "type": "module",
+  "bin": {
+    "nagi-css": "./src/cli.mjs"
+  },
+  "exports": "./src/cli.mjs",
+  "files": [
+    "src"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "dependencies": {
+    "@nagi-labs/eslint-plugin-nagi-css": "workspace:*",
+    "@nagi-labs/nagi-css-core": "workspace:*",
+    "@nagi-labs/stylelint-plugin-nagi-css": "workspace:*",
+    "eslint": "^10.0.0",
+    "stylelint": "^16.0.0"
+  }
+}

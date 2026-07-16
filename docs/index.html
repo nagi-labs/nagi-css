@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nagi CSS — CSS, after the wind</title>
+<meta name="description" content="Nagi CSS is a lint-enforced semantic CSS contract. Every class name has exactly one correct answer — CSS, after the wind.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>凪</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho&text=凪&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main class="home-page">
+
+  <header class="header">
+    <div class="media -glyph" aria-hidden="true">凪</div>
+    <h1 class="title">Nagi CSS</h1>
+    <p class="text -tagline">CSS, after the wind.</p>
+    <p class="text -lead">
+      A lint-enforced semantic contract — every class name has exactly one
+      correct answer.
+    </p>
+    <p class="text -meaning">
+      <em>Nagi</em> (凪, “NAH-ghee”) is Japanese for the calm when the wind dies
+      down — the state a codebase reaches when naming entropy stops.
+      <small class="note">(Yes, the linter is a bit naggy. That’s the point.)</small>
+    </p>
+    <nav class="nav">
+      <ul class="list">
+        <li class="item"><a class="link" href="https://github.com/nagi-labs/nagi-css">GitHub</a></li>
+        <li class="item"><a class="link" href="https://github.com/nagi-labs/nagi-css/blob/main/CONTRACT.md">Contract</a></li>
+        <li class="item"><a class="link" href="https://github.com/nagi-labs/nagi-css/blob/main/FAQ.md">FAQ</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <section class="section -naming">
+    <h2 class="title">Every name is derived</h2>
+    <p class="text">
+      One component, named entirely by rule. Nothing below was invented — each
+      class comes from a lookup, and the linter enforces every derivation.
+      The result reads as plain, unforced semantics.
+    </p>
+    <div class="zone">
+      <figure class="figure -sample">
+        <pre class="codeblock">&lt;article class="<mark class="mark -surface">invoice-card</mark>"&gt;
+  &lt;header class="<mark class="mark -element">header</mark>"&gt;
+    &lt;div class="<mark class="mark -anatomy">media</mark>"&gt;
+      &lt;img class="<mark class="mark -element">image</mark>" src="acme.svg" alt="Acme Ltd."&gt;
+    &lt;/div&gt;
+    &lt;h3 class="<mark class="mark -element">title</mark>"&gt;Invoice&lt;/h3&gt;
+  &lt;/header&gt;
+  &lt;div class="<mark class="mark -stn">zone</mark>"&gt;
+    &lt;dl class="<mark class="mark -element">list</mark> <mark class="mark -variant">-description</mark>"&gt;
+      &lt;div class="<mark class="mark -anatomy">field</mark> <mark class="mark -variant">-user</mark>"&gt;
+        &lt;dt class="<mark class="mark -element">term</mark>"&gt;User&lt;/dt&gt;
+        &lt;dd class="<mark class="mark -element">definition</mark>"&gt;A. Lovelace&lt;/dd&gt;
+      &lt;/div&gt;
+      &lt;div class="<mark class="mark -anatomy">field</mark> <mark class="mark -variant">-amount</mark>"&gt;
+        &lt;dt class="<mark class="mark -element">term</mark>"&gt;Amount&lt;/dt&gt;
+        &lt;dd class="<mark class="mark -element">definition</mark>"&gt;
+          &lt;span class="<mark class="mark -anatomy">value</mark>" <mark class="mark -state">data-status</mark>="paid"&gt;¥12,000&lt;/span&gt;
+        &lt;/dd&gt;
+      &lt;/div&gt;
+    &lt;/dl&gt;
+    &lt;div class="<mark class="mark -stn">seg</mark>"&gt;
+      &lt;small class="<mark class="mark -element">note</mark>"&gt;Paid July 1, 2026.&lt;/small&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+  &lt;footer class="<mark class="mark -element">footer</mark>"&gt;
+    &lt;button class="<mark class="mark -element">button</mark> <mark class="mark -variant">-secondary</mark>"&gt;Download&lt;/button&gt;
+    &lt;button class="<mark class="mark -element">button</mark> <mark class="mark -variant">-primary</mark>" <mark class="mark -state">disabled</mark>&gt;
+      Send
+    &lt;/button&gt;
+  &lt;/footer&gt;
+&lt;/article&gt;</pre>
+      </figure>
+      <ul class="list -rules">
+        <li class="item -surface">
+          <h3 class="title">Surface — from the file name</h3>
+          <p class="text"><code class="snippet">invoice-card</code> is the
+          component file's name, kebab-cased. Never chosen.</p>
+        </li>
+        <li class="item -element">
+          <h3 class="title">Elements — from the tag</h3>
+          <p class="text"><code class="snippet">header</code>, <code class="snippet">title</code>,
+          <code class="snippet">image</code>, <code class="snippet">list</code>,
+          <code class="snippet">term</code>, <code class="snippet">definition</code>,
+          <code class="snippet">note</code>, <code class="snippet">footer</code>,
+          <code class="snippet">button</code> — each HTML element has one fixed class.</p>
+        </li>
+        <li class="item -anatomy">
+          <h3 class="title">UI anatomy — a tiny allowlist</h3>
+          <p class="text">Names for common UI parts that HTML has no tag for:
+          <code class="snippet">field</code> (label + control),
+          <code class="snippet">value</code>, <code class="snippet">actions</code>,
+          <code class="snippet">media</code>, <code class="snippet">icon</code>
+          by default — five words go a long way, and the list is configurable
+          per project.</p>
+        </li>
+        <li class="item -stn">
+          <h3 class="title">Structural Tier Names (STN)</h3>
+          <p class="text">A structural ladder (<code class="snippet">zone</code> ·
+          <code class="snippet">seg</code> · <code class="snippet">fr</code> ·
+          <code class="snippet">g</code>) for the <code class="snippet">div</code>s
+          that nothing else fits — the tier is determined by depth, so
+          <code class="snippet">wrapper</code> and
+          <code class="snippet">inner</code> never appear.</p>
+        </li>
+        <li class="item -variant">
+          <h3 class="title">Variants — modifiers, not names</h3>
+          <p class="text"><code class="snippet">-user</code>,
+          <code class="snippet">-primary</code>, … — they qualify an anchor,
+          never name what an element is, and stay alphabetical.</p>
+        </li>
+        <li class="item -state">
+          <h3 class="title">State — attributes, not classes</h3>
+          <p class="text"><code class="snippet">disabled</code>,
+          <code class="snippet">aria-*</code>, <code class="snippet">data-*</code> —
+          runtime state never becomes a class.</p>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="section -why">
+    <h2 class="title">Why</h2>
+    <p class="text">
+      The property everything else falls out of is <strong>canonical form</strong>:
+      given the markup, the correct class for a node is unique — derived from the
+      file name, the element and component tables, and a structural ladder,
+      rather than chosen.
+    </p>
+    <ul class="list">
+      <li class="item">
+        <h3 class="title">Machine-checkable</h3>
+        <p class="text">
+          A linter can verify every derivation: template classes, selector
+          structure, ownership edges, UI-library boundaries. Consistency stops
+          being a discipline problem.
+        </p>
+      </li>
+      <li class="item">
+        <h3 class="title">Convergent</h3>
+        <p class="text">
+          Two authors — or an AI agent — arrive at the same class names for the
+          same markup. Generated CSS stops drifting.
+        </p>
+      </li>
+      <li class="item">
+        <h3 class="title">Meaning in the source</h3>
+        <p class="text">
+          <code class="snippet">class="user-card"</code> self-documents. Diffs
+          are a changed property in a named rule, not a mutated utility string.
+        </p>
+      </li>
+    </ul>
+  </section>
+
+  <section class="section -usage">
+    <h2 class="title">Usage</h2>
+    <p class="text">
+      The CLI accepts configuration from outside the application being checked,
+      so a target repository needs no lint setup of its own.
+    </p>
+    <pre class="codeblock"><code>nagi-css check \
+  --config /absolute/path/to/nagi.config.mjs \
+  --cwd /absolute/path/to/application</code></pre>
+    <p class="text">
+      ESLint validates templates and cross-block contracts; Stylelint validates
+      selectors and CSS nesting. <code class="snippet">--fix</code> applies only
+      unambiguous missing fixed-class fixes. The toolchain targets Vue
+      single-file components first; the contract itself is framework-agnostic.
+    </p>
+  </section>
+
+  <section class="section -agents">
+    <h2 class="title">Built for AI agents</h2>
+    <p class="text">
+      The repository ships an agent skill that packages the contract as a
+      workflow: what to derive, in what order, and how to verify the result.
+      An agent applies the skill; the linter proves the output conforms.
+      Generate against a deterministic contract, then machine-check it — that
+      loop is how AI-written CSS stays consistent at scale.
+    </p>
+  </section>
+
+  <footer class="footer">
+    <p class="text">
+      MIT licensed.
+      <a class="link" href="https://github.com/nagi-labs/nagi-css">Source on GitHub</a>.
+    </p>
+    <p class="text -colophon">
+      This page is plain HTML and CSS with the Nagi contract applied by hand —
+      no JavaScript, no utilities, every selector anchored with
+      <code class="snippet">&gt;</code>.
+    </p>
+  </footer>
+
+</main>
+</body>
+</html>

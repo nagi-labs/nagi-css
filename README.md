@@ -1,0 +1,194 @@
+# Nagi CSS
+
+**CSS, after the wind. A lint-enforced semantic contract — every class name
+has exactly one correct answer, so humans and AI agents converge on the same
+output.**
+
+Nagi CSS is a semantic contract and lint toolchain for styling owned markup in
+component-based applications. Class names are *derived* — from the file name,
+from element and component tables, from a structural ladder — rather than
+chosen, and ESLint and Stylelint verify every derivation: template classes,
+cross-block contracts, selector structure, ownership edges, and UI-library
+boundaries. The CLI accepts configuration from outside the application being
+checked, so a target repository needs no lint setup of its own. The toolchain
+targets Vue single-file components first; the contract itself is
+framework-agnostic.
+
+*Nagi (凪, "NAH-ghee") is Japanese for the calm when the wind dies down — the
+state a codebase reaches when naming entropy stops. (Yes, the linter is a bit
+naggy. That's the point.)*
+
+[CONTRACT.md](CONTRACT.md) defines the contract; [FAQ.md](FAQ.md) explains why
+the design holds and answers common objections.
+
+## Before / after
+
+Familiar-looking Vue that Nagi CSS rejects:
+
+```vue
+<template>
+  <section class="user-card">
+    <i :class="iconName" />
+    <div :class="{ 'is-active': status === 'active' }">Ada Lovelace</div>
+  </section>
+</template>
+
+<style scoped>
+.user-card div {
+  color: red;
+}
+</style>
+```
+
+```
+UserCard.vue
+  13:1   ✖  Selector ".user-card div" uses " " between owned elements; use ">".         nagi-css/owned-dom-direct-child
+  13:12  ✖  Selector ".user-card div" styles bare <div> inside owned DOM; use a class.  nagi-css/bare-element-selector
+   7:5   ✖  Dynamic classes may only supplement a static owned class on the same element   nagi-css/dynamic-class-requires-static-anchor
+   8:5   ✖  Class "is-active" encodes runtime state; use a native, ARIA, or data attribute instead  nagi-css/state-not-class
+```
+
+The conforming version — every name static, derived, and checkable; runtime
+state in attributes:
+
+```vue
+<template>
+  <section class="user-card">
+    <i class="icon" :class="iconName" />
+    <div class="value" :data-active="status === 'active'">Ada Lovelace</div>
+  </section>
+</template>
+
+<style scoped>
+.user-card {
+  > .icon {}
+  > .value {
+    color: red;
+  }
+}
+</style>
+```
+
+Each rule is doing structural work: `user-card` is the surface identity
+derived from `UserCard.vue`; `icon` and `value` come from the configured
+anatomy vocabulary; `>` marks an owned parent-child DOM edge, so
+the selector tree mirrors the template; the dynamic icon class rides on a
+static anchor; and `data-active` keeps state where assistive technology and
+CSS attribute selectors both already look.
+
+## Why
+
+The property everything else falls out of is **canonical form**: given the
+markup, the correct class for a node is unique. That is what makes the
+contract machine-checkable, what lets a linter drive any author — human or
+model — to the same answer, and what keeps a large codebase from silently
+accumulating entropy. Names carry meaning in the source
+(`<section class="user-card">` self-documents), diffs are a changed property
+in a named rule rather than a mutated utility string, and dead rules are
+mechanically detectable because selectors mirror template structure.
+
+The costs are real: styles are not local to the element, and the structural
+vocabulary must be learned. [FAQ.md](FAQ.md) treats both honestly, alongside
+the Tailwind and BEM comparisons.
+
+## UI-library boundaries
+
+Nagi CSS never inspects a dependency's internal DOM. Configured component
+roots are opaque boundaries: cross them with a descendant step, then resume
+owned `>` nesting at a declared slot sub-surface.
+
+```vue
+<style scoped>
+.orders-page {
+  > .ui-data-table {
+    .ui-table-column-body {
+      > .value {}
+    }
+  }
+}
+</style>
+```
+
+## Checks
+
+ESLint enforces:
+
+- file-derived surface root names;
+- static anchors for dynamic classes;
+- fixed element and component classes, including `when-styled` emission;
+- anatomy, role names, reserved HTML names, and alphabetical variants;
+- variant names that stay outside the protocol vocabulary;
+- attribute-based runtime state;
+- the STN floor, consecutive-tier, and reach-`g` rules;
+- component slot configuration; and
+- safe autofixes for unambiguous missing fixed classes.
+
+Stylelint enforces:
+
+- surface-only top-level selectors;
+- class selectors instead of bare owned elements;
+- `>` for owned DOM edges;
+- descendant steps across configured UI-library boundaries;
+- nested, component-prefixed slot sub-surfaces;
+- anatomy and state vocabulary in selectors;
+- variant names that stay outside the protocol vocabulary;
+- no external layout (`position`, inset, `margin`) on a surface's own rule,
+  with a top-layer and anchor-positioning exception; and
+- explicit detached configuration for top-level teleported surfaces.
+
+## Usage
+
+Run Nagi CSS from this repository without adding lint configuration to the
+target repository:
+
+```sh
+node packages/cli/src/cli.mjs check \
+  --config /absolute/path/to/nagi.config.mjs \
+  --cwd /absolute/path/to/application
+```
+
+A minimal configuration:
+
+```js
+export default {
+  eslintFiles: ["src/**/*.vue"],
+  stylelintFiles: ["src/**/*.{vue,css}"],
+  semantic: {},
+}
+```
+
+The `semantic` object configures component classes, slot surfaces, library
+boundary prefixes, emit policy, and vocabulary — see
+[skills/nagi-css/references/configuration.md](skills/nagi-css/references/configuration.md).
+For opaque UI components, `componentClasses: ["DataTable"]` derives
+`pv-data-table`; explicit mappings remain available for exceptions. Do not list
+application-owned Vue components in that table.
+
+Add `--fix` to apply only unambiguous missing fixed-class ESLint fixes.
+Selector, surface, anatomy, state, and ownership diagnostics are never
+rewritten.
+
+## Agent skill
+
+`skills/nagi-css` packages the contract as an agent workflow: what to derive,
+in what order, and how to verify the result with the CLI. An agent applies
+the skill; the linter proves the output conforms. This closed loop — generate
+against a deterministic contract, then machine-check it — is the intended way
+to keep AI-written CSS consistent at scale.
+
+## Repository layout
+
+- `packages/core` - shared configuration and validation
+- `packages/eslint-plugin` - template and cross-block rules
+- `packages/stylelint-plugin` - selector and stylesheet rules
+- `packages/cli` - external-config runner for ESLint and Stylelint
+- `skills/nagi-css` - agent workflow for applying the contract
+
+Local target profiles and runner scripts belong under `.sandbox/`. That
+directory is ignored and must not contain code intended for publication.
+
+Run the package tests with `pnpm test`.
+
+## License
+
+[MIT](LICENSE)

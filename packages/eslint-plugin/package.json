@@ -1,0 +1,39 @@
+{
+  "name": "@nagi-labs/eslint-plugin-nagi-css",
+  "version": "0.1.0",
+  "description": "ESLint plugin for the Nagi CSS contract: template classes and cross-block rules for Vue SFCs.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nagi-labs/nagi-css.git",
+    "directory": "packages/eslint-plugin"
+  },
+  "homepage": "https://github.com/nagi-labs/nagi-css#readme",
+  "keywords": [
+    "eslint",
+    "eslint-plugin",
+    "css",
+    "vue",
+    "semantic-css",
+    "nagi"
+  ],
+  "type": "module",
+  "exports": "./src/index.mjs",
+  "files": [
+    "src"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "dependencies": {
+    "@nagi-labs/nagi-css-core": "workspace:*",
+    "@typescript-eslint/parser": "^8.0.0",
+    "vue-eslint-parser": "^10.0.0"
+  },
+  "peerDependencies": {
+    "eslint": ">=9"
+  }
+}

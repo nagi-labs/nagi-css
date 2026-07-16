@@ -1,0 +1,4 @@
+interface:
+  display_name: "Nagi CSS"
+  short_description: "Apply and verify semantic styling rules"
+  default_prompt: "Use $nagi-css to implement or review semantic styling in this project."

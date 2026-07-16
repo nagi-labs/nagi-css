@@ -1,0 +1,7 @@
+node_modules/
+coverage/
+.sandbox/
+*.log
+.DS_Store
+.playwright-cli/
+.claude/settings.local.json
