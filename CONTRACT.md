@@ -38,19 +38,22 @@ Naming and structure inside owned DOM must be reproducible by rule, not by taste
 
 ## Core contract at a glance
 
-1. Give every styled surface a static identity class derived from its Vue file.
-2. Keep non-surface class names in the configured element, component, anatomy,
+1. Give every styled surface a static identity class derived exactly from its
+   configured namespace prefix and Vue file.
+2. Give each styled element exactly one base identity from the first matching
+   naming-table step; express additional ARIA semantics with attributes.
+3. Keep non-surface class names in the configured element, component, anatomy,
    STN, slot-surface, or explicit `role` vocabulary.
-3. Connect styled owned parent-child edges with `>` and target owned elements
+4. Connect styled owned parent-child edges with `>` and target owned elements
    through classes.
-4. Treat configured UI component roots as opaque boundaries. Cross them with a
+5. Treat configured UI component roots as opaque boundaries. Cross them with a
    descendant step, never `>`.
-5. Resume owned `>` nesting at a declared slot sub-surface.
-6. Prefix each slot sub-surface with its owning component slot prefix.
-7. Represent runtime state with native, ARIA, or `data-*` attributes.
-8. Keep teleported slot surfaces top-level only when explicitly configured as detached.
-9. Keep static `-variant` tokens alphabetical.
-10. Keep `-variant` names outside the protocol vocabulary; variants modify an
+6. Resume owned `>` nesting at a declared slot sub-surface.
+7. Prefix each slot sub-surface with its owning component slot prefix.
+8. Represent runtime state with native, ARIA, or `data-*` attributes.
+9. Keep teleported slot surfaces top-level only when explicitly configured as detached.
+10. Keep static `-variant` tokens alphabetical.
+11. Keep `-variant` names outside the protocol vocabulary; variants modify an
     anchor, they never name what an element is.
 
 The rest of this document defines each rule precisely and explains the
@@ -200,9 +203,9 @@ Here, `-compact` is a variant of the `settings-panel` surface, and `-muted` is a
 
 Variants modify an anchor; they never name what an element *is*. A variant name
 must therefore stay outside the protocol vocabulary: element classes, component
-classes, anatomy, STN tiers, slot surfaces, banned generic names, and rendered
-HTML element names are all rejected as variant stems (`-title`, `-header`,
-`-wrapper`, `-span`). Wanting a vocabulary word as a variant is a signal that
+classes, anatomy, STN tiers, slot surfaces, ARIA role names, banned generic
+names, and rendered HTML element names are all rejected as variant stems
+(`-title`, `-separator`, `-header`, `-wrapper`, `-span`). Wanting a vocabulary word as a variant is a signal that
 the element wants that tag or class instead — a "link-styled button" is a
 design error (links navigate, buttons operate), and a title *bar* is not a
 `-title` variant but a differently named element.
@@ -235,14 +238,21 @@ The contract should be treated as:
 
 Each styling surface must have one class that identifies the surface.
 
-**The surface root name is derived from the file, not chosen (deterministic):**
+**The surface root name is derived from configuration and the file, not chosen
+(deterministic):**
 
 - a **component** (`…/components/Foo.vue`) → the file basename in kebab-case (`invoice-payment-section.vue` → `.invoice-payment-section`).
 - a **page** (`…/pages/…`) → `<name>-page`, where `<name>` is the file basename, or — when the basename is `index` or a dynamic `[param]` — the nearest meaningful ancestor directory (`procedure/error.vue` → `.error-page`, `procedure/[key]/index.vue` → `.procedure-page`).
 
+`surfaceRootPrefixes` is required and must contain at least one namespace. With
+`surfaceRootPrefixes: ["n-"]`, `Button.vue` must use `.n-button`: bare `.button`
+and unrelated `.n-control` both fail. Multiple prefixes are alternative exact
+derivations, not a general `startsWith` exemption.
+
 Rules:
 
 - lowercase, kebab-case, stable
+- use exactly one configured prefix followed by the file-derived name
 - there is one surface root per file, and it sits on the template's root element
 
 Examples:
@@ -301,17 +311,17 @@ Examples:
 - `-success`
 - `-avatar`
 - `-sidebar`
-- `-toolbar`
+- `-dense`
 - `-sr-only`
 
 Variants are for styling differences, not runtime state.
 
-Multiple variants may be applied to the same styling surface or style element, and **must be written in alphabetical order** (`-sr-only -toolbar`, not `-toolbar -sr-only`) so the ordering is deterministic.
+Multiple variants may be applied to the same styling surface or style element, and **must be written in alphabetical order** (`-dense -sr-only`, not `-sr-only -dense`) so the ordering is deterministic.
 
 Example:
 
 ```html
-<footer class="footer -sr-only -toolbar">...</footer>
+<footer class="footer -dense -sr-only">...</footer>
 ```
 
 ---
@@ -473,9 +483,9 @@ element. Notes that survive the trimming:
   (`card`, …).
 - `<button>` means the native element only; library button components use
   their configured boundary class.
-- `<svg>` self-maps; a glyph-sized svg is usually better named with the
-  anatomy class `icon`. Decorative internal `<path>` etc. are not style
-  elements.
+- `<svg>` self-maps even when glyph-sized. Use an `icon` `div`/`span` wrapper
+  only when a separate anatomy wrapper is actually needed. Decorative internal
+  `<path>` etc. are not style elements.
 - `<select>`/`<textarea>` self-map; a shared control skin targets
   `:is(.input, .select, .textarea)`.
 - The table-row mappings expand HTML's abbreviations and fix a variant where
@@ -488,6 +498,11 @@ element. Notes that survive the trimming:
   `<input>` kinds take plain `input` and are styled as
   `.input[type=checkbox]`, `.input[type=radio]`, never through a class copy
   of the `type`.
+- ARIA semantics are also attribute-reachable and never replace or supplement
+  the fixed base identity. A list separator is
+  `<li class="item" role="separator">` and is styled with
+  `.item[role="separator"]`; `class="separator"`, `class="item separator"`,
+  and `class="item -separator"` are non-canonical on `<li>`.
 - A mapping-fixed variant is legal only in compound with its base
   (`.rowgroup.-head` conforms; `.zone.-head` is judged as an ordinary
   variant).
@@ -502,7 +517,7 @@ There is no blanket exemption for document-only element names. `body` belongs to
 
 ### Library Component Class Table (configured components)
 
-A UI library component root that you place in your own markup takes a fixed class from the project's configured table (declared in the linter config, enforced by the linter). A project table should list only opaque third-party/UI-library components the project actually uses. Application-owned Vue components are not listed: each owns the surface root derived from its filename.
+A UI library component root that you place in your own markup takes a fixed class from the project's configured table (declared in the linter config, enforced by the linter). A project table should list only opaque third-party/UI-library components the project actually uses. Application-owned Vue components are not listed: each owns the surface root derived from its configured namespace prefix and filename.
 
 When a configured library component does not provide an explicit class value, its class is deterministic: the default `pv-` prefix plus the component name in kebab-case (`DataTable` → `pv-data-table`). `componentClassPrefix` changes the prefix, and an explicit `componentClasses` object value overrides the derived name.
 
@@ -535,7 +550,14 @@ The following three steps name a `div`/`span` — the only elements the tables d
 
 Use Accessibility Semantics as the first source for base names inside owned DOM.
 
-This includes native element roles, ARIA roles, and common interaction roles. A class equal to an **ARIA role name** (`toolbar`, `tablist`, `tab`, `tabpanel`, `menu`, `option`, `alert`, `status`, `dialog`, …) is permitted **only when the element carries the matching `role="X"` attribute** — this removes the judgment of whether a role is "implied," and guarantees the accessibility attribute actually exists. No explicit `role` → fall back to a UI Anatomy name or STN.
+This includes native element roles, ARIA roles, and common interaction roles. For
+the residual `div`/`span` step only, a class equal to an **ARIA role name**
+(`toolbar`, `tablist`, `tabpanel`, `menu`, `option`, `alert`, `status`,
+`dialog`, `separator`, …) is permitted **only when the element carries the
+matching `role="X"` attribute**. An element already covered by the Element
+Class Table keeps that fixed identity and exposes its additional ARIA semantics
+through the attribute selector. No explicit `role` on a `div`/`span` → fall
+back to a UI Anatomy name or STN.
 
 Example:
 
@@ -550,9 +572,13 @@ Example:
 
 ```html
 <div class="tabs">
-  <button class="tab" role="tab" aria-selected="true">Details</button>
+  <button class="button" role="tab" aria-selected="true">Details</button>
   <div class="tabpanel" role="tabpanel">...</div>
 </div>
+
+<style>
+  .button[role="tab"] { /* ... */ }
+</style>
 ```
 
 ### 2. UI Anatomy Semantics
@@ -596,7 +622,7 @@ The scheme is enforced by three **local relations** — no global depth computat
 
 These three uniquely determine the tiers for any tree and are machine-checkable per surface (parent/child adjacency + a per-surface "is `g` present?" check). A slot sub-surface is its own surface and resets the chain.
 
-- Restore local meaning with a variant (`zone -toolbar`), never by changing the tier.
+- Restore local meaning with a variant (`zone -filters`), never by changing the tier.
 
 (`zone` and `g` are used rather than the more natural `area` and `u`, which collide with the rendered elements `<area>`/`<u>`.)
 
@@ -604,7 +630,7 @@ Example (a shallow surface: two nested STN divs plus an isolated one — all sta
 
 ```html
 <section class="settings-panel">
-  <div class="zone -toolbar">
+  <div class="zone -filters">
     <div class="seg -search">...</div>
   </div>
   <div class="zone -footer">...</div>
@@ -644,9 +670,14 @@ and cannot, fully mechanize it.
 
 Composition combines a base name with variants.
 
-The base name must come from Accessibility Semantics, allowlisted UI Anatomy Semantics, or STN.
+The base name must come from the first matching naming step: surface identity,
+Element Class Table, Library Component Class Table, or the `div`/`span`
+Semantics model. Each element has exactly one base identity.
 
-The variant may express additional UI role, styling role, density, size, or Domain Semantics.
+The variant may express a non-vocabulary styling distinction, density, size, or
+Domain Semantics. Additional ARIA semantics stay in `role` and are selected by
+attribute; an ARIA role name is never copied into a base or variant after an
+earlier table match.
 
 Domain Semantics are allowed in two places only:
 
@@ -657,9 +688,9 @@ Examples:
 
 ```html
 <button class="button -trigger">Open</button>
-<div class="dialog -confirm">...</div>
+<div class="dialog -confirm" role="dialog">...</div>
 <div class="zone -filters">...</div>
-<div class="card -order">...</div>
+<div class="zone -order">...</div>
 <article class="invoice-card">...</article>
 ```
 
@@ -1014,10 +1045,10 @@ Utility-like concerns must be expressed as variants on a styling surface or styl
 Example:
 
 ```html
-<footer class="footer -sr-only -toolbar">...</footer>
+<footer class="footer -dense -sr-only">...</footer>
 ```
 
-In this example, `footer` remains the style element, while `-sr-only` and `-toolbar` express local styling concerns as variants.
+In this example, `footer` remains the style element, while `-dense` and `-sr-only` express local styling concerns as variants.
 
 Nagi CSS preserves readable styling surfaces rather than collapsing meaning into flat utility composition.
 
@@ -1028,11 +1059,13 @@ Nagi CSS preserves readable styling surfaces rather than collapsing meaning into
 ### MUST
 
 - each styling surface has one class that identifies the surface
+- each element and selector compound has exactly one base identity class
 - strict rules apply only inside owned DOM
 - state is expressed via native states, ARIA, or `data-*`, not state classes
 - style elements are nested under the surface block in CSS
 - `>` MUST connect every parent/child inside owned DOM; a relationship that cannot use `>` marks a non-owned boundary
 - every HTML element other than `div`/`span` carries its fixed class from the Element Class Table
+- additional ARIA semantics on a table-mapped element are selected through attributes, not copied into base or variant classes
 - every configured UI library component carries its fixed class from the Library Component Class Table, and that class never descends into library internals
 - vague structural names should be avoided when stable UI semantics exist
 - STN are fallback names only, and their tiers obey the floor, consecutive-tier, and reach-`g` relations

@@ -5,7 +5,8 @@ has exactly one correct answer, so humans and AI agents converge on the same
 output.**
 
 Nagi CSS is a semantic contract and lint toolchain for styling owned markup in
-component-based applications. Class names are *derived* — from the file name,
+component-based applications. Class names are *derived* — from the configured
+surface namespace and file name,
 from element and component tables, from a structural ladder — rather than
 chosen, and ESLint and Stylelint verify every derivation: template classes,
 cross-block contracts, selector structure, ownership edges, and UI-library
@@ -28,7 +29,7 @@ Familiar-looking Vue that Nagi CSS rejects:
 ```vue
 <template>
   <section class="user-card">
-    <i :class="iconName" />
+    <span :class="iconName" />
     <div :class="{ 'is-active': status === 'active' }">Ada Lovelace</div>
   </section>
 </template>
@@ -54,7 +55,7 @@ state in attributes:
 ```vue
 <template>
   <section class="user-card">
-    <i class="icon" :class="iconName" />
+    <span class="icon" :class="iconName" />
     <div class="value" :data-active="status === 'active'">Ada Lovelace</div>
   </section>
 </template>
@@ -113,11 +114,12 @@ owned `>` nesting at a declared slot sub-surface.
 
 ESLint enforces:
 
-- file-derived surface root names;
+- exact configured-prefix + file-derived surface root names;
 - static anchors for dynamic classes;
 - fixed element and component classes, including `when-styled` emission;
+- exactly one table-first base identity class per element;
 - anatomy, role names, reserved HTML names, and alphabetical variants;
-- variant names that stay outside the protocol vocabulary;
+- variant names that stay outside the protocol vocabulary, including ARIA roles;
 - attribute-based runtime state;
 - the STN floor, consecutive-tier, and reach-`g` rules;
 - component slot configuration; and
@@ -130,8 +132,9 @@ Stylelint enforces:
 - `>` for owned DOM edges;
 - descendant steps across configured UI-library boundaries;
 - nested, component-prefixed slot sub-surfaces;
+- exactly one base identity class per selector compound;
 - anatomy and state vocabulary in selectors;
-- variant names that stay outside the protocol vocabulary;
+- variant names that stay outside the protocol vocabulary, including ARIA roles;
 - no external layout (`position`, inset, `margin`) on a surface's own rule,
   with a top-layer and anchor-positioning exception; and
 - explicit detached configuration for top-level teleported surfaces.
@@ -153,12 +156,13 @@ A minimal configuration:
 export default {
   eslintFiles: ["src/**/*.vue"],
   stylelintFiles: ["src/**/*.{vue,css}"],
-  semantic: {},
+  semantic: { surfaceRootPrefixes: ["app-"] },
 }
 ```
 
-The `semantic` object configures component classes, slot surfaces, library
-boundary prefixes, emit policy, and vocabulary — see
+`semantic.surfaceRootPrefixes` is required and must contain at least one
+lowercase kebab prefix ending in `-`. The `semantic` object also configures
+component classes, slot surfaces, library boundary prefixes, emit policy, and vocabulary — see
 [skills/nagi-css/references/configuration.md](skills/nagi-css/references/configuration.md).
 For opaque UI components, `componentClasses: ["DataTable"]` derives
 `pv-data-table`; explicit mappings remain available for exceptions. Do not list

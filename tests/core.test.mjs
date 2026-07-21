@@ -3,6 +3,7 @@ import test from "node:test"
 
 import {
   analyzeVueTemplate,
+  deriveAllowedSurfaceRootNames,
   defineNagiConfig,
   deriveSurfaceRootName,
   validateNagiConfig,
@@ -117,10 +118,12 @@ test("does not grant a blanket document-only name exemption", () => {
 
 test("validates component-owned slot surface prefixes", () => {
   const valid = defineNagiConfig({
+    surfaceRootPrefixes: ["test-"],
     componentClasses: { Card: "ui-card" },
     componentSlots: { Card: { content: "ui-card-content" } },
   })
   const invalid = defineNagiConfig({
+    surfaceRootPrefixes: ["test-"],
     componentClasses: { Card: "ui-card" },
     componentSlots: { Card: { content: "content" } },
   })
@@ -135,6 +138,82 @@ test("derives component and routed page surface names", () => {
   assert.equal(deriveSurfaceRootName("/src/components/UserMenu.vue"), "user-menu")
   assert.equal(deriveSurfaceRootName("/src/pages/reports/index.vue"), "reports-page")
   assert.equal(deriveSurfaceRootName("/src/pages/users/[id].vue"), "users-page")
+})
+
+test("derives exact prefixed surface names and requires a configured prefix", () => {
+  assert.deepEqual(
+    deriveAllowedSurfaceRootNames("/src/components/Toggle.vue", ["n-", "app-"]),
+    ["n-toggle", "app-toggle"],
+  )
+
+  for (const root of ["n-toggle", "app-toggle"]) {
+    const result = analyzeVueTemplate(
+      `<template><button class="${root}">Toggle</button></template><style>.${root} {}</style>`,
+      "/src/components/Toggle.vue",
+      { surfaceRootPrefixes: ["n-", "app-"] },
+    )
+    assert.deepEqual(result.violations, [])
+    assert.deepEqual([...result.surfaceRoots], [root])
+  }
+
+  for (const root of ["toggle", "n-control"]) {
+    const result = analyzeVueTemplate(
+      `<template><button class="${root}">Toggle</button></template><style>.${root} {}</style>`,
+      "/src/components/Toggle.vue",
+      { surfaceRootPrefixes: ["n-"] },
+    )
+    assert.equal(
+      result.violations.some(({ ruleId }) => ruleId === "surface-root-name"),
+      true,
+      root,
+    )
+  }
+})
+
+test("prefix enforcement recognizes filename roots that overlap element vocabulary", () => {
+  const valid = analyzeVueTemplate(
+    `<template><button class="n-button">Save</button></template><style>.n-button {}</style>`,
+    "/src/components/Button.vue",
+    { surfaceRootPrefixes: ["n-"] },
+  )
+  const missingPrefix = analyzeVueTemplate(
+    `<template><button class="button">Save</button></template><style>.button {}</style>`,
+    "/src/components/Button.vue",
+    { surfaceRootPrefixes: ["n-"] },
+  )
+
+  assert.deepEqual(valid.violations, [])
+  assert.deepEqual([...valid.surfaceRoots], ["n-button"])
+  assert.equal(
+    missingPrefix.violations.some(({ ruleId }) => ruleId === "surface-root-name"),
+    true,
+  )
+})
+
+test("validates surface root prefix configuration", () => {
+  assert.deepEqual(
+    validateNagiConfig(defineNagiConfig({ surfaceRootPrefixes: ["n-", "app-ui-"] })),
+    [],
+  )
+  assert.deepEqual(
+    validateNagiConfig(defineNagiConfig()),
+    ["surfaceRootPrefixes must contain at least one prefix"],
+  )
+  assert.deepEqual(
+    validateNagiConfig(defineNagiConfig({ surfaceRootPrefixes: [] })),
+    ["surfaceRootPrefixes must contain at least one prefix"],
+  )
+  assert.deepEqual(
+    validateNagiConfig(defineNagiConfig({ surfaceRootPrefixes: "n-" })),
+    ["surfaceRootPrefixes must be an array"],
+  )
+  assert.deepEqual(
+    validateNagiConfig(defineNagiConfig({ surfaceRootPrefixes: ["N-", "n"] })),
+    [
+      'surfaceRootPrefixes entries must be lowercase kebab prefixes ending in "-"; received "N-"',
+      'surfaceRootPrefixes entries must be lowercase kebab prefixes ending in "-"; received "n"',
+    ],
+  )
 })
 
 test("template analysis covers every semantic template rule", () => {
@@ -206,11 +285,11 @@ test("does not descend into SVG and MathML internals", () => {
   const source = `
 <template>
   <section class="foreign-surface">
-    <svg class="icon"><a><path /></a></svg>
+    <svg class="svg"><a><path /></a></svg>
     <math><mrow><a /></mrow></math>
   </section>
 </template>
-<style>.foreign-surface { > .icon {} }</style>`
+<style>.foreign-surface { > .svg {} }</style>`
   const result = analyzeVueTemplate(source, "/src/components/ForeignSurface.vue")
   assert.deepEqual(result.violations, [])
 })
@@ -223,6 +302,62 @@ test("accepts an anatomy name backed by a matching static role", () => {
 
   assert.deepEqual(result.violations, [])
   assert.deepEqual([...result.roleNames], ["toolbar"])
+})
+
+test("keeps element-table identity ahead of additional ARIA semantics", () => {
+  const valid = analyzeVueTemplate(
+    `<template><section class="separator-list"><ul class="list"><li class="item" role="separator" /></ul><div class="separator" role="separator" /></section></template>
+<style>.separator-list { > .list { > .item[role="separator"] {} } > .separator {} }</style>`,
+    "/src/components/SeparatorList.vue",
+  )
+  const roleInsteadOfElement = analyzeVueTemplate(
+    `<template><section class="separator-list"><li class="separator" role="separator" /></section></template>
+<style>.separator-list { > .separator {} }</style>`,
+    "/src/components/SeparatorList.vue",
+  )
+  const multipleBases = analyzeVueTemplate(
+    `<template><section class="separator-list"><li class="item separator" role="separator" /></section></template>`,
+    "/src/components/SeparatorList.vue",
+  )
+  const roleVariant = analyzeVueTemplate(
+    `<template><section class="separator-list"><li class="item -separator" role="separator" /></section></template>`,
+    "/src/components/SeparatorList.vue",
+  )
+  const mappedRoleVariant = analyzeVueTemplate(
+    `<template><section class="separator-list"><li class="item -separator" role="separator" /></section></template>`,
+    "/src/components/SeparatorList.vue",
+    { elementClasses: { li: "item -separator" } },
+  )
+
+  assert.deepEqual(valid.violations, [])
+  assert.deepEqual([...valid.roleNames], ["separator"])
+  assert.equal(
+    roleInsteadOfElement.violations.some(
+      ({ ruleId }) => ruleId === "element-class-required",
+    ),
+    true,
+  )
+  assert.equal(
+    roleInsteadOfElement.violations.some(({ ruleId }) => ruleId === "anatomy-allowed"),
+    true,
+  )
+  assert.deepEqual([...roleInsteadOfElement.roleNames], [])
+  assert.equal(
+    multipleBases.violations.some(({ ruleId }) => ruleId === "single-base-identity"),
+    true,
+  )
+  assert.equal(
+    roleVariant.violations.some(
+      ({ ruleId }) => ruleId === "variant-shadows-vocabulary",
+    ),
+    true,
+  )
+  assert.equal(
+    mappedRoleVariant.violations.some(
+      ({ ruleId }) => ruleId === "variant-shadows-vocabulary",
+    ),
+    true,
+  )
 })
 
 test("rejects variants that shadow vocabulary names", () => {

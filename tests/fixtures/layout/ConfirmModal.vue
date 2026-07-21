@@ -1,10 +1,10 @@
 <template>
-  <dialog class="confirm-modal">
+  <dialog class="test-confirm-modal">
     <p class="text">Sure?</p>
   </dialog>
 </template>
 <style scoped>
-.confirm-modal {
+.test-confirm-modal {
   margin: auto;
   inset: 0;
   > .text { color: red; }

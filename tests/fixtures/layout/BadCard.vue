@@ -1,10 +1,10 @@
 <template>
-  <article class="bad-card">
+  <article class="test-bad-card">
     <h3 class="title">Hi</h3>
   </article>
 </template>
 <style scoped>
-.bad-card {
+.test-bad-card {
   margin: 1rem;
   position: absolute;
   top: 0;

@@ -3,7 +3,7 @@
 Keep a static owned anchor and add dynamic library or variant tokens only beside it.
 
 ```vue
-<template><section class="icon-label"><svg class="icon" :class="iconName"/><span class="value" :class="{ '-muted': muted }"/></section></template>
+<template><section class="icon-label"><span class="icon" :class="iconName"><svg/></span><span class="value" :class="{ '-muted': muted }"/></section></template>
 <style scoped>.icon-label { > .icon {} > .value.-muted {} }</style>
 ```
 

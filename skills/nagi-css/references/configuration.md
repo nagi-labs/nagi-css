@@ -39,7 +39,17 @@ componentClasses: {
 ```
 
 Do not register application-owned Vue components here. Their surface root is
-derived from their own filename.
+derived from their own filename and the required `surfaceRootPrefixes`.
+
+```js
+surfaceRootPrefixes: ["n-", "app-"]
+```
+
+The array must contain at least one prefix. The accepted roots are exact
+derivations. `Button.vue` accepts `.n-button` or `.app-button`, but
+rejects both bare `.button` and unrelated `.n-control`. Prefixes must be
+lowercase kebab prefixes ending in `-`. Use one prefix for canonical new code;
+multiple entries are for repositories that intentionally contain namespaces.
 
 ```js
 // Incorrect: these become opaque library boundaries.
@@ -48,8 +58,8 @@ componentClasses: {
   ScenarioTreePath: "scenario-tree-path",
 }
 
-// Correct: omit both. ArtifactDetailPane.vue owns .artifact-detail-pane and
-// ScenarioTreePath.vue owns .scenario-tree-path in their respective SFCs.
+// Correct: omit both. With surfaceRootPrefixes: ["n-"], these files own
+// .n-artifact-detail-pane and .n-scenario-tree-path in their respective SFCs.
 componentClasses: []
 ```
 
@@ -73,6 +83,6 @@ Use `libraryBoundaryPrefixes` for opaque component root classes and
 ending in `-` matches by `startsWith`; another prefix matches itself and its
 hyphenated family.
 
-The semantic object also accepts `componentClassPrefix`, `elementClasses`, `anatomyClasses`,
+The semantic object also accepts `surfaceRootPrefixes`, `componentClassPrefix`, `elementClasses`, `anatomyClasses`,
 `bannedClasses`, `stateClasses`, and `tiers`. Prefer narrow project mappings
 over growing anatomy vocabulary to accommodate one local component.

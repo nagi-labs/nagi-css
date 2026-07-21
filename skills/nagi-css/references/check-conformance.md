@@ -21,6 +21,7 @@ the judgments the linter cannot make.
 
 - Style Elements:
   - Native HTML element semantics are used before class naming workarounds.
+  - Each element carries at most one base identity class; variants and library-internal classes do not create a second identity.
   - **STN in bulk is a smell — check for skipped semantic tags.** For each `div`/`span` carrying a STN tier, ask whether a more specific semantic element (`section`, `nav`, `header`, `footer`, `aside`, `article`, `ul`/`ol`/`li`, `dl`, `figure`, `time`, …) fits. If it does, it should be that element (self-documenting, Element-Table class), not a `div` + STN tier. A region that reads as a section/nav/list flagged as `block`/`stratum` is a finding.
   - A class matching a rendered HTML element name appears only on that element or on an element the tables deliberately map to it. There is no blanket exemption for document-only names: `.body` belongs to `<body>`.
   - Native element names are not reused as hyphen-delimited class segments for different meanings.
@@ -28,13 +29,14 @@ the judgments the linter cannot make.
   - `p` is used only for prose paragraphs, not generic text containers.
   - `dl`, `dt`, and `dd` are used only for clear name-value or term-description lists.
   - Layout and component-internal display use `div` or `span` by default unless stronger native semantics are clearly needed.
-  - Base names come from Accessibility Semantics, allowlisted UI Anatomy Semantics, or STN.
+  - Base names come from the first matching table-first step. Accessibility Semantics, allowlisted UI Anatomy Semantics, or STN are considered only for the residual `div`/`span` step.
+  - A table-mapped element keeps its fixed base when it carries an additional ARIA role: `<li class="item" role="separator">`, selected as `.item[role="separator"]`.
   - Domain Semantics do not appear in internal style element names.
   - Vague names such as `wrapper`, `container`, `inner`, `box`, `thing`, and `content-area` are avoided.
 
 - Variants:
   - Variants start with `-` and are written in alphabetical order.
-  - Variant stems stay outside the contract vocabulary: element classes, component classes, anatomy, STN tiers, slot surfaces, banned generic names, and rendered element names are not variant stems (`-title`, `-header`, `-wrapper`, `-span`).
+  - Variant stems stay outside the contract vocabulary: element classes, component classes, anatomy, STN tiers, slot surfaces, ARIA roles, banned generic names, and rendered element names are not variant stems (`-title`, `-separator`, `-header`, `-wrapper`, `-span`).
   - Multiple variants are allowed.
   - Domain distinctions inside a surface are variants only when they create a styling or UI role distinction.
   - Raw data/content categories are not variants, such as `-description` for a field named description.
@@ -50,6 +52,7 @@ the judgments the linter cannot make.
 
 - CSS:
   - The main surface selector is top-level.
+  - Each selector compound carries at most one base identity class.
   - Nested surface selectors are placed under the nearest owned scope when they remain in that rendered DOM subtree.
   - Teleported or otherwise detached surfaces stay top-level only when declared in `detachedSlotSurfaces`.
   - Style element selectors are nested under their owning parent block.

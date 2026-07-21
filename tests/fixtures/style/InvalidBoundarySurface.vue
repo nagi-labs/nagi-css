@@ -1,5 +1,5 @@
 <template>
-  <section class="invalid-boundary-surface">
+  <section class="test-invalid-boundary-surface">
     <DataTable class="ui-data-table">
       <Column class="ui-column">
         <template #body>
@@ -11,14 +11,14 @@
 </template>
 
 <style scoped>
-.invalid-boundary-surface .value {}
-.invalid-boundary-surface > button {}
-.invalid-boundary-surface > .ui-data-table .ui-table-column-body {}
-.invalid-boundary-surface > .ui-data-table > .ui-table-column-body {}
+.test-invalid-boundary-surface .value {}
+.test-invalid-boundary-surface > button {}
+.test-invalid-boundary-surface > .ui-data-table .ui-table-column-body {}
+.test-invalid-boundary-surface > .ui-data-table > .ui-table-column-body {}
 .ui-table-column-body {}
 .value {}
 
-.invalid-boundary-surface {
+.test-invalid-boundary-surface {
   > .mystery {}
   > .wrapper {}
   > .is-open {}

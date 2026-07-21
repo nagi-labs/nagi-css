@@ -7,7 +7,7 @@ import selectorParser from "postcss-selector-parser"
 import {
   buildNagiSets,
   defineNagiConfig,
-  deriveSurfaceRootName,
+  deriveAllowedSurfaceRootNames,
   mappingTokens,
   matchesClassPrefix,
 } from "./index.mjs"
@@ -137,6 +137,16 @@ function hasOwnedBaseClass(tokens, config) {
   return tokens.some((token) => !isVariant(token) && !isLibraryInternal(token, config))
 }
 
+function ownedBaseTokens(tokens, config, sets) {
+  return tokens.filter(
+    (token) =>
+      !isVariant(token) &&
+      !STATE_PREFIX_RE.test(token) &&
+      !sets.stateClasses.has(token) &&
+      !isLibraryInternal(token, config),
+  )
+}
+
 function push(violations, node, ruleId, message, fix) {
   violations.push({
     ruleId,
@@ -170,7 +180,9 @@ export function analyzeVueTemplate(source, filename, inputConfig = {}) {
   if (!template) return { roleNames, surfaceRoots, topLayerSurfaces, violations }
 
   const styledClasses = collectStyledClasses(descriptor.styles)
-  const expectedRoot = deriveSurfaceRootName(filename)
+  const expectedRoots = new Set(
+    deriveAllowedSurfaceRootNames(filename, config.surfaceRootPrefixes),
+  )
   const classRequired = (name) =>
     config.emitPolicy === "always" || styledClasses.has(name)
   const zoneIndex = config.tiers.indexOf("zone") + 1
@@ -185,6 +197,18 @@ export function analyzeVueTemplate(source, filename, inputConfig = {}) {
     const staticOwnedTokens = info.staticTokens.filter(
       (token) => !isVariant(token) && !isLibraryInternal(token, config),
     )
+    const baseTokens = [
+      ...new Set(ownedBaseTokens([...info.staticTokens, ...info.dynamicTokens], config, sets)),
+    ]
+
+    if (baseTokens.length > 1) {
+      push(
+        violations,
+        node,
+        "single-base-identity",
+        `Element has multiple base identity classes: "${baseTokens.join(" ")}"; keep exactly one table-first base and express additional semantics with attributes.`,
+      )
+    }
 
     if (info.dynamic && staticOwnedTokens.length === 0) {
       push(
@@ -198,29 +222,36 @@ export function analyzeVueTemplate(source, filename, inputConfig = {}) {
     const slotSurfaceTokens = info.staticTokens.filter((token) => sets.slotSurfaces.has(token))
     const identityTokens = info.staticTokens.filter(
       (token) =>
-        !isVariant(token) &&
-        !STATE_PREFIX_RE.test(token) &&
-        !sets.stateClasses.has(token) &&
-        !isLibraryInternal(token, config) &&
-        !sets.knownNames.has(token) &&
-        !sets.banned.has(token) &&
-        !sets.slotSurfaces.has(token),
+        expectedRoots.has(token) ||
+        (!isVariant(token) &&
+          !STATE_PREFIX_RE.test(token) &&
+          !sets.stateClasses.has(token) &&
+          !isLibraryInternal(token, config) &&
+          !sets.knownNames.has(token) &&
+          !sets.banned.has(token) &&
+          !sets.slotSurfaces.has(token)),
     )
-    const isMainRoot = depth === 0 && identityTokens.length > 0
+    const matchingRootTokens = identityTokens.filter((token) => expectedRoots.has(token))
+    const requiresSurfacePrefix =
+      Array.isArray(config.surfaceRootPrefixes) && config.surfaceRootPrefixes.length > 0
+    const isMainRoot =
+      depth === 0 &&
+      (identityTokens.length > 0 || (requiresSurfacePrefix && staticOwnedTokens.length > 0))
     const isSlotSurface = slotSurfaceTokens.length > 0
     const isSurfaceRoot = isMainRoot || isSlotSurface
 
     if (isMainRoot) {
-      for (const token of identityTokens) {
+      for (const token of matchingRootTokens) {
         surfaceRoots.add(token)
-        if (token !== expectedRoot) {
-          push(
-            violations,
-            node,
-            "surface-root-name",
-            `Surface root ".${token}" must be named ".${expectedRoot}" from the Vue file name.`,
-          )
-        }
+      }
+      if (matchingRootTokens.length === 0 || identityTokens.length !== matchingRootTokens.length) {
+        const expected = [...expectedRoots].map((token) => `".${token}"`).join(" or ")
+        push(
+          violations,
+          node,
+          "surface-root-name",
+          `Surface root must be named ${expected} from the configured prefix and Vue file name.`,
+        )
       }
     }
     if (isSlotSurface) {
@@ -236,7 +267,9 @@ export function analyzeVueTemplate(source, filename, inputConfig = {}) {
     }
 
     const role = getStaticAttr(node, "role")
-    if (role && staticTokens.has(role)) roleNames.add(role)
+    const acceptsRoleIdentity =
+      node.tagType === NATIVE && (node.tag === "div" || node.tag === "span")
+    if (acceptsRoleIdentity && role && staticTokens.has(role)) roleNames.add(role)
 
     for (const token of allTokens) checkState(token, node, sets, violations)
 
@@ -252,9 +285,15 @@ export function analyzeVueTemplate(source, filename, inputConfig = {}) {
 
     for (const token of allTokens) {
       if (!isVariant(token) || sets.stateClasses.has(token)) continue
-      const pairedBases = sets.fixedVariantBases.get(token)
-      if (pairedBases && [...pairedBases].some((base) => staticTokens.has(base))) continue
       const stem = token.slice(1)
+      const pairedBases = sets.fixedVariantBases.get(token)
+      if (
+        !sets.roleVocabulary.has(stem) &&
+        pairedBases &&
+        [...pairedBases].some((base) => staticTokens.has(base))
+      ) {
+        continue
+      }
       if (sets.variantShadowNames.has(stem)) {
         push(
           violations,
@@ -287,7 +326,10 @@ export function analyzeVueTemplate(source, filename, inputConfig = {}) {
           !sets.knownNames.has(token) &&
           !sets.banned.has(token) &&
           !sets.slotSurfaces.has(token)
-        if (arbitrary && !(token === role && staticTokens.has(token))) {
+        if (
+          arbitrary &&
+          !(acceptsRoleIdentity && token === role && staticTokens.has(token))
+        ) {
           push(
             violations,
             node,
@@ -308,7 +350,9 @@ export function analyzeVueTemplate(source, filename, inputConfig = {}) {
       const required = config.elementClasses[node.tag]
       const requiredTokens = mappingTokens(required)
       const missing = requiredTokens.filter((token) => !staticTokens.has(token))
-      const styledTrigger = requiredTokens.some((token) => classRequired(token))
+      const styledTrigger =
+        requiredTokens.some((token) => classRequired(token)) ||
+        [...allTokens].some((token) => styledClasses.has(token))
       const partialCarry =
         requiredTokens.length > 1 && staticTokens.has(requiredTokens[0])
       if (missing.length > 0 && (styledTrigger || partialCarry)) {
@@ -421,7 +465,7 @@ export function analyzeVueTemplate(source, filename, inputConfig = {}) {
   }
 
   return {
-    expectedRoot,
+    expectedRoots,
     roleNames,
     surfaceRoots,
     topLayerSurfaces,

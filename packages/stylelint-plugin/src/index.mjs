@@ -18,6 +18,7 @@ const ruleIds = [
   "bare-element-selector",
   "boundary-nesting",
   "owned-dom-direct-child",
+  "single-base-identity",
   "slot-surface-top-level",
   "state-not-class",
   "surface-external-layout",
@@ -191,9 +192,15 @@ function analyzeStyles(root, inputConfig) {
   }
 
   function checkVariantShadow(rule, token, compoundClasses = new Set()) {
-    const pairedBases = sets.fixedVariantBases.get(token)
-    if (pairedBases && [...pairedBases].some((base) => compoundClasses.has(base))) return
     const stem = token.slice(1)
+    const pairedBases = sets.fixedVariantBases.get(token)
+    if (
+      !sets.roleVocabulary.has(stem) &&
+      pairedBases &&
+      [...pairedBases].some((base) => compoundClasses.has(base))
+    ) {
+      return
+    }
     if (!sets.variantShadowNames.has(stem)) return
     report(
       rule,
@@ -203,8 +210,33 @@ function analyzeStyles(root, inputConfig) {
     )
   }
 
+  function checkSingleBaseIdentity(rule, nodes) {
+    const baseTokens = [
+      ...new Set(
+        nodes
+          .filter((node) => node.type === "class")
+          .map((node) => node.value)
+          .filter(
+            (token) =>
+              !token.startsWith("-") &&
+              !/^(?:is-|has-)/.test(token) &&
+              !sets.stateClasses.has(token) &&
+              !isLibraryInternal(token, config),
+          ),
+      ),
+    ]
+    if (baseTokens.length < 2) return
+    report(
+      rule,
+      "single-base-identity",
+      `Selector compound has multiple base identity classes: ".${baseTokens.join(" .")}"; keep exactly one table-first base and express additional semantics with attributes.`,
+      `.${baseTokens[1]}`,
+    )
+  }
+
   function checkAnatomy(rule, nodes) {
     if (hasDeepPseudo(nodes)) return
+    checkSingleBaseIdentity(rule, nodes)
     const compoundClasses = new Set(classNodesDeep(nodes).map((node) => node.value))
     for (const node of classNodesDeep(nodes)) {
       const token = node.value
@@ -359,6 +391,7 @@ function analyzeStyles(root, inputConfig) {
       const firstCompoundClasses = new Set(
         classNodesDeep(compounds[0]).map((node) => node.value),
       )
+      checkSingleBaseIdentity(rule, compounds[0])
       for (const node of compounds[0].filter((candidate) => candidate.type === "class")) {
         const token = node.value
         if (checkState(rule, token)) continue

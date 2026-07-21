@@ -3,14 +3,14 @@ defineProps({ active: Boolean, iconName: String })
 </script>
 
 <template>
-  <section class="component">
-    <i class="icon" :class="iconName" />
+  <section class="test-component">
+    <span class="icon" :class="iconName" />
     <div class="value" :data-active="active" />
   </section>
 </template>
 
 <style scoped>
-.component {
+.test-component {
   > .icon {}
   > .value {}
 }

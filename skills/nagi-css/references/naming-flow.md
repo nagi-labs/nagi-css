@@ -5,7 +5,7 @@ Deterministic, table-first. Apply top to bottom, stop at the first match. Judgme
 ## Decision procedure
 
 ```
-1. Styling surface root?          → name by identity (kebab-case: procedure-section, otp-auth-panel)
+1. Styling surface root?          → configured prefix + filename identity (`n-` + `OtpAuthPanel.vue` → `n-otp-auth-panel`)
 2. HTML element ≠ div/span?       → Element Class Table            (no judgment)
 3. Configured library component?  → Library Component Class Table  (no judgment)
 4. div / span?                    → Semantics: 4a → 4b → 4c
@@ -32,15 +32,20 @@ only in compound with its base. A variant is fixed **only for distinctions a
 selector cannot reach** (tag differences): attribute-reachable distinctions
 are selected through the attribute — `<input>` kinds are plain `input`,
 styled as `.input[type=checkbox]`, never a class copy of `type`.
+ARIA semantics follow the same rule: `<li role="separator">` keeps `item` and
+is styled as `.item[role="separator"]`; only `div`/`span` may use `separator`
+as their base identity with a matching role.
 
 Every other rendered element **self-maps** (class = tag name): `header`,
 `section`, `button`, `dialog`, `form`, `select`, `textarea`, `svg`, … No
 element is left without a legal class; the table lists only meaning-bearing
-overrides. A glyph-sized svg is usually better named with the anatomy class
-`icon`.
+overrides. A glyph-sized `<svg>` keeps `svg`; use an `icon` `div`/`span`
+wrapper only when a separate anatomy wrapper is actually needed.
 
 Multiple same-tag elements share the base class; differentiate with variants (`button -danger`).
 Override only by rule: wrong default → it's a surface root (name by identity) or add a variant. Never rename the base.
+An element and a selector compound each carry exactly one base identity;
+`item separator` is never a valid composition.
 
 ## 3. Library Component Class Table (declared in the config) — emit per `emitPolicy`
 
@@ -59,14 +64,14 @@ This class is a boundary **anchor, not a `>` licence into internals**. Style lib
 
 ## 4. div / span only — the Semantics model
 
-- **4a. Accessibility Semantics** — a class equal to an ARIA role (`toolbar`, `tablist`, `tab`, `tabpanel`, `menu`, `option`, `alert`, `status`, `dialog`, …) is allowed **only when the element carries the matching `role="X"` attribute**. No `role` attribute → no role name.
+- **4a. Accessibility Semantics** — a class equal to an ARIA role (`toolbar`, `tablist`, `tabpanel`, `menu`, `option`, `alert`, `status`, `dialog`, `separator`, …) is allowed **only when this `div`/`span` carries the matching `role="X"` attribute**. No `role` attribute → no role name. Elements covered by an earlier table keep that table identity and use an attribute selector for the role.
 - **4b. UI Anatomy allowlist** (closed, deliberately tiny): `field` (label+control wrapper) · `value` (read-only datum) · `actions` (button/action group) · `media` (image/figure wrapper) · `icon` (glyph-sized pictogram). Nothing else. Banned: `wrapper  container  inner  box  thing  content-area`. Dropped names route elsewhere: `title/body`→element table or STN, `list/item`→`<ul>/<li>`, `card/panel`→STN+`-card`, `status`→`-success` variant or `role="status"`, `trigger/overlay/viewport`→`role=` or variant.
 - **4c. STN** — ladder coarse→fine: `stratum · region · block · zone · seg · fr · g`. **Leaf-anchored + zone floor**, enforced by three local relations (depth counted along the **STN chain**, not raw DOM — semantic/component nodes between STN nodes don't count):
   - **Consecutive**: a STN element is exactly one tier finer than its nearest STN ancestor (`zone → seg → fr → g`); no skip, no inversion (siblings share a tier).
   - **Floor**: the shallowest STN in a surface (no STN ancestor) is `zone` or coarser — never `seg`/`fr`/`g` at the top. So an isolated STN div is `zone`.
   - **Reach-g**: if a surface uses a tier coarser than `zone` (`block`/`region`/`stratum`) it must also use `g` ("`block` without `g`" is illegal).
 
-  Effect: coarse names appear only in genuinely deep surfaces (a "this is deep → maybe split" signal). Past `g` → split the surface. Local meaning via variant (`zone -toolbar`), never by changing the tier.
+  Effect: coarse names appear only in genuinely deep surfaces (a "this is deep → maybe split" signal). Past `g` → split the surface. Local meaning via a non-vocabulary variant (`zone -filters`), never by changing the tier.
 
 ## Reserved-element-name rule
 

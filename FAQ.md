@@ -11,7 +11,7 @@ unconstrained. Nagi CSS is optimized for *reading, reviewing, and
 maintaining*: names carry meaning and structure is verifiable.
 
 The decisive difference is **canonical form**. Under Nagi CSS, the correct
-class for a node is *unique* — derived from the file name, the element and
+class for a node is *unique* — derived from the configured prefix and file name, the element and
 component tables, anatomy, or the STN ladder. A linter can therefore enforce
 it, and any two authors (human or AI) converge on the same output. Tailwind
 has no canonical form: many utility combinations produce the same look, and
@@ -36,7 +36,7 @@ is a fine choice. Nagi CSS bets on the other axis.
 
 BEM is a naming *convention*: it tells you how to format a name you already
 chose, and nothing checks the choice. Nagi CSS is a *contract*: the name
-itself is derived — surface roots from file names, fixed classes from
+itself is derived — surface roots from configured prefixes and file names, fixed classes from
 element/component tables, structural names from the STN ladder — and every
 derivation is lint-enforced, including things naming conventions never touch:
 ownership edges (`>`), UI-library boundaries, slot sub-surfaces, teleported

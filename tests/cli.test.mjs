@@ -18,12 +18,12 @@ test("CLI applies only safe fixed-class fixes from an external config", async (c
   const config = path.join(directory, "nagi.config.mjs")
   await fs.writeFile(
     component,
-    `<template><section class="fix-surface"><button>Save</button></section></template>
-<style>.fix-surface { > .button {} }</style>`,
+    `<template><section class="test-fix-surface"><button>Save</button></section></template>
+<style>.test-fix-surface { > .button {} }</style>`,
   )
   await fs.writeFile(
     config,
-    `export default { eslintFiles: ["*.vue"], stylelintFiles: ["*.vue"], semantic: {} }`,
+    `export default { eslintFiles: ["*.vue"], stylelintFiles: ["*.vue"], semantic: { surfaceRootPrefixes: ["test-"] } }`,
   )
 
   await execute(process.execPath, [cli, "check", "--config", config, "--cwd", directory, "--fix"])

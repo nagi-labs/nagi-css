@@ -1,5 +1,5 @@
 <template>
-  <section class="boundary-surface">
+  <section class="test-boundary-surface">
     <DataTable class="ui-data-table">
       <Column class="ui-column">
         <template #body>
@@ -13,7 +13,7 @@
 </template>
 
 <style scoped>
-.boundary-surface {
+.test-boundary-surface {
   > .ui-data-table {
     .ui-column {
       .ui-table-column-body {

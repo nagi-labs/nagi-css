@@ -21,11 +21,13 @@ Use this when creating new markup and CSS under the Nagi CSS contract.
    - Configured library component: take the fixed class from the Library Component Class Table (no judgment).
    - Only for `div`/`span`, apply the Semantics model: Accessibility Semantics (ARIA role) → allowlisted UI Anatomy (`field`, `value`, `actions`, `media`, `icon`) → STN (leaf-anchored ladder with a `zone` floor: `stratum`/`region`/`block`/`zone`/`seg`/`fr`/`g`).
    - A class equal to a rendered element name appears only on that element. There is no blanket exemption for document-only names: `.body` belongs to `<body>` and is invalid on a content `<div>`. Deliberate mappings such as `.title` on `<h1>`–`<h6>` and `.link` on `<a>` remain valid.
+   - Keep exactly one base identity. Additional ARIA semantics on a table-mapped element stay in the attribute: `<li class="item" role="separator">` with `.item[role="separator"]`. Only the residual `div`/`span` step may use the matching role name as its base.
 
 4. Add variants.
    - Use variants for styling role, density, size, domain meaning, and utility-like concerns.
    - Multiple variants are allowed and must be written in alphabetical order.
-   - Example: `class="footer -sr-only -toolbar"`.
+   - ARIA role names are protocol vocabulary and cannot be copied into variants (`-separator`, `-toolbar`).
+   - Example: `class="footer -dense -sr-only"`.
 
 5. Express runtime state without classes.
    - Prefer native states and pseudo-classes.
@@ -50,7 +52,7 @@ Use this when creating new markup and CSS under the Nagi CSS contract.
       </div>
     </dl>
   </div>
-  <footer class="footer -sr-only -toolbar">...</footer>
+  <footer class="footer -dense -sr-only">...</footer>
 </article>
 ```
 

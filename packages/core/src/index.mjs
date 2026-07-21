@@ -53,6 +53,22 @@ const RENDERED_ELEMENTS = [
   "u", "ul", "var", "video", "wbr",
 ]
 
+// Concrete WAI-ARIA roles are protocol vocabulary: they may be base names on
+// div/span when backed by a matching role attribute, but never variants.
+const ARIA_ROLE_NAMES = [
+  "alert", "alertdialog", "application", "article", "banner", "blockquote", "button",
+  "caption", "cell", "checkbox", "code", "columnheader", "combobox", "complementary",
+  "contentinfo", "definition", "deletion", "dialog", "directory", "document", "emphasis",
+  "feed", "figure", "form", "generic", "grid", "gridcell", "group", "heading", "img",
+  "insertion", "link", "list", "listbox", "listitem", "log", "main", "marquee", "math",
+  "menu", "menubar", "menuitem", "menuitemcheckbox", "menuitemradio", "meter", "navigation",
+  "none", "note", "option", "paragraph", "presentation", "progressbar", "radio", "radiogroup",
+  "region", "row", "rowgroup", "rowheader", "scrollbar", "search", "searchbox", "separator",
+  "slider", "spinbutton", "status", "strong", "subscript", "suggestion", "superscript", "switch",
+  "tab", "table", "tablist", "tabpanel", "term", "textbox", "time", "timer", "toolbar",
+  "tooltip", "tree", "treegrid", "treeitem",
+]
+
 // The table lists only meaning-bearing overrides; every other rendered
 // element self-maps so no element is left without a legal class.
 for (const tag of RENDERED_ELEMENTS) {
@@ -77,11 +93,17 @@ const DEFAULT_CONFIG = Object.freeze({
     "-active", "-busy", "-checked", "-disabled", "-error", "-expanded", "-hidden",
     "-invalid", "-loading", "-open", "-pressed", "-selected", "-success",
   ],
+  surfaceRootPrefixes: [],
   tiers: ["stratum", "region", "block", "zone", "seg", "fr", "g"],
 })
 
 function unique(values) {
   return [...new Set(values)]
+}
+
+function normalizeArray(value, fallback) {
+  const resolved = value ?? fallback
+  return Array.isArray(resolved) ? unique(resolved) : resolved
 }
 
 function derivedComponentClass(component, prefix) {
@@ -129,6 +151,10 @@ export function defineNagiConfig(config = {}) {
       config.libraryInternalPrefixes ?? DEFAULT_CONFIG.libraryInternalPrefixes,
     ),
     stateClasses: unique(config.stateClasses ?? DEFAULT_CONFIG.stateClasses),
+    surfaceRootPrefixes: normalizeArray(
+      config.surfaceRootPrefixes,
+      DEFAULT_CONFIG.surfaceRootPrefixes,
+    ),
     tiers: unique(config.tiers ?? DEFAULT_CONFIG.tiers),
   }
 }
@@ -196,6 +222,7 @@ export function buildNagiSets(input) {
     fixedVariantBases,
     knownNames: new Set([...elementValues, ...componentValues, ...anatomy, ...stn]),
     renderedElements: new Set(RENDERED_ELEMENTS),
+    roleVocabulary: new Set(ARIA_ROLE_NAMES),
     slotSurfaces: surfaces,
     stateClasses: new Set(config.stateClasses),
     stn,
@@ -208,6 +235,7 @@ export function buildNagiSets(input) {
       ...surfaces,
       ...config.bannedClasses,
       ...RENDERED_ELEMENTS,
+      ...ARIA_ROLE_NAMES,
     ]),
   }
 }
@@ -219,6 +247,19 @@ export function validateNagiConfig(config) {
   }
   if (typeof config.componentClassPrefix !== "string" || !config.componentClassPrefix) {
     errors.push("componentClassPrefix must be a non-empty string")
+  }
+  if (!Array.isArray(config.surfaceRootPrefixes)) {
+    errors.push("surfaceRootPrefixes must be an array")
+  } else if (config.surfaceRootPrefixes.length === 0) {
+    errors.push("surfaceRootPrefixes must contain at least one prefix")
+  } else {
+    for (const prefix of config.surfaceRootPrefixes) {
+      if (typeof prefix !== "string" || !/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*-$/.test(prefix)) {
+        errors.push(
+          `surfaceRootPrefixes entries must be lowercase kebab prefixes ending in "-"; received "${prefix}"`,
+        )
+      }
+    }
   }
 
   for (const [component, slots] of Object.entries(config.componentSlots ?? {})) {
@@ -261,6 +302,13 @@ export function deriveSurfaceRootName(filename) {
       .find((part) => part && part !== "pages" && !part.startsWith("[")) ?? basename
   }
   return `${kebabCase(name)}-page`
+}
+
+export function deriveAllowedSurfaceRootNames(filename, prefixes = []) {
+  const name = deriveSurfaceRootName(filename)
+  return Array.isArray(prefixes) && prefixes.length > 0
+    ? unique(prefixes.map((prefix) => `${prefix}${name}`))
+    : [name]
 }
 
 export { DEFAULT_CONFIG, ELEMENT_CLASSES, RENDERED_ELEMENTS }

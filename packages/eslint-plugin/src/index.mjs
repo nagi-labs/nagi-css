@@ -16,14 +16,16 @@ const ruleDescriptions = {
     "Require a static owned class beside every dynamic class binding",
   "element-class-required": "Require configured static element classes when styled",
   "reserved-element-name": "Reserve rendered element names for their mapped elements",
+  "single-base-identity": "Allow exactly one base identity class per element",
   "state-not-class": "Represent runtime state with native, ARIA, or data attributes",
-  "surface-root-name": "Derive component and page surface names from their Vue file",
+  "surface-root-name":
+    "Derive component and page surface names from the configured prefix and Vue file",
   "stn-floor": "Start each STN chain at zone or a coarser tier",
   "stn-order": "Keep adjacent STN tiers consecutive",
   "stn-reach-g": "Make surfaces above zone reach the g tier",
   "variant-order": "Keep static variant classes in alphabetical order",
   "variant-shadows-vocabulary":
-    "Keep variant names outside the element, component, anatomy, STN, and slot vocabulary",
+    "Keep variant names outside the element, component, anatomy, STN, slot, and ARIA role vocabulary",
 }
 
 function cachedAnalysis(context, config) {
@@ -89,7 +91,7 @@ const rules = Object.fromEntries(
 rules["valid-config"] = {
   meta: {
     type: "problem",
-    docs: { description: "Validate Nagi CSS component and slot configuration" },
+    docs: { description: "Validate Nagi CSS surface, component, and slot configuration" },
     schema: [{ type: "object" }],
     messages: { invalid: "{{message}}" },
   },

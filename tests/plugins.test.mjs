@@ -16,7 +16,10 @@ const invalidFile = path.join(root, "fixtures/invalid/Component.vue")
 const styleFile = path.join(root, "fixtures/style/BoundarySurface.vue")
 const invalidStyleFile = path.join(root, "fixtures/style/InvalidBoundarySurface.vue")
 
+const testSurface = { surfaceRootPrefixes: ["test-"] }
+
 const semantic = {
+  ...testSurface,
   componentClasses: { Column: "ui-column", DataTable: "ui-data-table" },
   componentSlotPrefixes: { Column: "ui-table-column" },
   componentSlots: { Column: { body: "ui-table-column-body" } },
@@ -28,7 +31,7 @@ async function lintEslint(file, config = {}) {
   const eslint = new ESLint({
     cwd: root,
     overrideConfigFile: true,
-    overrideConfig: [createNagiEslintConfig(config)],
+    overrideConfig: [createNagiEslintConfig({ ...testSurface, ...config })],
   })
   return (await eslint.lintText(await fs.readFile(file, "utf8"), { filePath: file }))[0]
 }
@@ -37,7 +40,7 @@ async function lintStylelint(file, config = semantic) {
   return stylelint.lint({
     code: await fs.readFile(file, "utf8"),
     codeFilename: file,
-    config: createNagiStylelintConfig(config),
+    config: createNagiStylelintConfig({ ...testSurface, ...config }),
   })
 }
 
@@ -54,14 +57,24 @@ test("ESLint accepts additive dynamic classes and reports template violations", 
   assert.ok(invalid.messages.some(({ ruleId }) => ruleId === "nagi-css/state-not-class"))
 })
 
+test("ESLint and Stylelint share an exact configured surface prefix", async () => {
+  const file = path.join(root, "fixtures/prefixed/Toggle.vue")
+  const config = { surfaceRootPrefixes: ["n-"] }
+  const eslint = await lintEslint(file, config)
+  const styles = await lintStylelint(file, config)
+
+  assert.equal(eslint.errorCount, 0)
+  assert.equal(styles.errored, false, JSON.stringify(styles.results[0].warnings))
+})
+
 test("ESLint autofixes an unambiguous required static class", async () => {
   const eslint = new ESLint({
     cwd: root,
     fix: true,
     overrideConfigFile: true,
-    overrideConfig: [createNagiEslintConfig({ emitPolicy: "always" })],
+    overrideConfig: [createNagiEslintConfig({ ...testSurface, emitPolicy: "always" })],
   })
-  const code = `<template><section class="fix-surface"><button>-</button></section></template>`
+  const code = `<template><section class="test-fix-surface"><button>-</button></section></template>`
   const [result] = await eslint.lintText(code, {
     filePath: path.join(root, "fixtures/FixSurface.vue"),
   })
@@ -77,9 +90,9 @@ test("Stylelint accepts nested UI boundaries and deep library internals", async 
 
 test("Stylelint treats an automatically derived pv class as a boundary", async () => {
   const result = await stylelint.lint({
-    code: `<template><section class="table-host"><DataTable class="pv-data-table" /></section></template>\n<style scoped>.table-host { > .pv-data-table { > .value {} } }</style>`,
+    code: `<template><section class="test-table-host"><DataTable class="pv-data-table" /></section></template>\n<style scoped>.test-table-host { > .pv-data-table { > .value {} } }</style>`,
     codeFilename: path.join(root, "fixtures/TableHost.vue"),
-    config: createNagiStylelintConfig({ componentClasses: ["DataTable"] }),
+    config: createNagiStylelintConfig({ ...testSurface, componentClasses: ["DataTable"] }),
   })
 
   assert.equal(
@@ -90,10 +103,19 @@ test("Stylelint treats an automatically derived pv class as a boundary", async (
 
 test("Stylelint recognizes body while template analysis enforces its owner", async () => {
   const result = await stylelint.lint({
-    code: `<template><section class="invalid-body"><div class="body" /></section></template>\n<style scoped>.invalid-body { > .body { color: inherit; } }</style>`,
+    code: `<template><section class="test-invalid-body"><div class="body" /></section></template>\n<style scoped>.test-invalid-body { > .body { color: inherit; } }</style>`,
     codeFilename: path.join(root, "fixtures/InvalidBody.vue"),
-    config: createNagiStylelintConfig(),
+    config: createNagiStylelintConfig(testSurface),
   })
+
+  assert.equal(result.errored, false, JSON.stringify(result.results[0].warnings))
+})
+
+test("Stylelint accepts table-first identity with ARIA attribute semantics", async () => {
+  const result = await lintStylelint(
+    path.join(root, "fixtures/roles/SeparatorList.vue"),
+    {},
+  )
 
   assert.equal(result.errored, false, JSON.stringify(result.results[0].warnings))
 })
@@ -146,10 +168,10 @@ test("Stylelint keeps external layout off surfaces except top-layer or anchored 
 
 test("Stylelint rejects selector variants that shadow vocabulary names", async () => {
   const result = await stylelint.lint({
-    code: `<template><section class="shadow-surface"><p class="text -lead">x</p></section></template>
-<style scoped>.shadow-surface { > .text.-title {} > .text.-lead {} }</style>`,
+    code: `<template><section class="test-shadow-surface"><p class="text -lead">x</p></section></template>
+<style scoped>.test-shadow-surface { > .text.-title {} > .text.-lead {} }</style>`,
     codeFilename: path.join(root, "fixtures/ShadowSurface.vue"),
-    config: createNagiStylelintConfig(),
+    config: createNagiStylelintConfig(testSurface),
   })
   const shadowWarnings = result.results[0].warnings.filter(
     ({ rule }) => rule === "nagi-css/variant-shadows-vocabulary",
@@ -163,14 +185,44 @@ test("ESLint rejects template variants that shadow vocabulary names", async () =
   const eslint = new ESLint({
     cwd: root,
     overrideConfigFile: true,
-    overrideConfig: [createNagiEslintConfig()],
+    overrideConfig: [createNagiEslintConfig(testSurface)],
   })
   const [result] = await eslint.lintText(
-    `<template><section class="shadow-surface"><p class="text -title">x</p></section></template>`,
+    `<template><section class="test-shadow-surface"><p class="text -title">x</p></section></template>`,
     { filePath: path.join(root, "fixtures/ShadowSurface.vue") },
   )
 
   assert.ok(
     result.messages.some(({ ruleId }) => ruleId === "nagi-css/variant-shadows-vocabulary"),
+  )
+})
+
+test("ESLint rejects multiple base identities", async () => {
+  const eslint = new ESLint({
+    cwd: root,
+    overrideConfigFile: true,
+    overrideConfig: [createNagiEslintConfig(testSurface)],
+  })
+  const [result] = await eslint.lintText(
+    `<template><section class="test-separator-list"><li class="item separator" role="separator" /></section></template>`,
+    { filePath: path.join(root, "fixtures/SeparatorList.vue") },
+  )
+
+  assert.ok(
+    result.messages.some(({ ruleId }) => ruleId === "nagi-css/single-base-identity"),
+  )
+})
+
+test("Stylelint rejects multiple base identities in one compound", async () => {
+  const result = await stylelint.lint({
+    code: `<style scoped>.test-compound-surface { > .item.zone {} }</style>`,
+    codeFilename: path.join(root, "fixtures/CompoundSurface.vue"),
+    config: createNagiStylelintConfig(testSurface),
+  })
+
+  assert.ok(
+    result.results[0].warnings.some(
+      ({ rule }) => rule === "nagi-css/single-base-identity",
+    ),
   )
 })
