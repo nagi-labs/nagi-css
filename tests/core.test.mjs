@@ -116,6 +116,38 @@ test("does not grant a blanket document-only name exemption", () => {
   }
 })
 
+test("uses unit as the STN floor without a legacy zone alias", () => {
+  assert.deepEqual(defineNagiConfig().tiers, [
+    "stratum",
+    "region",
+    "block",
+    "unit",
+    "seg",
+    "fr",
+    "g",
+  ])
+
+  const shallow = analyzeVueTemplate(
+    `<template><section class="stn-surface"><div class="unit"><div class="seg" /></div></section></template>`,
+    "/src/components/StnSurface.vue",
+  )
+  const deep = analyzeVueTemplate(
+    `<template><section class="stn-surface"><div class="stratum"><div class="region"><div class="block"><div class="unit"><div class="seg"><div class="fr"><div class="g" /></div></div></div></div></div></div></section></template>`,
+    "/src/components/StnSurface.vue",
+  )
+  const legacy = analyzeVueTemplate(
+    `<template><section class="stn-surface"><div class="zone" /></section></template>`,
+    "/src/components/StnSurface.vue",
+  )
+
+  assert.deepEqual(shallow.violations, [])
+  assert.deepEqual(deep.violations, [])
+  assert.equal(
+    legacy.violations.some(({ ruleId }) => ruleId === "anatomy-allowed"),
+    true,
+  )
+})
+
 test("validates component-owned slot surface prefixes", () => {
   const valid = defineNagiConfig({
     surfaceRootPrefixes: ["test-"],
@@ -381,19 +413,19 @@ test("rejects variants that shadow vocabulary names", () => {
 
 test("variant shadow check covers banned names, rendered elements, and dynamic literals", () => {
   const banned = analyzeVueTemplate(
-    `<template><section class="shadow-surface"><div class="zone -wrapper" /></section></template>`,
+    `<template><section class="shadow-surface"><div class="unit -wrapper" /></section></template>`,
     "/src/components/ShadowSurface.vue",
   )
   const rendered = analyzeVueTemplate(
-    `<template><section class="shadow-surface"><div class="zone -span" /></section></template>`,
+    `<template><section class="shadow-surface"><div class="unit -span" /></section></template>`,
     "/src/components/ShadowSurface.vue",
   )
   const dynamic = analyzeVueTemplate(
-    `<template><section class="shadow-surface"><div class="zone" :class="{ '-title': fancy }" /></section></template>`,
+    `<template><section class="shadow-surface"><div class="unit" :class="{ '-title': fancy }" /></section></template>`,
     "/src/components/ShadowSurface.vue",
   )
   const state = analyzeVueTemplate(
-    `<template><section class="shadow-surface"><div class="zone -active" /></section></template>`,
+    `<template><section class="shadow-surface"><div class="unit -active" /></section></template>`,
     "/src/components/ShadowSurface.vue",
   )
 

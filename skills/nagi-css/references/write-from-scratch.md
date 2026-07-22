@@ -19,7 +19,7 @@ Use this when creating new markup and CSS under the Nagi CSS contract.
 3. Pick style element base names — table-first, follow [naming-flow.md](naming-flow.md).
    - HTML element ≠ `div`/`span`: take the fixed class from the Element Class Table (no judgment).
    - Configured library component: take the fixed class from the Library Component Class Table (no judgment).
-   - Only for `div`/`span`, apply the Semantics model: Accessibility Semantics (ARIA role) → allowlisted UI Anatomy (`field`, `value`, `actions`, `media`, `icon`) → STN (leaf-anchored ladder with a `zone` floor: `stratum`/`region`/`block`/`zone`/`seg`/`fr`/`g`).
+   - Only for `div`/`span`, apply the Semantics model: Accessibility Semantics (ARIA role) → allowlisted UI Anatomy (`field`, `value`, `actions`, `media`, `icon`) → STN (leaf-anchored ladder with a `unit` floor: `stratum`/`region`/`block`/`unit`/`seg`/`fr`/`g`).
    - A class equal to a rendered element name appears only on that element. There is no blanket exemption for document-only names: `.body` belongs to `<body>` and is invalid on a content `<div>`. Deliberate mappings such as `.title` on `<h1>`–`<h6>` and `.link` on `<a>` remain valid.
    - Keep exactly one base identity. Additional ARIA semantics on a table-mapped element stay in the attribute: `<li class="item" role="separator">` with `.item[role="separator"]`. Only the residual `div`/`span` step may use the matching role name as its base.
 
@@ -44,7 +44,7 @@ Use this when creating new markup and CSS under the Nagi CSS contract.
   <header class="header">
     <h3 class="title">Invoice</h3>
   </header>
-  <div class="zone">
+  <div class="unit">
     <dl class="list -description">
       <div class="field -user">
         <dt class="term">User</dt>

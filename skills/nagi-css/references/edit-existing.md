@@ -20,7 +20,7 @@ Use this when revising existing markup/CSS to follow the Nagi CSS contract.
    - A `div`/`span` earns its place only if it is a styling surface, **groups two or more children that must be laid out or styled together**, carries an Accessibility/Anatomy meaning, or is a STN node with actual styled purpose.
    - Remove a wrapper that ends up holding a single (visible) child — e.g. a group whose siblings are `display:none` or were deleted — and promote the child in its place. Delete permanently hidden / dead elements rather than keeping them plus their wrapper.
    - Fewer wrappers = shallower nesting = lower STN tiers and fewer STN elements. This is the everyday complement to "split when too deep" (CONTRACT.md §"Depth is capped"): also **collapse** a level that adds nothing.
-   - Example: `<div class="zone"><h1 class="title"/><p class="text -subtitle"/></div>` where the subtitle is always `display:none` → delete the subtitle and the wrapper, leaving `<h1 class="title"/>` directly under the header.
+   - Example: `<div class="unit"><h1 class="title"/><p class="text -subtitle"/></div>` where the subtitle is always `display:none` → delete the subtitle and the wrapper, leaving `<h1 class="title"/>` directly under the header.
 
 4. Normalize internal style elements.
    - Replace domain-heavy internal names with Accessibility Semantics, allowlisted UI Anatomy Semantics, or STN.

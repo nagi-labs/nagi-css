@@ -94,7 +94,7 @@ const DEFAULT_CONFIG = Object.freeze({
     "-invalid", "-loading", "-open", "-pressed", "-selected", "-success",
   ],
   surfaceRootPrefixes: [],
-  tiers: ["stratum", "region", "block", "zone", "seg", "fr", "g"],
+  tiers: ["stratum", "region", "block", "unit", "seg", "fr", "g"],
 })
 
 function unique(values) {

@@ -66,12 +66,12 @@ This class is a boundary **anchor, not a `>` licence into internals**. Style lib
 
 - **4a. Accessibility Semantics** — a class equal to an ARIA role (`toolbar`, `tablist`, `tabpanel`, `menu`, `option`, `alert`, `status`, `dialog`, `separator`, …) is allowed **only when this `div`/`span` carries the matching `role="X"` attribute**. No `role` attribute → no role name. Elements covered by an earlier table keep that table identity and use an attribute selector for the role.
 - **4b. UI Anatomy allowlist** (closed, deliberately tiny): `field` (label+control wrapper) · `value` (read-only datum) · `actions` (button/action group) · `media` (image/figure wrapper) · `icon` (glyph-sized pictogram). Nothing else. Banned: `wrapper  container  inner  box  thing  content-area`. Dropped names route elsewhere: `title/body`→element table or STN, `list/item`→`<ul>/<li>`, `card/panel`→STN+`-card`, `status`→`-success` variant or `role="status"`, `trigger/overlay/viewport`→`role=` or variant.
-- **4c. STN** — ladder coarse→fine: `stratum · region · block · zone · seg · fr · g`. **Leaf-anchored + zone floor**, enforced by three local relations (depth counted along the **STN chain**, not raw DOM — semantic/component nodes between STN nodes don't count):
-  - **Consecutive**: a STN element is exactly one tier finer than its nearest STN ancestor (`zone → seg → fr → g`); no skip, no inversion (siblings share a tier).
-  - **Floor**: the shallowest STN in a surface (no STN ancestor) is `zone` or coarser — never `seg`/`fr`/`g` at the top. So an isolated STN div is `zone`.
-  - **Reach-g**: if a surface uses a tier coarser than `zone` (`block`/`region`/`stratum`) it must also use `g` ("`block` without `g`" is illegal).
+- **4c. STN** — ladder coarse→fine: `stratum · region · block · unit · seg · fr · g`. **Leaf-anchored + unit floor**, enforced by three local relations (depth counted along the **STN chain**, not raw DOM — semantic/component nodes between STN nodes don't count):
+  - **Consecutive**: a STN element is exactly one tier finer than its nearest STN ancestor (`unit → seg → fr → g`); no skip, no inversion (siblings share a tier).
+  - **Floor**: the shallowest STN in a surface (no STN ancestor) is `unit` or coarser — never `seg`/`fr`/`g` at the top. So an isolated STN div is `unit`.
+  - **Reach-g**: if a surface uses a tier coarser than `unit` (`block`/`region`/`stratum`) it must also use `g` ("`block` without `g`" is illegal).
 
-  Effect: coarse names appear only in genuinely deep surfaces (a "this is deep → maybe split" signal). Past `g` → split the surface. Local meaning via a non-vocabulary variant (`zone -filters`), never by changing the tier.
+  Effect: coarse names appear only in genuinely deep surfaces (a "this is deep → maybe split" signal). Past `g` → split the surface. Local meaning via a non-vocabulary variant (`unit -filters`), never by changing the tier. `unit` is a hierarchy name, not a measurement unit; `fr` is short for `fraction`.
 
 ## Reserved-element-name rule
 
@@ -96,7 +96,7 @@ Good:
 .procedure-page {
   > .header {
     display: grid;
-    > .zone.-intro > .title { margin: 0; }
+    > .unit.-intro > .title { margin: 0; }
   }
 
   > .ui-data-table .ui-table-column-body {
@@ -108,7 +108,7 @@ Good:
 Bad (flattened, and forces `>` past readability):
 
 ```css
-.procedure-page > .header > .zone.-intro > .title { margin: 0; }
+.procedure-page > .header > .unit.-intro > .title { margin: 0; }
 ```
 
 ## Example
@@ -118,7 +118,7 @@ Bad (flattened, and forces `>` past readability):
   <header class="header">
     <h3 class="title">Invoice</h3>
   </header>
-  <div class="zone">
+  <div class="unit">
     <dl class="list -description">
       <div class="field -user">
         <dt class="term">User</dt>

@@ -42,7 +42,7 @@ derivation is lint-enforced, including things naming conventions never touch:
 ownership edges (`>`), UI-library boundaries, slot sub-surfaces, teleported
 surfaces, and attribute-based state.
 
-## The STN vocabulary (`stratum`/`region`/`block`/`zone`/`seg`/`fr`/`g`) looks over-engineered.
+## The STN vocabulary (`stratum`/`region`/`block`/`unit`/`seg`/`fr`/`g`) looks over-engineered.
 
 STN is the piece that closes the contract end to end. The naming flow —
 surface root → element table → component table → role → anatomy — leaves
@@ -53,7 +53,7 @@ mechanically from depth, so *every* element gets a rule-derived name and the
 determinism holds edge to edge.
 
 Used correctly, STN recedes: maximize semantic HTML and most surfaces need
-only a few shallow tiers (mostly `zone`). A surface full of coarse STN names
+only a few shallow tiers (mostly `unit`). A surface full of coarse STN names
 is the contract telling you the component is too deep and should be split —
 a smell detector, not a naming style to lean on.
 

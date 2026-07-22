@@ -215,7 +215,7 @@ test("ESLint rejects multiple base identities", async () => {
 
 test("Stylelint rejects multiple base identities in one compound", async () => {
   const result = await stylelint.lint({
-    code: `<style scoped>.test-compound-surface { > .item.zone {} }</style>`,
+    code: `<style scoped>.test-compound-surface { > .item.unit {} }</style>`,
     codeFilename: path.join(root, "fixtures/CompoundSurface.vue"),
     config: createNagiStylelintConfig(testSurface),
   })
@@ -223,6 +223,20 @@ test("Stylelint rejects multiple base identities in one compound", async () => {
   assert.ok(
     result.results[0].warnings.some(
       ({ rule }) => rule === "nagi-css/single-base-identity",
+    ),
+  )
+})
+
+test("Stylelint rejects the legacy zone STN name", async () => {
+  const result = await stylelint.lint({
+    code: `<style scoped>.test-legacy-zone-surface { > .zone {} }</style>`,
+    codeFilename: path.join(root, "fixtures/LegacyZoneSurface.vue"),
+    config: createNagiStylelintConfig(testSurface),
+  })
+
+  assert.ok(
+    result.results[0].warnings.some(
+      ({ rule }) => rule === "nagi-css/anatomy-allowed",
     ),
   )
 })

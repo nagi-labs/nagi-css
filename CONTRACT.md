@@ -176,12 +176,12 @@ Example:
   <header class="header">
     <h2 class="title">Notification settings</h2>
   </header>
-  <div class="zone">...</div>
+  <div class="unit">...</div>
   <footer class="footer">...</footer>
 </section>
 ```
 
-Here, `header`, `title`, `zone`, and `footer` are style elements owned by `settings-panel`.
+Here, `header`, `title`, `unit`, and `footer` are style elements owned by `settings-panel`.
 
 ### Style Variants
 
@@ -504,7 +504,7 @@ element. Notes that survive the trimming:
   `.item[role="separator"]`; `class="separator"`, `class="item separator"`,
   and `class="item -separator"` are non-canonical on `<li>`.
 - A mapping-fixed variant is legal only in compound with its base
-  (`.rowgroup.-head` conforms; `.zone.-head` is judged as an ordinary
+  (`.rowgroup.-head` conforms; `.unit.-head` is judged as an ordinary
   variant).
 - ARIA role `menu` on a `div`/`span` still requires an explicit `role`
   attribute; the class `menu` on `<menu>` comes from the self-map.
@@ -610,34 +610,59 @@ Example:
 
 Use STN only for a `div`/`span` that no Accessibility Semantics or allowlisted UI Anatomy name fits — the structural fallback for elements that would otherwise become `wrapper`, `inner`, or `box`.
 
-The tier ladder, coarse → fine: `stratum` · `region` · `block` · `zone` · `seg` · `fr` · `g`.
+The tier ladder, coarse → fine: `stratum` · `region` · `block` · `unit` · `seg` · `fr` · `g`.
 
-STN is **leaf-anchored with a zone floor**. The deepest tier is `g`; shallow chains start at `zone` and go `zone → seg → fr → g`. A chain reaches above `zone` (into `block → region → stratum`) only when it is deep enough to also bottom out at `g`. So the coarse names (`stratum`/`region`/`block`) appear **only in genuinely deep surfaces** — seeing one is a signal the surface is deep (and probably should be split). Depth is counted along the **STN chain** (nearest-STN-ancestor → nearest-STN-descendant), not raw DOM depth: semantic elements and components between STN nodes don't count, so the more semantic the markup, the fewer and shallower the STN names.
+STN is **leaf-anchored with a unit floor**. The deepest tier is `g`; shallow chains start at `unit` and go `unit → seg → fr → g`. A chain reaches above `unit` (into `block → region → stratum`) only when it is deep enough to also bottom out at `g`. So the coarse names (`stratum`/`region`/`block`) appear **only in genuinely deep surfaces** — seeing one is a signal the surface is deep (and probably should be split). Depth is counted along the **STN chain** (nearest-STN-ancestor → nearest-STN-descendant), not raw DOM depth: semantic elements and components between STN nodes don't count, so the more semantic the markup, the fewer and shallower the STN names.
 
 The scheme is enforced by three **local relations** — no global depth computation, no absolute "tier = depth":
 
-- **Consecutive (no skip).** A STN element is exactly one tier finer than its nearest STN ancestor (`zone → seg → fr → g`). No skipping, no inversion. Siblings therefore share a tier.
-- **Floor.** The shallowest STN in a surface (no STN ancestor) is `zone` or coarser — never `seg`/`fr`/`g` at the top.
-- **Reach-g.** If a surface uses any tier coarser than `zone` (`block`/`region`/`stratum`), it must also use `g`. "`block` without `g`" is illegal: a coarse tier only appears when the chain is long enough to reach the leaf.
+- **Consecutive (no skip).** A STN element is exactly one tier finer than its nearest STN ancestor (`unit → seg → fr → g`). No skipping, no inversion. Siblings therefore share a tier.
+- **Floor.** The shallowest STN in a surface (no STN ancestor) is `unit` or coarser — never `seg`/`fr`/`g` at the top.
+- **Reach-g.** If a surface uses any tier coarser than `unit` (`block`/`region`/`stratum`), it must also use `g`. "`block` without `g`" is illegal: a coarse tier only appears when the chain is long enough to reach the leaf.
 
 These three uniquely determine the tiers for any tree and are machine-checkable per surface (parent/child adjacency + a per-surface "is `g` present?" check). A slot sub-surface is its own surface and resets the chain.
 
-- Restore local meaning with a variant (`zone -filters`), never by changing the tier.
+- Restore local meaning with a variant (`unit -filters`), never by changing the tier.
 
-(`zone` and `g` are used rather than the more natural `area` and `u`, which collide with the rendered elements `<area>`/`<u>`.)
+#### STN naming charter
 
-Example (a shallow surface: two nested STN divs plus an isolated one — all start at `zone`):
+`unit` is a hierarchy name, not a measurement unit. In source it appears as a
+class token (`class="unit"`, `.unit`), so search for that code form or say “STN
+unit” when prose needs to distinguish it from a unit test. Two tiers below it,
+`fr` is short for **fraction**. In a class token it is an STN tier; in a CSS
+declaration value it retains the standard CSS Grid fractional-unit meaning.
+The leaf remains `g` rather than `u`, because `u` collides with the rendered
+`<u>` element and its fixed class.
+
+The generic quality of `unit` is deliberate. It is the most frequent STN tier,
+and repeated use gives a generic anchor a stable local meaning. Its adjacency
+to `block` also supplies the familiar block → unit reading. Rare tiers need
+distinctive words because readers repeatedly have to recover their meaning;
+the frequent anchor does not.
+
+Rejected alternatives are recorded here so the same constraints do not need
+to be rediscovered:
+
+- `pane` — a concrete UI term that implies a visible panel and violates the
+  rule against false UI anatomy.
+- `area` — collides with the rendered `<area>` element and its fixed class.
+- `space` — suggests whitespace or spacing rather than hierarchy, collides
+  heavily with layout/token language, and loses the local block → unit reading.
+- `tract` — distinctive but too uncommon in ordinary engineering vocabulary;
+  intermittent encounters force readers to recover its meaning again.
+
+Example (a shallow surface: two nested STN divs plus an isolated one — all start at `unit`):
 
 ```html
 <section class="settings-panel">
-  <div class="zone -filters">
+  <div class="unit -filters">
     <div class="seg -search">...</div>
   </div>
-  <div class="zone -footer">...</div>
+  <div class="unit -footer">...</div>
 </section>
 ```
 
-> Determinism note: the tier is still fully determined by the tree (no "size" / "start anywhere" judgment) — it is anchored at the leaf (`g`) with a `zone` floor instead of at the root. That keeps it machine-checkable, and makes the coarse tiers a rare "this is deep" signal rather than the default outermost name. (Anchoring `tier = depth-from-root` instead would make `block` appear in shallow trees that never reach `g`.)
+> Determinism note: the tier is still fully determined by the tree (no "size" / "start anywhere" judgment) — it is anchored at the leaf (`g`) with a `unit` floor instead of at the root. That keeps it machine-checkable, and makes the coarse tiers a rare "this is deep" signal rather than the default outermost name. (Anchoring `tier = depth-from-root` instead would make `block` appear in shallow trees that never reach `g`.)
 
 #### Depth is capped — component splitting is the one non-deterministic step
 
@@ -689,8 +714,8 @@ Examples:
 ```html
 <button class="button -trigger">Open</button>
 <div class="dialog -confirm" role="dialog">...</div>
-<div class="zone -filters">...</div>
-<div class="zone -order">...</div>
+<div class="unit -filters">...</div>
+<div class="unit -order">...</div>
 <article class="invoice-card">...</article>
 ```
 

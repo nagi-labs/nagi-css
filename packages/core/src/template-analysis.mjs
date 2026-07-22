@@ -185,7 +185,7 @@ export function analyzeVueTemplate(source, filename, inputConfig = {}) {
   )
   const classRequired = (name) =>
     config.emitPolicy === "always" || styledClasses.has(name)
-  const zoneIndex = config.tiers.indexOf("zone") + 1
+  const unitIndex = config.tiers.indexOf("unit") + 1
   const leafIndex = config.tiers.indexOf("g") + 1
 
   function visit(node, depth, nearestStnIndex = null, surfaceContext = null) {
@@ -409,12 +409,12 @@ export function analyzeVueTemplate(source, filename, inputConfig = {}) {
     const stnIndex = stnToken ? sets.stnIndex.get(stnToken) : null
     const context = isSurfaceRoot ? { coarse: [], hasLeaf: false } : surfaceContext
     if (stnIndex != null) {
-      if (nearestStnIndex == null && zoneIndex > 0 && stnIndex > zoneIndex) {
+      if (nearestStnIndex == null && unitIndex > 0 && stnIndex > unitIndex) {
         push(
           violations,
           node,
           "stn-floor",
-          `Outermost STN class "${stnToken}" must be zone or coarser.`,
+          `Outermost STN class "${stnToken}" must be unit or coarser.`,
         )
       } else if (nearestStnIndex != null && stnIndex !== nearestStnIndex + 1) {
         push(
@@ -425,7 +425,7 @@ export function analyzeVueTemplate(source, filename, inputConfig = {}) {
         )
       }
       if (context) {
-        if (zoneIndex > 0 && stnIndex < zoneIndex) context.coarse.push({ node, token: stnToken })
+        if (unitIndex > 0 && stnIndex < unitIndex) context.coarse.push({ node, token: stnToken })
         if (leafIndex > 0 && stnIndex === leafIndex) context.hasLeaf = true
       }
     }
@@ -455,7 +455,7 @@ export function analyzeVueTemplate(source, filename, inputConfig = {}) {
         violations,
         first.node,
         "stn-reach-g",
-        `STN class "${first.token}" is coarser than zone, so this surface must reach the "g" tier.`,
+        `STN class "${first.token}" is coarser than unit, so this surface must reach the "g" tier.`,
       )
     }
   }

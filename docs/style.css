@@ -193,7 +193,7 @@ body {
     }
 
     &.-naming {
-      > .zone {
+      > .unit {
         display: grid;
         grid-template-columns: 7fr 5fr;
         gap: calc(var(--space) * 2);
@@ -421,7 +421,7 @@ body {
 
     > .section {
       &.-naming {
-        > .zone {
+        > .unit {
           grid-template-columns: 1fr;
         }
       }

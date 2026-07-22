@@ -20,9 +20,9 @@ const ruleDescriptions = {
   "state-not-class": "Represent runtime state with native, ARIA, or data attributes",
   "surface-root-name":
     "Derive component and page surface names from the configured prefix and Vue file",
-  "stn-floor": "Start each STN chain at zone or a coarser tier",
+  "stn-floor": "Start each STN chain at unit or a coarser tier",
   "stn-order": "Keep adjacent STN tiers consecutive",
-  "stn-reach-g": "Make surfaces above zone reach the g tier",
+  "stn-reach-g": "Make surfaces above unit reach the g tier",
   "variant-order": "Keep static variant classes in alphabetical order",
   "variant-shadows-vocabulary":
     "Keep variant names outside the element, component, anatomy, STN, slot, and ARIA role vocabulary",
