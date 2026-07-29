@@ -52,16 +52,17 @@ UserCard.vue
 The conforming version — every name static, derived, and checkable; runtime
 state in attributes:
 
+<!-- nagi-check file=src/components/UserCard.vue -->
 ```vue
 <template>
-  <section class="user-card">
+  <section class="app-user-card">
     <span class="icon" :class="iconName" />
     <div class="value" :data-active="status === 'active'">Ada Lovelace</div>
   </section>
 </template>
 
 <style scoped>
-.user-card {
+.app-user-card {
   > .icon {}
   > .value {
     color: red;
@@ -70,8 +71,8 @@ state in attributes:
 </style>
 ```
 
-Each rule is doing structural work: `user-card` is the surface identity
-derived from `UserCard.vue`; `icon` and `value` come from the configured
+Each rule is doing structural work: `app-user-card` is the surface identity
+derived from the configured prefix and `UserCard.vue`; `icon` and `value` come from the configured
 anatomy vocabulary; `>` marks an owned parent-child DOM edge, so
 the selector tree mirrors the template; the dynamic icon class rides on a
 static anchor; and `data-active` keeps state where assistive technology and
@@ -84,7 +85,7 @@ markup, the correct class for a node is unique. That is what makes the
 contract machine-checkable, what lets a linter drive any author — human or
 model — to the same answer, and what keeps a large codebase from silently
 accumulating entropy. Names carry meaning in the source
-(`<section class="user-card">` self-documents), diffs are a changed property
+(`<section class="app-user-card">` self-documents), diffs are a changed property
 in a named rule rather than a mutated utility string, and dead rules are
 mechanically detectable because selectors mirror template structure.
 
@@ -119,8 +120,10 @@ ESLint enforces:
 - fixed element and component classes, including `when-styled` emission;
 - exactly one table-first base identity class per element;
 - anatomy, role names, reserved HTML names, and alphabetical variants;
-- variant names that stay outside the protocol vocabulary, including ARIA roles;
-- attribute-based runtime state;
+- variant names that stay outside the base-identity vocabulary, and outside a
+  role name the element itself declares;
+- attribute-based runtime state, including variants kept out of class bindings so
+  a variant cannot express state;
 - owned child components styled by their own derived surface root, with no class
   passed to the tag;
 - the STN floor, consecutive-tier, and reach-`g` rules;
@@ -136,7 +139,6 @@ Stylelint enforces:
 - `>` for owned DOM edges;
 - selector chains that match the template they target, so a rule whose anchor
   class is absent, or whose path does not exist, is reported;
-- owned child component roots as boundaries: style the root, never below it;
 - descendant steps across configured UI-library boundaries;
 - owned child component roots as boundaries: their placement may be styled, their
   insides may not, derived from the component tag rather than configuration;

@@ -13,7 +13,9 @@
 - Derive a surface name exactly from its configured namespace prefix and Vue component or routed page file.
 - Use only configured anatomy, element, component, STN, slot, or matching role names below a surface.
 - Keep `-variant` classes alphabetical.
-- Keep `-variant` names outside the vocabulary (element, component, anatomy, STN, slot, ARIA role, banned, and rendered element names). Variants modify an anchor; they never name what an element is. If a variant wants a vocabulary word (`-title`, `-separator`, `-header`), use the matching element/class or attribute instead.
+- Keep `-variant` stems outside the **base-identity** vocabulary (element, component, anatomy, STN, slot, banned, and rendered element names). Variants modify an anchor; they never name what an element is. If a variant wants one of those (`-title`, `-header`, `-footer`), use the matching element/class or attribute instead.
+- An ARIA role name that is *not* a base identity is a legal variant (`-search`, `-toolbar`, `-status`) — it says which part of the design this is. It is rejected only on an element that declares the matching role, where it was available as the base.
+- **Write variants in the static `class` attribute.** A variant applied by a binding is runtime state: `:class="{ '-collapsed': !open }"` reports `variant-must-be-static`; use `:data-collapsed="!open"` and select `[data-collapsed="true"]`.
 
 ## UI Libraries
 

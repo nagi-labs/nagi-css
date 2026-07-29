@@ -65,24 +65,75 @@ async function runEslint(cwd, config, fix) {
   })
   const results = await eslint.lintFiles(files)
   if (fix) await ESLint.outputFixes(results)
-  const formatter = await eslint.loadFormatter("stylish")
-  const output = formatter.format(results)
-  if (output) process.stdout.write(output)
-  return results.some((result) => result.errorCount > 0)
+  return results.flatMap((result) =>
+    result.messages.map((message) => ({
+      column: message.column ?? 1,
+      file: result.filePath,
+      line: message.line ?? 1,
+      rule: message.ruleId ?? "eslint",
+      severity: message.severity === 1 ? "warning" : "error",
+      text: message.message,
+    })),
+  )
 }
 
 async function runStylelint(cwd, config) {
   const files = config.stylelintFiles ?? ["**/*.vue"]
-  const result = await stylelint.lint({
+  const { results } = await stylelint.lint({
     cwd,
     files,
     config: createNagiStylelintConfig(config.semantic, config.severity),
     ignorePattern: config.ignores ?? ["**/node_modules/**", "**/dist/**"],
     allowEmptyInput: true,
-    formatter: "string",
   })
-  if (result.report) process.stdout.write(result.report)
-  return result.errored
+  return results.flatMap((result) =>
+    [...result.parseErrors, ...result.warnings].map((warning) => ({
+      column: warning.column ?? 1,
+      file: result.source,
+      line: warning.line ?? 1,
+      rule: warning.rule ?? "stylelint",
+      severity: warning.severity === "warning" ? "warning" : "error",
+      text: warning.text.replace(/\s*\([^)]*\)$/, ""),
+    })),
+  )
+}
+
+// One report for both linters: paths relative to the target, sorted by position,
+// and a single summary line.
+function formatReport(diagnostics, cwd) {
+  const byFile = new Map()
+  for (const diagnostic of diagnostics) {
+    const name = diagnostic.file ? path.relative(cwd, diagnostic.file) : "<unknown>"
+    if (!byFile.has(name)) byFile.set(name, [])
+    byFile.get(name).push(diagnostic)
+  }
+
+  const lines = []
+  for (const name of [...byFile.keys()].sort()) {
+    const entries = byFile
+      .get(name)
+      .sort((a, b) => a.line - b.line || a.column - b.column || a.rule.localeCompare(b.rule))
+    lines.push("", name)
+    const width = Math.max(...entries.map((entry) => `${entry.line}:${entry.column}`.length))
+    for (const entry of entries) {
+      const at = `${entry.line}:${entry.column}`.padEnd(width)
+      const mark = entry.severity === "warning" ? "warning" : "error  "
+      lines.push(`  ${at}  ${mark}  ${entry.text}  ${entry.rule}`)
+    }
+  }
+
+  const errors = diagnostics.filter((diagnostic) => diagnostic.severity === "error").length
+  const warnings = diagnostics.length - errors
+  if (diagnostics.length > 0) {
+    lines.push(
+      "",
+      `${diagnostics.length} problem${diagnostics.length === 1 ? "" : "s"} (${errors} error${
+        errors === 1 ? "" : "s"
+      }, ${warnings} warning${warnings === 1 ? "" : "s"})`,
+      "",
+    )
+  }
+  return lines.join("\n")
 }
 
 export async function run(argv = process.argv.slice(2)) {
@@ -106,11 +157,14 @@ export async function run(argv = process.argv.slice(2)) {
   }
 
   const config = { ...loaded, semantic, severity }
-  const [eslintFailed, stylelintFailed] = await Promise.all([
+  const reports = await Promise.all([
     runEslint(args.cwd, config, args.fix),
     runStylelint(args.cwd, config),
   ])
-  return eslintFailed || stylelintFailed ? 1 : 0
+  const diagnostics = reports.flat()
+  const report = formatReport(diagnostics, args.cwd)
+  if (report) process.stdout.write(`${report}\n`)
+  return diagnostics.some((diagnostic) => diagnostic.severity === "error") ? 1 : 0
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {

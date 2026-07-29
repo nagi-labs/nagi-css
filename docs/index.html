@@ -46,7 +46,7 @@
     </p>
     <div class="unit">
       <figure class="figure -sample">
-        <pre class="codeblock">&lt;article class="<mark class="mark -surface">invoice-card</mark>"&gt;
+        <pre class="pre">&lt;article class="<mark class="mark -surface">invoice-card</mark>"&gt;
   &lt;header class="<mark class="mark -element">header</mark>"&gt;
     &lt;div class="<mark class="mark -anatomy">media</mark>"&gt;
       &lt;img class="<mark class="mark -element">image</mark>" src="acme.svg" alt="Acme Ltd."&gt;
@@ -81,45 +81,45 @@
       <ul class="list -rules">
         <li class="item -surface">
           <h3 class="title">Surface — from the file name</h3>
-          <p class="text"><code class="snippet">invoice-card</code> is the
+          <p class="text"><code class="code">invoice-card</code> is the
           component file's name, kebab-cased. Never chosen.</p>
         </li>
         <li class="item -element">
           <h3 class="title">Elements — from the tag</h3>
-          <p class="text"><code class="snippet">header</code>, <code class="snippet">title</code>,
-          <code class="snippet">image</code>, <code class="snippet">list</code>,
-          <code class="snippet">term</code>, <code class="snippet">definition</code>,
-          <code class="snippet">note</code>, <code class="snippet">footer</code>,
-          <code class="snippet">button</code> — each HTML element has one fixed class.</p>
+          <p class="text"><code class="code">header</code>, <code class="code">title</code>,
+          <code class="code">image</code>, <code class="code">list</code>,
+          <code class="code">term</code>, <code class="code">definition</code>,
+          <code class="code">note</code>, <code class="code">footer</code>,
+          <code class="code">button</code> — each HTML element has one fixed class.</p>
         </li>
         <li class="item -anatomy">
           <h3 class="title">UI anatomy — a tiny allowlist</h3>
           <p class="text">Names for common UI parts that HTML has no tag for:
-          <code class="snippet">field</code> (label + control),
-          <code class="snippet">value</code>, <code class="snippet">actions</code>,
-          <code class="snippet">media</code>, <code class="snippet">icon</code>
+          <code class="code">field</code> (label + control),
+          <code class="code">value</code>, <code class="code">actions</code>,
+          <code class="code">media</code>, <code class="code">icon</code>
           by default — five words go a long way, and the list is configurable
           per project.</p>
         </li>
         <li class="item -stn">
           <h3 class="title">Structural Tier Names (STN)</h3>
-          <p class="text">A structural ladder (<code class="snippet">unit</code> ·
-          <code class="snippet">seg</code> · <code class="snippet">fr</code> ·
-          <code class="snippet">g</code>) for the <code class="snippet">div</code>s
+          <p class="text">A structural ladder (<code class="code">unit</code> ·
+          <code class="code">seg</code> · <code class="code">fr</code> ·
+          <code class="code">g</code>) for the <code class="code">div</code>s
           that nothing else fits — the tier is determined by depth, so
-          <code class="snippet">wrapper</code> and
-          <code class="snippet">inner</code> never appear.</p>
+          <code class="code">wrapper</code> and
+          <code class="code">inner</code> never appear.</p>
         </li>
         <li class="item -variant">
           <h3 class="title">Variants — modifiers, not names</h3>
-          <p class="text"><code class="snippet">-user</code>,
-          <code class="snippet">-primary</code>, … — they qualify an anchor,
+          <p class="text"><code class="code">-user</code>,
+          <code class="code">-primary</code>, … — they qualify an anchor,
           never name what an element is, and stay alphabetical.</p>
         </li>
         <li class="item -state">
           <h3 class="title">State — attributes, not classes</h3>
-          <p class="text"><code class="snippet">disabled</code>,
-          <code class="snippet">aria-*</code>, <code class="snippet">data-*</code> —
+          <p class="text"><code class="code">disabled</code>,
+          <code class="code">aria-*</code>, <code class="code">data-*</code> —
           runtime state never becomes a class.</p>
         </li>
       </ul>
@@ -153,7 +153,7 @@
       <li class="item">
         <h3 class="title">Meaning in the source</h3>
         <p class="text">
-          <code class="snippet">class="user-card"</code> self-documents. Diffs
+          <code class="code">class="user-card"</code> self-documents. Diffs
           are a changed property in a named rule, not a mutated utility string.
         </p>
       </li>
@@ -166,12 +166,12 @@
       The CLI accepts configuration from outside the application being checked,
       so a target repository needs no lint setup of its own.
     </p>
-    <pre class="codeblock"><code>nagi-css check \
+    <pre class="pre"><code>nagi-css check \
   --config /absolute/path/to/nagi.config.mjs \
   --cwd /absolute/path/to/application</code></pre>
     <p class="text">
       ESLint validates templates and cross-block contracts; Stylelint validates
-      selectors and CSS nesting. <code class="snippet">--fix</code> applies only
+      selectors and CSS nesting. <code class="code">--fix</code> applies only
       unambiguous missing fixed-class fixes. The toolchain targets Vue
       single-file components first; the contract itself is framework-agnostic.
     </p>
@@ -196,7 +196,7 @@
     <p class="text -colophon">
       This page is plain HTML and CSS with the Nagi contract applied by hand —
       no JavaScript, no utilities, every selector anchored with
-      <code class="snippet">&gt;</code>.
+      <code class="code">&gt;</code>.
     </p>
   </footer>
 

@@ -225,14 +225,29 @@ Example:
 
 Here, `-compact` is a variant of the `settings-panel` surface, and `-muted` is a variant of the `title` element.
 
-Variants modify an anchor; they never name what an element *is*. A variant name
-must therefore stay outside the protocol vocabulary: element classes, component
-classes, anatomy, STN tiers, slot surfaces, ARIA role names, banned generic
-names, and rendered HTML element names are all rejected as variant stems
-(`-title`, `-separator`, `-header`, `-wrapper`, `-span`). Wanting a vocabulary word as a variant is a signal that
-the element wants that tag or class instead — a "link-styled button" is a
-design error (links navigate, buttons operate), and a title *bar* is not a
-`-title` variant but a differently named element.
+Variants modify an anchor; they never name what an element *is*. A variant stem
+must therefore stay outside the names the vocabulary hands out as a **base
+identity**: element classes, component classes, anatomy, STN tiers, slot surfaces,
+banned generic names, and rendered HTML element names (`-title`, `-header`,
+`-wrapper`, `-span`). Wanting one of those as a variant is a signal that the
+element wants that tag or class instead — a "link-styled button" is a design
+error (links navigate, buttons operate), and a title *bar* is not a `-title`
+variant but a differently named element.
+
+An **ARIA role name that is not also a base identity** is a different case.
+`-search`, `-toolbar`, and `-status` say *which part of the design this is*, and
+there is no element or class the author was supposed to use instead — the contract
+also forbids adding a role purely as a styling hook. Those are legal variants, and
+rejected only on an element that declares the matching role, where the name *was*
+available as its base identity (`<div class="unit -dialog" role="dialog">` should
+be `<div class="dialog" role="dialog">`).
+
+**A variant is written in the static `class` attribute.** A variant applied by a
+binding is runtime state wearing a variant's clothes, so it is rejected
+regardless of the word: `:class="{ '-collapsed': !open }"` becomes
+`:data-collapsed="!open"`, selected as `[data-collapsed="true"]`. This is what
+makes the state rule enforceable — the linter does not have to decide which words
+mean state, only that state is what changes.
 
 ---
 
@@ -739,9 +754,14 @@ Example (a shallow surface: two nested STN divs plus an isolated one — all sta
   <div class="unit -filters">
     <div class="seg -search">...</div>
   </div>
-  <div class="unit -footer">...</div>
+  <div class="unit -summary">...</div>
 </section>
 ```
+
+(`-summary` rather than `-footer`: `footer` is a base identity in the element
+table, so a variant may not borrow it — if the block really is the footer, it
+should be `<footer class="footer">`. `-search` is fine, because `search` is only
+an ARIA role name here and this element does not declare that role.)
 
 > Determinism note: the tier is still fully determined by the tree (no "size" / "start anywhere" judgment) — it is anchored at the leaf (`g`) with a `unit` floor instead of at the root. That keeps it machine-checkable, and makes the coarse tiers a rare "this is deep" signal rather than the default outermost name. (Anchoring `tier = depth-from-root` instead would make `block` appear in shallow trees that never reach `g`.)
 
@@ -760,6 +780,20 @@ and cannot, fully mechanize it.
   of structure; a genuinely 7-deep surface should be **rare and reserved for
   special, irreducibly deep decoration**. **Depth 8 is not allowed** — split the
   block into its own component/surface instead of inventing an eighth tier.
+- **If a surface really is irreducibly deeper, raise the ladder in configuration.**
+  `tiers` takes the full ladder, so a project can add a coarser name at the front
+  and keep `unit` and `g` in place, which the floor and reach-`g` relations anchor
+  on:
+
+  ```js
+  tiers: ["plate", "stratum", "region", "block", "unit", "seg", "fr", "g"]
+  ```
+
+  Shallow surfaces are unaffected — they still start at `unit`. Two things make
+  this a deliberate escape rather than a loophole: it is a change to the shared
+  configuration, so it lands in a diff and gets reviewed, and it cannot be done
+  locally in the file that wants the extra depth. Extending below `g` is not
+  supported; `g` is the leaf.
 - **Deterministic split triggers:** a block that is rendered repeatedly
   (`v-for` with its own styled internals), reused across files, or would nest
   past depth 7 **must** become its own surface. These are not judgment calls.
@@ -1187,7 +1221,9 @@ Nagi CSS preserves readable styling surfaces rather than collapsing meaning into
 - each styling surface has one class that identifies the surface
 - each element and selector compound has exactly one base identity class
 - strict rules apply only inside owned DOM
-- state is expressed via native states, ARIA, or `data-*`, not state classes
+- state is expressed via native states, ARIA, or `data-*`, not state classes; a
+  variant is written in the static class attribute, never applied by a binding,
+  so a variant cannot become a state class under another name
 - style elements are nested under the surface block in CSS
 - `>` MUST connect every parent/child inside owned DOM; a relationship that cannot use `>` marks a non-owned boundary
 - a selector chain inside owned DOM MUST match the template structure it targets; where the chain leaves owned DOM the requirement stops

@@ -33,6 +33,12 @@ export default {
 }
 ```
 
+`tiers` sets the STN ladder. Its default is seven names, and a surface that is
+irreducibly deeper can be given headroom by adding a coarser name at the front —
+`tiers: ["plate", "stratum", …, "unit", "seg", "fr", "g"]` — keeping `unit` and
+`g`, which the floor and reach-`g` relations anchor on. Shallow surfaces are
+unaffected. Extending below `g` is not supported.
+
 `severity` is optional and sits outside `semantic`, because it configures the
 linters rather than the vocabulary. Every rule is `error` unless listed; `*` sets
 the fallback; `warn` reports without failing the run; `off` removes the rule.

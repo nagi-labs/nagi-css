@@ -316,6 +316,18 @@ function analyzeStyles(root, inputConfig, fallbackFile) {
 
   function checkVariantShadow(rule, token) {
     const stem = token.slice(1)
+    // A role name that is not also a base identity is only unavailable where the
+    // template actually declares that role.
+    if (sets.roleVocabulary.has(stem) && !sets.variantShadowNames.has(stem)) {
+      if (!roleNames.has(stem)) return
+      report(
+        rule,
+        "variant-shadows-vocabulary",
+        `Variant ".${token}" names a role this template declares; use ".${stem}" as the base identity instead.`,
+        `.${token}`,
+      )
+      return
+    }
     if (!sets.variantShadowNames.has(stem)) return
     report(
       rule,

@@ -747,3 +747,69 @@ test("fixes every violation whose correct output the contract computes", () => {
     /class="seg"/,
   )
 })
+
+test("a variant applied by a binding is runtime state", () => {
+  const config = { surfaceRootPrefixes: ["app-"] }
+  const dynamic = analyzeVueTemplate(
+    `<template><section class="app-state-host"><div class="unit" :class="{ '-collapsed': !open }" /></section></template>`,
+    "/src/components/StateHost.vue",
+    config,
+  )
+  const attribute = analyzeVueTemplate(
+    `<template><section class="app-state-host"><div class="unit" :data-collapsed="!open" /></section></template>`,
+    "/src/components/StateHost.vue",
+    config,
+  )
+  const staticVariant = analyzeVueTemplate(
+    `<template><section class="app-state-host"><div class="unit -collapsed" /></section></template>`,
+    "/src/components/StateHost.vue",
+    config,
+  )
+
+  assert.equal(
+    dynamic.violations.some(({ ruleId }) => ruleId === "variant-must-be-static"),
+    true,
+  )
+  assert.deepEqual(attribute.violations, [])
+  // static means it does not change, so it is a style variant rather than state
+  assert.deepEqual(staticVariant.violations, [])
+})
+
+test("only role names that are also base identities are barred from variants", () => {
+  const config = { surfaceRootPrefixes: ["app-"] }
+  const host = (markup) =>
+    analyzeVueTemplate(
+      `<template><section class="app-role-variant">${markup}</section></template>`,
+      "/src/components/RoleVariant.vue",
+      config,
+    ).violations.map(({ ruleId }) => ruleId)
+
+  // role names with no base identity behind them say which part of the design this is
+  for (const stem of ["search", "toolbar", "status", "tooltip"]) {
+    assert.deepEqual(host(`<div class="unit -${stem}" />`), [], stem)
+  }
+  // names the vocabulary hands out as a base identity stay barred
+  for (const stem of ["title", "footer", "nav", "media", "unit"]) {
+    assert.deepEqual(
+      host(`<div class="seg -${stem}" />`).filter(
+        (ruleId) => ruleId === "variant-shadows-vocabulary",
+      ),
+      ["variant-shadows-vocabulary"],
+      stem,
+    )
+  }
+  // and a role name is barred on the element that declares it
+  assert.ok(
+    host(`<div class="unit -dialog" role="dialog" />`).includes("variant-shadows-vocabulary"),
+  )
+})
+
+test("a tone word is a variant, not a state class", () => {
+  const result = analyzeVueTemplate(
+    `<template><section class="app-tone-host"><div class="unit -success" /></section></template>`,
+    "/src/components/ToneHost.vue",
+    { surfaceRootPrefixes: ["app-"] },
+  )
+
+  assert.deepEqual(result.violations, [])
+})

@@ -21,9 +21,18 @@ node packages/cli/src/cli.mjs check \
 - **CONTRACT.md is normative.** The skill and the linter are projections of
   it; when they disagree, the contract wins. A behavior change lands as one
   change to code, tests, and the affected documents together.
-- **Every example must pass the linter.** Documentation markup is checked
-  the same way application code is; do not commit examples the toolchain
-  would reject.
+- **Every example must pass the linter**, and `tests/docs.test.mjs` enforces it.
+  Mark an example with the file it stands for and it is linted with the rest of
+  the suite:
+
+  ```
+  <!-- nagi-check file=src/components/UserCard.vue -->
+  ```
+
+  Optional keys: `prefix=` (default `app-`), `components=DataTable,Column`,
+  `slots=Card.content=pv-card-content`, `emit=always`. Only complete `vue` blocks
+  can be annotated; a fragment that is not a whole component cannot be checked, so
+  keep such examples short and derive them from an annotated one where possible.
 - **Determinism is the product.** A proposal that reintroduces judgment
   ("let authors choose…") works against the design. The decision principles
   the vocabulary already follows:

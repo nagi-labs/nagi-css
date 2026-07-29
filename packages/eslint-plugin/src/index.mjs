@@ -40,6 +40,8 @@ const ruleDescriptions = {
   "stn-reach-g": "Make surfaces above unit reach the g tier",
   "unsupported-style-syntax":
     "Report style blocks the toolchain cannot read instead of skipping them",
+  "variant-must-be-static":
+    "Keep variants out of class bindings, so a variant cannot express runtime state",
   "variant-order": "Keep static variant classes in alphabetical order",
   "variant-shadows-vocabulary":
     "Keep variant names outside the element, component, anatomy, STN, slot, and ARIA role vocabulary",

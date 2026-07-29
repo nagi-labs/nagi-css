@@ -86,9 +86,12 @@ const DEFAULT_CONFIG = Object.freeze({
   emitPolicy: "when-styled",
   libraryBoundaryPrefixes: [],
   libraryInternalPrefixes: [],
+  // A cheap catch for the obvious static spellings. Words that double as a tone
+  // (`-success`, `-error`) are deliberately absent: they are legitimate style
+  // variants, and the genuinely stateful use is caught by being dynamic.
   stateClasses: [
-    "-active", "-busy", "-checked", "-disabled", "-error", "-expanded", "-hidden",
-    "-invalid", "-loading", "-open", "-pressed", "-selected", "-success",
+    "-active", "-busy", "-checked", "-disabled", "-expanded", "-hidden",
+    "-invalid", "-loading", "-open", "-pressed", "-selected",
   ],
   surfaceRootPrefixes: [],
   tiers: ["stratum", "region", "block", "unit", "seg", "fr", "g"],
@@ -238,6 +241,12 @@ export function buildNagiSets(input) {
     stateClasses: new Set(config.stateClasses),
     stn,
     stnIndex: new Map(config.tiers.map((name, index) => [name, index + 1])),
+    // Names the vocabulary hands out as a base identity. A variant using one of
+    // these is smuggling in a name the author should have used as the base.
+    // ARIA role names are deliberately absent: a role name that is not also a
+    // base identity (`search`, `toolbar`, `status`) says *which area this is*,
+    // not what the element is, and is only rejected when the element carries the
+    // matching role — where it would have been available as a base.
     variantShadowNames: new Set([
       ...elementValues,
       ...componentValues,
@@ -246,7 +255,6 @@ export function buildNagiSets(input) {
       ...surfaces,
       ...config.bannedClasses,
       ...RENDERED_ELEMENTS,
-      ...ARIA_ROLE_NAMES,
     ]),
   }
 }

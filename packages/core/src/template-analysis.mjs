@@ -469,9 +469,35 @@ export function analyzeVueTemplate(source, filename, inputConfig = {}) {
       )
     }
 
+    // A variant that a binding switches on and off is runtime state by definition,
+    // whatever the word is. Blocking the mechanism removes the need for the
+    // linter to decide which words mean state.
+    for (const token of info.dynamicTokens) {
+      if (!isVariant(token)) continue
+      push(
+        violations,
+        node,
+        "variant-must-be-static",
+        `Variant "${token}" is applied by a binding, so it expresses runtime state; keep variants in the static class attribute and use a native, ARIA, or data attribute for state.`,
+      )
+    }
+
     for (const token of allTokens) {
       if (!isVariant(token) || sets.stateClasses.has(token)) continue
       const stem = token.slice(1)
+      // A role name is only unavailable as a variant when this element could have
+      // used it as its base identity — that is, when it carries that role.
+      if (sets.roleVocabulary.has(stem) && !sets.variantShadowNames.has(stem)) {
+        if (role === stem) {
+          push(
+            violations,
+            node,
+            "variant-shadows-vocabulary",
+            `Variant "${token}" names the role this element already declares; use "${stem}" as the base identity instead.`,
+          )
+        }
+        continue
+      }
       if (sets.variantShadowNames.has(stem)) {
         push(
           violations,
