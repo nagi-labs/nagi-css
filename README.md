@@ -121,6 +121,8 @@ ESLint enforces:
 - anatomy, role names, reserved HTML names, and alphabetical variants;
 - variant names that stay outside the protocol vocabulary, including ARIA roles;
 - attribute-based runtime state;
+- owned child components styled by their own derived surface root, with no class
+  passed to the tag;
 - the STN floor, consecutive-tier, and reach-`g` rules;
 - component slot configuration;
 - style blocks the toolchain cannot read, rather than skipping them; and
@@ -134,6 +136,7 @@ Stylelint enforces:
 - `>` for owned DOM edges;
 - selector chains that match the template they target, so a rule whose anchor
   class is absent, or whose path does not exist, is reported;
+- owned child component roots as boundaries: style the root, never below it;
 - descendant steps across configured UI-library boundaries;
 - owned child component roots as boundaries: their placement may be styled, their
   insides may not, derived from the component tag rather than configuration;

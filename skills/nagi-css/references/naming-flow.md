@@ -57,7 +57,7 @@ componentClasses: ["DataTable", "Column"]
 // DataTable -> pv-data-table; Column -> pv-column
 ```
 
-List only opaque third-party/UI-library components the project actually uses. Never add an application-owned Vue component: its own file-derived surface is not an opaque boundary.
+List only opaque third-party/UI-library components the project actually uses. Never add an application-owned Vue component: **pass it no class at all**. Its root already carries the surface root derived from its own file, so the parent writes `<UserAvatar />` and styles `> .app-user-avatar` (prefix from `surfaceRootPrefixes` + kebab-case tag). Placement variants may still be passed: `<UserAvatar class="-lead" />`.
 
 This class is a boundary **anchor, not a `>` licence into internals**. Style library internals via props → pass-through APIs → CSS custom properties → `::part()`. Never descend from a boundary class into library-owned internals.
 

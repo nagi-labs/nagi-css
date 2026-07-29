@@ -12,7 +12,7 @@
 | 状態 | 項目 |
 |---|---|
 | **修正済み**（このブランチ） | #1 #2 #3 #4 #5 #6 #7 #21 #22 — 確認されたバグ全件。テスト同梱 |
-| **実装済み**（このブランチ） | #18 #23 — fixed variant 機構の廃止と表の2層化。#12 もこれで解消<br>#19 — per-rule `severity`（`error` / `warn` / `off`、`*` フォールバック、未知名は設定エラー）<br>#9 — `dead-rule` / `selector-mirrors-template`（テンプレートの owned ツリーとセレクタ鎖の照合）<br>#16 — autofix を6ルールに拡大<br>#17 — `owned-surface-reach-in`（自作コンポーネント根より下への降下を検出。設定不要） |
+| **実装済み**（このブランチ） | #18 #23 — fixed variant 機構の廃止と表の2層化。#12 もこれで解消<br>#19 — per-rule `severity`（`error` / `warn` / `off`、`*` フォールバック、未知名は設定エラー）<br>#9 — `dead-rule` / `selector-mirrors-template`（テンプレートの owned ツリーとセレクタ鎖の照合）<br>#16 — autofix を6ルールに拡大<br>#17 — 自作コンポーネント境界（`owned-component-identity` / `owned-surface-reach-in`）。パススルー方式は廃止 |
 | **文書反映済み**（このブランチ） | 素の CSS のみ対応・単体 `.css` 対象外の方針（CONTRACT.md / README / FAQ / configuration.md） |
 | **保留** | #10（値のトークン化）— 議論待ち |
 | **未着手** | #8 #11 #13 #14 #15 #20 |
@@ -80,16 +80,21 @@
   変体（`-*`）は条件付きが多いので照合対象外。兄弟結合子は兄弟として正しく解決する。
   要素表が要求するクラス（`expectedClasses`）は「死んだルール」ではなく
   `element-class-required` の担当なので二重報告しない
-- **#17** — `owned-surface-reach-in` を追加。判定は**解決済みセレクタ鎖の「最後以外」に
-  コンポーネント根クラスが現れたら落とす**の一行に尽きる（末尾なら根自身へのスタイルなので正当）。
-  設定は不要で、判定材料はテンプレート上の tagType のみ。設定済みライブラリ根（`pv-*`）は
-  宣言済み境界なので除外。同じクラス名が素の要素にも付いていたら曖昧なので判定しない。
-  **併せて**: 境界より下の子孫セレクタに `owned-dom-direct-child` が「`>` を使え」と
-  誘導していた問題（今回新たに判明）も解消。境界判定を先に行い、指摘を1本に置き換える
-- **#16** — autofix を **2 → 6 ルール**に拡大。追加分は `surface-root-name`（ファイル名から一意なとき）、
-  `stn-order`（祖先の1つ下のティア）、`stn-floor`（`unit`）、`variant-order`（アルファベット順に並べ替え）。
-  実装は class 属性全体の書き換えに統一（`rewriteClassFix` / `replaceToken`）。
+- **#16** — autofix を **2 → 7 ルール**に拡大。追加分は `surface-root-name`（ファイル名から一意なとき）、
+  `stn-order`（祖先の1つ下のティア）、`stn-floor`（`unit`）、`variant-order`（アルファベット順に並べ替え）、
+  `owned-component-identity`（渡されたクラスを削除）。
+  実装は class 属性全体の書き換えに統一（`rewriteClassFix` / `replaceToken`）。空になれば属性ごと削除。
   ESLint は複数パス適用するので、STN のリネーム連鎖も1回の `--fix` で解ける
+- **#17** — 自作コンポーネント境界。**親のタグにはクラスを渡さない**方式に変更（パススルー廃止）。
+  子の根は自分のファイル由来のサーフェス根を既に持ち、Vue の scoped CSS は**その要素にだけ**親のスコープ ID を付けるので、
+  親は `> .app-user-avatar` で当てられる。受け入れるクラス名は**テンプレート内のコンポーネントタグから導出**
+  （`surfaceRootPrefixes` + kebab(タグ名)）するので、設定もクロスファイル解決も不要。
+  タイプミスとリネーム後の古い名前は `anatomy-allowed` で落ち、
+  タグへの基底クラスは `owned-component-identity`（autofix 付き）、
+  根より下への降下は `owned-surface-reach-in`。変体は「配置」なので渡してよい。
+  **scoped CSS では降下したルールは実行時に無言で効かない**ので、この検査は「死んでいるのに意図的に見えるルール」を可視化する。
+  **併せて**: 境界より下の子孫セレクタに `owned-dom-direct-child` が「`>` を使え」と誘導していた問題
+  （今回新たに判明）も解消。境界判定を先に行い、指摘を1本に置き換える
 
 ---
 

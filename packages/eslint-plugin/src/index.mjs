@@ -15,6 +15,7 @@ const analysisCache = new WeakMap()
 const FIXABLE_RULES = new Set([
   "component-class-required",
   "element-class-required",
+  "owned-component-identity",
   "stn-floor",
   "stn-order",
   "surface-root-name",
@@ -28,6 +29,8 @@ const ruleDescriptions = {
     "Require a static owned class beside every dynamic class binding",
   "element-class-required": "Require configured static element classes when styled",
   "reserved-element-name": "Reserve rendered element names for their mapped elements",
+  "owned-component-identity":
+    "Style an owned child component by its own derived surface root, not a passed class",
   "single-base-identity": "Allow exactly one base identity class per element",
   "state-not-class": "Represent runtime state with native, ARIA, or data attributes",
   "surface-root-name":

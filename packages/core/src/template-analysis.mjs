@@ -8,6 +8,7 @@ import {
   buildNagiSets,
   defineNagiConfig,
   deriveAllowedSurfaceRootNames,
+  kebabCase,
   mappingBase,
   matchesClassPrefix,
 } from "./index.mjs"
@@ -248,6 +249,11 @@ function buildClassFix(node, info, requiredClass) {
 // construction rather than a guess.
 function rewriteClassFix(info, tokens) {
   if (!info.staticProp) return undefined
+  if (tokens.length === 0) {
+    // Nothing left to carry: drop the attribute rather than leave class="".
+    const { loc } = info.staticProp
+    return { range: [loc.start.offset - 1, loc.end.offset], text: "" }
+  }
   const value = info.staticProp.value
   return {
     range: [value.loc.start.offset, value.loc.end.offset],
@@ -322,7 +328,7 @@ export function analyzeVueTemplate(source, filename, inputConfig = {}) {
   const template = descriptor.template?.ast
   if (!template) {
     return {
-      componentRootClasses: new Set(),
+      childSurfaceRoots: new Set(),
       roleNames,
       styleBlocks,
       surfaceRoots,
@@ -341,8 +347,16 @@ export function analyzeVueTemplate(source, filename, inputConfig = {}) {
   const unitIndex = config.tiers.indexOf("unit") + 1
   const leafIndex = config.tiers.indexOf("g") + 1
   const tree = []
-  const componentRootClasses = new Set()
-  const elementRootClasses = new Set()
+  // An owned child component's root already carries the surface root derived from
+  // its own file, and Vue puts this surface's scope id on that same element. So the
+  // parent styles the child by that class and passes nothing down.
+  const childSurfaceRoot = (tag) =>
+    config.surfaceRootPrefixes.map((prefix) => `${prefix}${kebabCase(tag)}`)
+  const isOwnedComponent = (node) =>
+    node.tagType === COMPONENT &&
+    !Object.hasOwn(config.componentClasses, node.tag) &&
+    !isTransparentWrapper(node)
+  const childSurfaceRoots = new Set()
   // Classes the tables would put on elements this template already has. A rule
   // referencing one of these is not dead — the markup is missing the class, which
   // element-class-required already reports.
@@ -370,7 +384,9 @@ export function analyzeVueTemplate(source, filename, inputConfig = {}) {
       )
     }
 
-    if (info.dynamic && staticOwnedTokens.length === 0) {
+    // An owned component tag carries no static class of its own; its anchor is the
+    // child's surface root, which exists at runtime.
+    if (info.dynamic && staticOwnedTokens.length === 0 && !isOwnedComponent(node)) {
       push(
         violations,
         node,
@@ -567,29 +583,42 @@ export function analyzeVueTemplate(source, filename, inputConfig = {}) {
       }
     }
 
+    const ownedComponent = isOwnedComponent(node)
+    const derivedRoots = ownedComponent ? childSurfaceRoot(node.tag) : []
+    for (const token of derivedRoots) childSurfaceRoots.add(token)
+
+    if (ownedComponent) {
+      const passedThrough = info.staticTokens.filter(
+        (token) => !isVariant(token) && !derivedRoots.includes(token),
+      )
+      if (passedThrough.length > 0) {
+        push(
+          violations,
+          node,
+          "owned-component-identity",
+          `<${node.tag}> is an owned component: its root already carries "${derivedRoots[0]}", so style it with that class from this surface and remove "${passedThrough.join(" ")}".`,
+          rewriteClassFix(
+            info,
+            info.staticTokens.filter((token) => !passedThrough.includes(token)),
+          ),
+        )
+      }
+    }
+
     // The record a selector chain is checked against. Variants are left out: they
-    // are frequently conditional, and matching on them would only add doubt.
+    // are frequently conditional, and matching on them would only add doubt. An
+    // owned child carries its derived root at runtime even though nothing is
+    // written here.
     const record = {
       children: [],
-      classes: info.staticTokens.filter((token) => !isVariant(token)),
+      classes: [
+        ...new Set([...info.staticTokens.filter((token) => !isVariant(token)), ...derivedRoots]),
+      ],
       dynamic: info.dynamic,
       opaque: node.tagType === COMPONENT || node.tag === "slot",
       tag: node.tag,
     }
     siblings.push(record)
-    for (const token of record.classes) {
-      if (isLibraryInternal(token, config) || sets.slotSurfaces.has(token)) continue
-      // A configured library root is a declared boundary with its own edge rules;
-      // this set is only about application-owned components.
-      if (
-        sets.componentValues.has(token) ||
-        matchesClassPrefix(token, config.libraryBoundaryPrefixes)
-      ) {
-        continue
-      }
-      if (node.tagType === COMPONENT) componentRootClasses.add(token)
-      else elementRootClasses.add(token)
-    }
 
     const stnToken = [...staticTokens].find((token) => sets.stnIndex.has(token))
     const stnIndex = stnToken ? sets.stnIndex.get(stnToken) : null
@@ -658,11 +687,7 @@ export function analyzeVueTemplate(source, filename, inputConfig = {}) {
   visitRoots(template.children)
 
   return {
-    // A class that also sits on a plain element somewhere is ambiguous, so it is
-    // not treated as an owned component boundary.
-    componentRootClasses: new Set(
-      [...componentRootClasses].filter((token) => !elementRootClasses.has(token)),
-    ),
+    childSurfaceRoots,
     expectedClasses,
     expectedRoots,
     roleNames,

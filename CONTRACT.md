@@ -581,7 +581,47 @@ Project config should distinguish:
 
 The linter receives boundary prefixes separately from internal prefixes so selector edges are deterministic. `libraryBoundaryPrefixes` declares additional opaque root families; `libraryInternalPrefixes` declares library-owned internal classes.
 
-Do not use `componentClasses` as a registry of owned components. Parent layout around an owned child belongs to a parent-owned wrapper or to the child's own surface; this contract does not define a non-opaque `ownedComponentClasses` mapping.
+Do not use `componentClasses` as a registry of owned components. An owned child is covered by the rule below instead, which needs no configuration.
+
+### Owned child components (nothing is passed down)
+
+An **owned** component you place in your markup already carries a surface root on
+its own root element, derived from its own file. So the parent adds no class to
+the tag and styles the child by that derived name:
+
+```vue
+<template>
+  <header class="app-profile-header">
+    <UserAvatar />                       <!-- no class here -->
+    <NavSidebar class="-collapsed" />    <!-- placement variants may still be passed -->
+  </header>
+</template>
+```
+```css
+.app-profile-header {
+  > .app-user-avatar { margin-inline-end: 0.75rem; }
+  > .app-nav-sidebar.-collapsed { inline-size: 3rem; }
+}
+```
+
+The name is derived the same way as a library boundary class — a prefix plus the
+component name in kebab-case — only the prefix comes from `surfaceRootPrefixes`
+rather than `componentClassPrefix`. The linter derives the accepted set from the
+component tags in the template, so a typo, or a stale name after the component is
+renamed, is rejected; nothing has to be declared. This assumes the component's tag
+matches its file name, which is the usual convention.
+
+Two consequences:
+
+- **A base class on an owned component tag is a violation.** The child's identity
+  is already decided by its file; a second name for the same element would mean
+  two correct answers. Variants are different — they express *placement*, which is
+  the parent's business, and may be passed down.
+- **The parent may style that root and nothing below it.** The DOM inside belongs
+  to the child's surface. In Vue this is also how the platform behaves: scoped CSS
+  puts the parent's scope id on the child's root element *and no deeper*, so a
+  selector reaching inside silently matches nothing. The linter reports it rather
+  than leaving it to look intentional.
 
 ### The Semantics model (applies only to `div`/`span`)
 
@@ -1220,25 +1260,27 @@ Some components expose a documented `className`, slot class, or pass-through API
 
 Use those APIs to attach styling to the exposed root or slot target. This is especially appropriate for external layout responsibility, because parent surfaces own placement while child surfaces own their own skin.
 
-Pass-through APIs should not be the default strategy for styling related components that are owned by the same codebase. In that case, prefer splitting the related pieces into independent styling surfaces and applying the contract to each surface separately.
+This is for **third-party** components only. Passing a class to a component owned
+by the same codebase is not the way to place it: that child already carries its
+own derived surface root, so style it by that name and pass nothing — see
+[Owned child components](#owned-child-components-nothing-is-passed-down).
 
-Good use cases for pass-through classes are narrow:
+Good use cases for pass-through classes are therefore narrow:
 
 - third-party UI libraries that expose the class as an official styling hook
-- reusable leaf components placed inside a parent layout grid or flex container
-- parent-owned external layout adjustments such as margin, grid placement, or flex alignment
+- parent-owned external layout adjustments such as margin, grid placement, or flex alignment, on such a library component
 
-Example:
+Example, where `Calendar` comes from a UI library:
 
 ```html
-<UserProfile>
-  <SharedAvatar className="avatar" />
-</UserProfile>
+<div class="app-booking-form">
+  <Calendar class="pv-calendar" />
+</div>
 ```
 
 ```css
-.user-profile {
-  > .avatar {
+.app-booking-form {
+  > .pv-calendar {
     margin-inline-end: 0.75rem;
   }
 }

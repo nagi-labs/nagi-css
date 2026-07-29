@@ -1,17 +1,17 @@
 <template>
   <header class="test-owned-boundary">
-    <UserAvatar class="media" />
+    <UserAvatar />
     <div class="unit"><span class="icon" /></div>
   </header>
 </template>
 
 <style scoped>
 .test-owned-boundary {
-  > .media {
+  > .test-user-avatar {
     margin-inline-end: 0.75rem;
   }
 
-  > .media:hover {
+  > .test-user-avatar:hover {
     opacity: 0.8;
   }
 

@@ -653,25 +653,51 @@ test("gives up on chains the template cannot answer", () => {
   )
 })
 
-test("reports which classes sit on owned component roots", () => {
+test("derives an owned child component's surface root from its tag", () => {
+  const config = { surfaceRootPrefixes: ["app-"], componentClasses: ["DataTable"] }
   const result = analyzeVueTemplate(
     `<template>
-      <header class="boundary-host">
-        <UserAvatar class="media" />
-        <div class="unit" />
+      <header class="app-boundary-host">
+        <UserAvatar />
+        <NavSidebar />
+        <DataTable class="pv-data-table" />
       </header>
     </template>
-    <style>.boundary-host { > .media {} > .unit {} }</style>`,
+    <style>.app-boundary-host { > .app-user-avatar {} > .app-nav-sidebar {} > .pv-data-table {} }</style>`,
     "/src/components/BoundaryHost.vue",
-  )
-  const ambiguous = analyzeVueTemplate(
-    `<template><header class="boundary-host"><UserAvatar class="media" /><div class="media" /></header></template>`,
-    "/src/components/BoundaryHost.vue",
+    config,
   )
 
-  assert.deepEqual([...result.componentRootClasses], ["media"])
-  // the same class on a plain element makes it ambiguous, so it is not claimed
-  assert.deepEqual([...ambiguous.componentRootClasses], [])
+  // a configured library root keeps its own boundary class and is not derived
+  assert.deepEqual([...result.childSurfaceRoots], ["app-user-avatar", "app-nav-sidebar"])
+  assert.deepEqual(result.violations, [])
+})
+
+test("rejects a class passed to an owned child component, and removes it", () => {
+  const config = { surfaceRootPrefixes: ["app-"] }
+  const source = `<template><header class="app-boundary-host"><UserAvatar class="media" /></header></template>`
+  const result = analyzeVueTemplate(source, "/src/components/BoundaryHost.vue", config)
+  const violation = result.violations.find(
+    ({ ruleId }) => ruleId === "owned-component-identity",
+  )
+
+  assert.ok(violation, JSON.stringify(result.violations))
+  assert.match(violation.message, /already carries "app-user-avatar"/)
+  assert.equal(
+    source.slice(0, violation.fix.range[0]) +
+      violation.fix.text +
+      source.slice(violation.fix.range[1]),
+    `<template><header class="app-boundary-host"><UserAvatar /></header></template>`,
+  )
+
+  // a variant is placement, not identity, so it may still be passed down
+  const variant = analyzeVueTemplate(
+    `<template><header class="app-boundary-host"><UserAvatar class="-lead" /></header></template>
+<style>.app-boundary-host { > .app-user-avatar.-lead {} }</style>`,
+    "/src/components/BoundaryHost.vue",
+    config,
+  )
+  assert.deepEqual(variant.violations, [])
 })
 
 test("fixes every violation whose correct output the contract computes", () => {

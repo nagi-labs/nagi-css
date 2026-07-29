@@ -1,16 +1,16 @@
 <template>
   <header class="test-owned-boundary-reach-in">
-    <UserAvatar class="media" />
+    <UserAvatar />
   </header>
 </template>
 
 <style scoped>
 .test-owned-boundary-reach-in {
-  > .media > .icon {
+  > .test-user-avatar > .icon {
     inline-size: 2rem;
   }
 
-  > .media {
+  > .test-user-avatar {
     .icon {
       inline-size: 2rem;
     }

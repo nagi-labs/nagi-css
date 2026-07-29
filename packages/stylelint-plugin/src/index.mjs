@@ -166,10 +166,13 @@ function findInputFile(root, fallback) {
 }
 
 const emptyTemplateContext = () => ({
+  childSurfaceRoots: new Set(),
+  expectedClasses: new Set(),
   roleNames: new Set(),
   styleBlocks: [],
   surfaceRoots: new Set(),
   topLayerSurfaces: new Set(),
+  tree: [],
 })
 
 function readTemplateContext(root, config, fallbackFile) {
@@ -186,7 +189,7 @@ function analyzeStyles(root, inputConfig, fallbackFile) {
   const config = defineNagiConfig(inputConfig)
   const sets = buildNagiSets(config)
   const {
-    componentRootClasses = new Set(),
+    childSurfaceRoots = new Set(),
     expectedClasses = new Set(),
     roleNames,
     surfaceRoots,
@@ -194,7 +197,7 @@ function analyzeStyles(root, inputConfig, fallbackFile) {
     tree = [],
   } = readTemplateContext(root, config, fallbackFile)
 
-  const isOwnedComponentRoot = (token) => componentRootClasses.has(token)
+  const isOwnedComponentRoot = (token) => childSurfaceRoots.has(token)
   const endsInOwnedComponentRoot = (chain) =>
     chain !== null && (chain.at(-1)?.classes ?? []).some(isOwnedComponentRoot)
   const violations = []
@@ -230,7 +233,7 @@ function analyzeStyles(root, inputConfig, fallbackFile) {
   // DOM belongs to the child's own surface. Works on the resolved chain, so a
   // step written in a nested rule is caught the same as a flat one.
   function checkReachIn(rule, chain) {
-    if (chain === null || componentRootClasses.size === 0) return
+    if (chain === null || childSurfaceRoots.size === 0) return
     for (let index = 0; index < chain.length - 1; index += 1) {
       const owner = chain[index].classes.find(isOwnedComponentRoot)
       if (!owner) continue
@@ -368,6 +371,9 @@ function analyzeStyles(root, inputConfig, fallbackFile) {
         sets.componentValues.has(token) ||
         sets.slotSurfaces.has(token) ||
         surfaceRoots.has(token) ||
+        // An owned child component placed in this template: derived from its tag,
+        // so a typo or a stale name after a rename is rejected here.
+        childSurfaceRoots.has(token) ||
         roleNames.has(token)
       if (!allowed) {
         report(
