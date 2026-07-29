@@ -1130,6 +1130,7 @@ Nagi CSS preserves readable styling surfaces rather than collapsing meaning into
 - state is expressed via native states, ARIA, or `data-*`, not state classes
 - style elements are nested under the surface block in CSS
 - `>` MUST connect every parent/child inside owned DOM; a relationship that cannot use `>` marks a non-owned boundary
+- a selector chain inside owned DOM MUST match the template structure it targets; where the chain leaves owned DOM the requirement stops
 - every HTML element other than `div`/`span` carries its fixed class from the Element Class Table
 - additional ARIA semantics on a table-mapped element are selected through attributes, not copied into base or variant classes
 - every configured UI library component carries its fixed class from the Library Component Class Table, and that class never descends into library internals

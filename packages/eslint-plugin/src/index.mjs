@@ -10,6 +10,17 @@ import {
 
 const analysisCache = new WeakMap()
 
+// Rules whose correct output the contract computes, so the linter can write it.
+// Everything else needs a decision the tool cannot make.
+const FIXABLE_RULES = new Set([
+  "component-class-required",
+  "element-class-required",
+  "stn-floor",
+  "stn-order",
+  "surface-root-name",
+  "variant-order",
+])
+
 const ruleDescriptions = {
   "anatomy-allowed": "Allow only contract anatomy, role, element, component, and STN names",
   "component-class-required": "Require configured static component classes when styled",
@@ -53,10 +64,7 @@ function createAnalysisRule(ruleId) {
     meta: {
       type: ruleId === "variant-order" ? "layout" : "problem",
       docs: { description: ruleDescriptions[ruleId] },
-      fixable:
-        ruleId === "element-class-required" || ruleId === "component-class-required"
-          ? "code"
-          : undefined,
+      fixable: FIXABLE_RULES.has(ruleId) ? "code" : undefined,
       schema: [{ type: "object" }],
       messages: { violation: "{{message}}" },
     },

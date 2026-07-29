@@ -6,6 +6,7 @@ import {
   deriveAllowedSurfaceRootNames,
   defineNagiConfig,
   deriveSurfaceRootName,
+  matchSelectorChain,
   validateNagiConfig,
 } from "@nagi-labs/nagi-css-core"
 
@@ -578,4 +579,145 @@ test("reports unreadable style blocks", () => {
     )
   }
   assert.deepEqual(plain.violations, [])
+})
+
+test("checks a selector chain against the template it claims to mirror", () => {
+  const tree = analyzeVueTemplate(
+    `<template>
+      <section class="mirror-host">
+        <header class="header"><h2 class="title">Hi</h2></header>
+        <ul class="list"><li class="item">a</li><li class="item">b</li></ul>
+      </section>
+    </template>`,
+    "/src/components/MirrorHost.vue",
+  ).tree
+
+  // "> title" / "+ item" / "  title" (descendant)
+  const chain = (...steps) =>
+    steps.map((step, index) =>
+      index === 0
+        ? { classes: [step.trim()] }
+        : {
+            classes: [step.replace(/^[>+~]/, "").trim()],
+            combinator: /^[>+~]/.test(step) ? step[0] : " ",
+          },
+    )
+
+  assert.equal(matchSelectorChain(tree, chain("mirror-host", "> header", "> title")).status, "ok")
+  assert.equal(matchSelectorChain(tree, chain("mirror-host", "> list", "> item")).status, "ok")
+  assert.equal(matchSelectorChain(tree, chain("list", "> item", "+ item")).status, "ok")
+  assert.equal(matchSelectorChain(tree, chain("mirror-host", "  title")).status, "ok")
+
+  // title exists, but not as a direct child of the surface root
+  assert.equal(
+    matchSelectorChain(tree, chain("mirror-host", "> title")).status,
+    "mismatch",
+  )
+  // nothing in the template carries these
+  assert.deepEqual(matchSelectorChain(tree, chain("mirror-host", "> icon")), {
+    missing: ["icon"],
+    status: "dead",
+  })
+  assert.equal(
+    matchSelectorChain(tree, chain("mirror-host", "> header", "> item", "> value")).status,
+    "dead",
+  )
+})
+
+test("gives up on chains the template cannot answer", () => {
+  const opaque = analyzeVueTemplate(
+    `<template><section class="opaque-host"><DataTable class="pv-data-table"><div class="unit" /></DataTable></section></template>`,
+    "/src/components/OpaqueHost.vue",
+    { componentClasses: ["DataTable"] },
+  ).tree
+  const dynamic = analyzeVueTemplate(
+    `<template><section class="dynamic-host"><div class="unit" :class="extra" /></section></template>`,
+    "/src/components/DynamicHost.vue",
+  ).tree
+
+  // below a component root the structure is not ours to know
+  assert.equal(
+    matchSelectorChain(opaque, [
+      { classes: ["pv-data-table"] },
+      { classes: ["seg"], combinator: ">" },
+    ]).status,
+    "unknown",
+  )
+  // a dynamic class could be supplying the name
+  assert.equal(
+    matchSelectorChain(dynamic, [
+      { classes: ["dynamic-host"] },
+      { classes: ["seg"], combinator: ">" },
+    ]).status,
+    "unknown",
+  )
+})
+
+test("reports which classes sit on owned component roots", () => {
+  const result = analyzeVueTemplate(
+    `<template>
+      <header class="boundary-host">
+        <UserAvatar class="media" />
+        <div class="unit" />
+      </header>
+    </template>
+    <style>.boundary-host { > .media {} > .unit {} }</style>`,
+    "/src/components/BoundaryHost.vue",
+  )
+  const ambiguous = analyzeVueTemplate(
+    `<template><header class="boundary-host"><UserAvatar class="media" /><div class="media" /></header></template>`,
+    "/src/components/BoundaryHost.vue",
+  )
+
+  assert.deepEqual([...result.componentRootClasses], ["media"])
+  // the same class on a plain element makes it ambiguous, so it is not claimed
+  assert.deepEqual([...ambiguous.componentRootClasses], [])
+})
+
+test("fixes every violation whose correct output the contract computes", () => {
+  const fixed = (source, filename, config) => {
+    const { violations } = analyzeVueTemplate(source, filename, config)
+    let output = source
+    for (const violation of [...violations].sort((a, b) => (b.fix?.range[0] ?? 0) - (a.fix?.range[0] ?? 0))) {
+      if (!violation.fix) continue
+      output =
+        output.slice(0, violation.fix.range[0]) +
+        violation.fix.text +
+        output.slice(violation.fix.range[1])
+    }
+    return output
+  }
+
+  assert.match(
+    fixed(
+      `<template><section class="wrong-root" /></template><style>.n-right-root {}</style>`,
+      "/src/components/RightRoot.vue",
+      { surfaceRootPrefixes: ["n-"] },
+    ),
+    /class="n-right-root"/,
+  )
+  assert.match(
+    fixed(
+      `<template><section class="n-order-host"><div class="unit -z -a" /></section></template>`,
+      "/src/components/OrderHost.vue",
+      { surfaceRootPrefixes: ["n-"] },
+    ),
+    /class="unit -a -z"/,
+  )
+  assert.match(
+    fixed(
+      `<template><section class="n-stn-host"><div class="seg" /></section></template>`,
+      "/src/components/StnHost.vue",
+      { surfaceRootPrefixes: ["n-"] },
+    ),
+    /class="unit"/,
+  )
+  assert.match(
+    fixed(
+      `<template><section class="n-stn-host"><div class="unit"><div class="g" /></div></section></template>`,
+      "/src/components/StnHost.vue",
+      { surfaceRootPrefixes: ["n-"] },
+    ),
+    /class="seg"/,
+  )
 })

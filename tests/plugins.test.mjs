@@ -130,6 +130,7 @@ test("Stylelint reports every selector contract family", async () => {
       "nagi-css/anatomy-allowed",
       "nagi-css/bare-element-selector",
       "nagi-css/boundary-nesting",
+      "nagi-css/dead-rule",
       "nagi-css/owned-dom-direct-child",
       "nagi-css/slot-surface-top-level",
       "nagi-css/state-not-class",

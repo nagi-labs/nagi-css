@@ -82,8 +82,9 @@ self-documents in a way no utility string can.
 It can, and utility CSS is often praised for avoiding that. But the cruft
 does not disappear under utilities — it moves into the markup as dead and
 conflicting tokens on elements, scattered and unnoticeable. Under Nagi CSS,
-selectors are derived from the template's structure, so a rule whose anchor
-class no longer exists in the template is mechanically detectable. Dead
+selectors are derived from the template's structure, so the linter walks the
+owned tree and reports a rule whose anchor class no longer exists (`dead-rule`)
+or whose path no longer does (`selector-mirrors-template`). Dead
 weight that a tool can find beats dead weight that hides.
 
 ## Why is the linter mandatory rather than optional?

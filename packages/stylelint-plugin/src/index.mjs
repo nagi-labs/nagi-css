@@ -9,6 +9,7 @@ import {
   analyzeVueTemplate,
   buildNagiSets,
   defineNagiConfig,
+  matchSelectorChain,
   matchesClassPrefix,
   resolveSeverity,
   validateNagiConfig,
@@ -18,7 +19,9 @@ const ruleIds = [
   "anatomy-allowed",
   "bare-element-selector",
   "boundary-nesting",
+  "dead-rule",
   "owned-dom-direct-child",
+  "selector-mirrors-template",
   "single-base-identity",
   "slot-surface-top-level",
   "state-not-class",
@@ -181,12 +184,94 @@ function readTemplateContext(root, config, fallbackFile) {
 function analyzeStyles(root, inputConfig, fallbackFile) {
   const config = defineNagiConfig(inputConfig)
   const sets = buildNagiSets(config)
-  const { roleNames, surfaceRoots, topLayerSurfaces = new Set() } = readTemplateContext(
-    root,
-    config,
-    fallbackFile,
-  )
+  const {
+    expectedClasses = new Set(),
+    roleNames,
+    surfaceRoots,
+    topLayerSurfaces = new Set(),
+    tree = [],
+  } = readTemplateContext(root, config, fallbackFile)
   const violations = []
+
+  // Only compounds whose classes are all plainly written can be matched against
+  // the template: a class inside :is()/:not() means "one of", which the tree
+  // cannot answer, and a boundary class means the chain leaves owned DOM.
+  function chainCompound(nodes) {
+    if (hasDeepPseudo(nodes)) return null
+    const direct = nodes.filter((node) => node.type === "class").map((node) => node.value)
+    if (classNodesDeep(nodes).length !== direct.length) return null
+    const classes = direct.filter(
+      (token) =>
+        !token.startsWith("-") &&
+        !/^(?:is-|has-)/.test(token) &&
+        !sets.stateClasses.has(token),
+    )
+    if (classes.length === 0) return null
+    if (
+      classes.some(
+        (token) =>
+          isLibraryBoundary(token, sets, config) ||
+          isLibraryInternal(token, config) ||
+          sets.slotSurfaces.has(token),
+      )
+    ) {
+      return null
+    }
+    return classes
+  }
+
+  function checkMirror(rule, chain) {
+    if (tree.length === 0 || chain === null || chain.length === 0) return
+    const { missing, status } = matchSelectorChain(tree, chain)
+    if (status === "dead") {
+      // A class the tables would require is missing markup, not a dead rule.
+      if (missing.every((token) => expectedClasses.has(token))) return
+      report(
+        rule,
+        "dead-rule",
+        `Selector "${rule.selector}" targets ".${missing.join(".")}", which the template does not contain.`,
+        `.${missing[0]}`,
+      )
+      return
+    }
+    if (status === "mismatch") {
+      report(
+        rule,
+        "selector-mirrors-template",
+        `Selector "${rule.selector}" does not follow the template: no element matches this path.`,
+      )
+    }
+  }
+
+  // Grows the resolved chain by one rule's worth of compounds, or gives up (null)
+  // as soon as any part of it cannot be matched.
+  function extendChain(parentChain, compounds, combinators, mode) {
+    if (parentChain === null) return null
+    const steps = compounds.map(chainCompound)
+    if (steps.some((classes) => classes === null)) return null
+    if (mode === "merge") {
+      if (parentChain.length === 0) return null
+      const merged = parentChain.map((step, index) =>
+        index === parentChain.length - 1
+          ? { ...step, classes: [...new Set([...step.classes, ...steps[0]])] }
+          : step,
+      )
+      return [
+        ...merged,
+        ...steps.slice(1).map((classes, index) => ({
+          classes,
+          combinator: combinators[index] ?? " ",
+        })),
+      ]
+    }
+    return [
+      ...parentChain,
+      ...steps.map((classes, index) => ({
+        classes,
+        combinator: index === 0 ? (mode ?? " ") : (combinators[index - 1] ?? " "),
+      })),
+    ]
+  }
 
   function report(node, ruleId, message, word) {
     violations.push({ message, node, ruleId, word })
@@ -389,10 +474,14 @@ function analyzeStyles(root, inputConfig, fallbackFile) {
       return
     }
     let surfaceSubject = null
+    let ruleChain = null
     for (const nodes of alternatives) {
       const { combinators, compounds } = splitCompounds(nodes)
       if (compounds.length === 0) continue
       surfaceSubject ??= surfaceSubjectToken(compounds)
+      const chain = extendChain([], compounds, combinators, ">")
+      ruleChain ??= chain
+      checkMirror(rule, chain)
       checkBareElements(rule, compounds[0])
       checkSingleBaseIdentity(rule, compounds[0])
       for (const node of compounds[0].filter((candidate) => candidate.type === "class")) {
@@ -442,10 +531,10 @@ function analyzeStyles(root, inputConfig, fallbackFile) {
       }
     }
     checkSurfaceLayout(rule, surfaceSubject)
-    walkNested(rule, alternativesEndInBoundary(alternatives), surfaceSubject)
+    walkNested(rule, alternativesEndInBoundary(alternatives), surfaceSubject, ruleChain)
   }
 
-  function processNested(rule, parentEndsInBoundary, parentSurfaceToken = null) {
+  function processNested(rule, parentEndsInBoundary, parentSurfaceToken = null, parentChain = null) {
     let alternatives
     try {
       alternatives = selectorAlternatives(rule.selector)
@@ -454,10 +543,19 @@ function analyzeStyles(root, inputConfig, fallbackFile) {
       return
     }
     let surfaceSubject = null
+    let ruleChain = null
     for (const nodes of alternatives) {
       const { combinator, mode, rest } = resolveNesting(nodes)
       const { combinators, compounds } = splitCompounds(rest)
       if (compounds.length === 0) continue
+      const chain = extendChain(
+        parentChain,
+        compounds,
+        combinators,
+        mode === "merge" ? "merge" : combinator,
+      )
+      ruleChain ??= chain
+      checkMirror(rule, chain)
       checkFlattenedBoundary(rule, compounds)
       if (mode === "merge") {
         if (compounds.length === 1) surfaceSubject ??= parentSurfaceToken
@@ -478,13 +576,17 @@ function analyzeStyles(root, inputConfig, fallbackFile) {
       rule,
       alternativesEndInBoundary(alternatives, parentEndsInBoundary, true),
       surfaceSubject,
+      ruleChain,
     )
   }
 
-  function walkNested(container, parentEndsInBoundary, parentSurfaceToken = null) {
+  function walkNested(container, parentEndsInBoundary, parentSurfaceToken = null, parentChain = null) {
     container.each?.((node) => {
-      if (node.type === "rule") processNested(node, parentEndsInBoundary, parentSurfaceToken)
-      else if (node.type === "atrule") walkNested(node, parentEndsInBoundary, parentSurfaceToken)
+      if (node.type === "rule") {
+        processNested(node, parentEndsInBoundary, parentSurfaceToken, parentChain)
+      } else if (node.type === "atrule") {
+        walkNested(node, parentEndsInBoundary, parentSurfaceToken, parentChain)
+      }
     })
   }
 

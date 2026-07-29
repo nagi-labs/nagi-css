@@ -4,6 +4,10 @@
       <span class="value">a</span>
       <span class="value">b</span>
     </li>
+    <li class="item">
+      <span class="value">c</span>
+      <span class="value">d</span>
+    </li>
   </ul>
 </template>
 

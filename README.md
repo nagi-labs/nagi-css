@@ -124,13 +124,16 @@ ESLint enforces:
 - the STN floor, consecutive-tier, and reach-`g` rules;
 - component slot configuration;
 - style blocks the toolchain cannot read, rather than skipping them; and
-- safe autofixes for unambiguous missing fixed classes.
+- autofixes for every rule whose correct output the contract computes: missing
+  fixed classes, the file-derived surface root name, STN tiers, and variant order.
 
 Stylelint enforces:
 
 - surface-only top-level selectors;
 - class selectors instead of bare owned elements;
 - `>` for owned DOM edges;
+- selector chains that match the template they target, so a rule whose anchor
+  class is absent, or whose path does not exist, is reported;
 - descendant steps across configured UI-library boundaries;
 - nested, component-prefixed slot sub-surfaces;
 - exactly one base identity class per selector compound;
@@ -169,9 +172,10 @@ For opaque UI components, `componentClasses: ["DataTable"]` derives
 `pv-data-table`; explicit mappings remain available for exceptions. Do not list
 application-owned Vue components in that table.
 
-Add `--fix` to apply only unambiguous missing fixed-class ESLint fixes.
-Selector, surface, anatomy, state, and ownership diagnostics are never
-rewritten.
+`--fix` writes the answer for every rule the contract computes: a missing fixed
+class, the surface root name derived from the file, an STN tier that follows from
+its chain, and variant order. Anatomy choices, state migration, ownership edges,
+and anything else needing a decision are reported and left alone.
 
 Every rule is an error by default. `severity` changes that per rule, with `*` as
 the fallback, so an existing codebase can adopt the contract without turning the

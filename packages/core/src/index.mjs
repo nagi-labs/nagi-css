@@ -339,4 +339,8 @@ export function deriveAllowedSurfaceRootNames(filename, prefixes = []) {
 }
 
 export { DEFAULT_CONFIG, ELEMENT_CLASSES, RENDERED_ELEMENTS }
-export { analyzeVueTemplate } from "./template-analysis.mjs"
+export {
+  analyzeVueTemplate,
+  matchSelectorChain,
+  unreadableStyleBlocks,
+} from "./template-analysis.mjs"

@@ -5,6 +5,9 @@
 - Give every styled surface a static identity class.
 - Keep exactly one table-first base identity class on each element and selector compound.
 - Connect styled owned parent-child edges with `>`.
+- Write every selector chain so it matches the template it targets: the linter walks
+  the owned tree, so a rule whose anchor class is absent (`dead-rule`) or whose path
+  does not exist (`selector-mirrors-template`) is reported.
 - Use classes for owned styling targets; do not target bare owned elements.
 - Keep runtime state in native, ARIA, or `data-*` attributes.
 - Derive a surface name exactly from its configured namespace prefix and Vue component or routed page file.

@@ -40,6 +40,83 @@ function isTransparentWrapper(node) {
   )
 }
 
+// Walking the owned tree that the template describes, so a selector chain can be
+// checked against the structure it claims to mirror. Every answer other than
+// "ok" is only reported when the tree is certain; anything opaque or dynamic
+// resolves to "unknown" and is left alone.
+export function matchSelectorChain(tree = [], chain = []) {
+  if (chain.length === 0) return { status: "unknown" }
+  const anchor = chain[0].classes
+  if (anchor.length === 0) return { status: "unknown" }
+
+  const nodesWith = (classes, nodes) =>
+    nodes.filter((node) => classes.every((name) => node.classes.includes(name)))
+  const allNodes = []
+  const positions = new WeakMap()
+  const collect = (nodes) => {
+    for (const [index, node] of nodes.entries()) {
+      allNodes.push(node)
+      positions.set(node, { index, siblings: nodes })
+      collect(node.children)
+    }
+  }
+  collect(tree)
+
+  const followingSiblings = (node, adjacentOnly) => {
+    const at = positions.get(node)
+    if (!at) return []
+    return adjacentOnly
+      ? at.siblings.slice(at.index + 1, at.index + 2)
+      : at.siblings.slice(at.index + 1)
+  }
+
+  const existsAnywhere = (classes) => nodesWith(classes, allNodes).length > 0
+  let sawUnknown = false
+
+  const descendants = (node, deep) => {
+    const out = []
+    const push = (children) => {
+      for (const child of children) {
+        out.push(child)
+        if (deep && !child.opaque) push(child.children)
+      }
+    }
+    push(node.children)
+    return out
+  }
+
+  const walk = (node, index) => {
+    if (index >= chain.length) return true
+    const step = chain[index]
+    const sibling = step.combinator === "+" || step.combinator === "~"
+    if (node.opaque && !sibling) {
+      sawUnknown = true
+      return false
+    }
+    const pool = sibling
+      ? followingSiblings(node, step.combinator === "+")
+      : descendants(node, step.combinator !== ">")
+    if (pool.some((candidate) => candidate.dynamic || (candidate.opaque && !sibling))) {
+      sawUnknown = true
+    }
+    return nodesWith(step.classes, pool).some((candidate) => walk(candidate, index + 1))
+  }
+
+  const starts = nodesWith(anchor, allNodes)
+  if (starts.length === 0) {
+    return existsAnywhere(anchor)
+      ? { status: "unknown" }
+      : { missing: anchor, status: "dead" }
+  }
+  if (starts.some((node) => walk(node, 1))) return { status: "ok" }
+  if (sawUnknown) return { status: "unknown" }
+
+  const last = chain.at(-1).classes
+  return existsAnywhere(last)
+    ? { status: "mismatch" }
+    : { missing: last, status: "dead" }
+}
+
 const SUPPORTED_STYLE_LANGS = new Set(["css"])
 
 // Style blocks the toolchain cannot read. Reported rather than skipped: a file
@@ -161,15 +238,28 @@ function collectStyledClasses(styles) {
 }
 
 function buildClassFix(node, info, requiredClass) {
-  if (info.staticProp) {
-    const value = info.staticProp.value
-    return {
-      range: [value.loc.start.offset, value.loc.end.offset],
-      text: `"${value.content} ${requiredClass}"`,
-    }
-  }
+  if (info.staticProp) return rewriteClassFix(info, [...info.staticTokens, requiredClass])
   const offset = node.loc.start.offset + 1 + node.tag.length
   return { range: [offset, offset], text: ` class="${requiredClass}"` }
+}
+
+// Rewrites the whole static class attribute. Every rule that uses it computes the
+// replacement from the contract, so the result is the canonical form by
+// construction rather than a guess.
+function rewriteClassFix(info, tokens) {
+  if (!info.staticProp) return undefined
+  const value = info.staticProp.value
+  return {
+    range: [value.loc.start.offset, value.loc.end.offset],
+    text: `"${tokens.join(" ")}"`,
+  }
+}
+
+function replaceToken(info, from, to) {
+  return rewriteClassFix(
+    info,
+    info.staticTokens.map((token) => (token === from ? to : token)),
+  )
 }
 
 function hasOwnedBaseClass(tokens, config) {
@@ -231,7 +321,15 @@ export function analyzeVueTemplate(source, filename, inputConfig = {}) {
   }
   const template = descriptor.template?.ast
   if (!template) {
-    return { roleNames, styleBlocks, surfaceRoots, topLayerSurfaces, violations }
+    return {
+      componentRootClasses: new Set(),
+      roleNames,
+      styleBlocks,
+      surfaceRoots,
+      topLayerSurfaces,
+      tree: [],
+      violations,
+    }
   }
 
   const styledClasses = collectStyledClasses(descriptor.styles)
@@ -242,8 +340,15 @@ export function analyzeVueTemplate(source, filename, inputConfig = {}) {
     config.emitPolicy === "always" || styledClasses.has(name)
   const unitIndex = config.tiers.indexOf("unit") + 1
   const leafIndex = config.tiers.indexOf("g") + 1
+  const tree = []
+  const componentRootClasses = new Set()
+  const elementRootClasses = new Set()
+  // Classes the tables would put on elements this template already has. A rule
+  // referencing one of these is not dead — the markup is missing the class, which
+  // element-class-required already reports.
+  const expectedClasses = new Set()
 
-  function visit(node, depth, nearestStnIndex = null, surfaceContext = null) {
+  function visit(node, depth, nearestStnIndex = null, surfaceContext = null, siblings = tree) {
     if (!node || node.type !== ELEMENT) return
 
     const info = extractClassInfo(node)
@@ -301,11 +406,19 @@ export function analyzeVueTemplate(source, filename, inputConfig = {}) {
       }
       if (matchingRootTokens.length === 0 || identityTokens.length !== matchingRootTokens.length) {
         const expected = [...expectedRoots].map((token) => `".${token}"`).join(" or ")
+        // Fixable when a single wrong identity class stands in for a single
+        // derivable root name; anything else needs a decision.
+        const wrong = identityTokens.filter((token) => !expectedRoots.has(token))
+        const fix =
+          expectedRoots.size === 1 && wrong.length === 1 && matchingRootTokens.length === 0
+            ? replaceToken(info, wrong[0], [...expectedRoots][0])
+            : undefined
         push(
           violations,
           node,
           "surface-root-name",
           `Surface root must be named ${expected} from the configured prefix and Vue file name.`,
+          fix,
         )
       }
     }
@@ -330,11 +443,13 @@ export function analyzeVueTemplate(source, filename, inputConfig = {}) {
 
     const staticVariants = info.staticTokens.filter(isVariant)
     if (staticVariants.join("\0") !== [...staticVariants].sort().join("\0")) {
+      const sorted = [...staticVariants].sort()
       push(
         violations,
         node,
         "variant-order",
-        `Variant classes must be alphabetical: "${[...staticVariants].sort().join(" ")}".`,
+        `Variant classes must be alphabetical: "${sorted.join(" ")}".`,
+        rewriteClassFix(info, [...info.staticTokens.filter((token) => !isVariant(token)), ...sorted]),
       )
     }
 
@@ -395,6 +510,7 @@ export function analyzeVueTemplate(source, filename, inputConfig = {}) {
       Object.hasOwn(config.elementClasses, node.tag)
     ) {
       const required = mappingBase(config.elementClasses[node.tag])
+      if (required) expectedClasses.add(required)
       const styledTrigger =
         classRequired(required) || [...allTokens].some((token) => styledClasses.has(token))
       if (required && !staticTokens.has(required) && styledTrigger) {
@@ -417,6 +533,7 @@ export function analyzeVueTemplate(source, filename, inputConfig = {}) {
       Object.hasOwn(config.componentClasses, node.tag)
     ) {
       const required = config.componentClasses[node.tag]
+      expectedClasses.add(required)
       if (classRequired(required) && !staticTokens.has(required)) {
         const fix = hasOwnedBaseClass(info.staticTokens, config)
           ? undefined
@@ -450,23 +567,44 @@ export function analyzeVueTemplate(source, filename, inputConfig = {}) {
       }
     }
 
+    // The record a selector chain is checked against. Variants are left out: they
+    // are frequently conditional, and matching on them would only add doubt.
+    const record = {
+      children: [],
+      classes: info.staticTokens.filter((token) => !isVariant(token)),
+      dynamic: info.dynamic,
+      opaque: node.tagType === COMPONENT || node.tag === "slot",
+      tag: node.tag,
+    }
+    siblings.push(record)
+    for (const token of record.classes) {
+      if (isLibraryInternal(token, config) || sets.slotSurfaces.has(token)) continue
+      if (node.tagType === COMPONENT) componentRootClasses.add(token)
+      else elementRootClasses.add(token)
+    }
+
     const stnToken = [...staticTokens].find((token) => sets.stnIndex.has(token))
     const stnIndex = stnToken ? sets.stnIndex.get(stnToken) : null
     const context = isSurfaceRoot ? { coarse: [], hasLeaf: false } : surfaceContext
     if (stnIndex != null) {
+      // Both tiers are computed from the chain, so both are fixable: the floor is
+      // `unit`, and a child is one tier finer than its nearest STN ancestor.
       if (nearestStnIndex == null && unitIndex > 0 && stnIndex > unitIndex) {
         push(
           violations,
           node,
           "stn-floor",
           `Outermost STN class "${stnToken}" must be unit or coarser.`,
+          replaceToken(info, stnToken, config.tiers[unitIndex - 1]),
         )
       } else if (nearestStnIndex != null && stnIndex !== nearestStnIndex + 1) {
+        const expected = config.tiers[nearestStnIndex]
         push(
           violations,
           node,
           "stn-order",
-          `STN class "${stnToken}" must be exactly one tier finer than its nearest STN ancestor.`,
+          `STN class "${stnToken}" must be exactly one tier finer than its nearest STN ancestor${expected ? `: "${expected}"` : ""}.`,
+          expected ? replaceToken(info, stnToken, expected) : undefined,
         )
       }
       if (context) {
@@ -484,7 +622,7 @@ export function analyzeVueTemplate(source, filename, inputConfig = {}) {
       const visitChildren = (children, childDepth) => {
         for (const child of children ?? []) {
           if (isTransparentWrapper(child)) visitChildren(child.children, childDepth)
-          else visit(child, childDepth, childNearest, context)
+          else visit(child, childDepth, childNearest, context, record.children)
         }
       }
       visitChildren(node.children, depth + 1)
@@ -512,11 +650,18 @@ export function analyzeVueTemplate(source, filename, inputConfig = {}) {
   visitRoots(template.children)
 
   return {
+    // A class that also sits on a plain element somewhere is ambiguous, so it is
+    // not treated as an owned component boundary.
+    componentRootClasses: new Set(
+      [...componentRootClasses].filter((token) => !elementRootClasses.has(token)),
+    ),
+    expectedClasses,
     expectedRoots,
     roleNames,
     styleBlocks,
     surfaceRoots,
     topLayerSurfaces,
+    tree,
     violations,
     sourceFile: path.resolve(filename),
   }
