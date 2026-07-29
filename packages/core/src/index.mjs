@@ -30,11 +30,8 @@ const ELEMENT_CLASSES = {
   small: "note",
   svg: "svg",
   table: "table",
-  tbody: "rowgroup",
   td: "cell",
-  tfoot: "rowgroup -foot",
-  th: "cell -head",
-  thead: "rowgroup -head",
+  th: "cell",
   time: "time",
   tr: "row",
   ul: "list",
@@ -173,14 +170,11 @@ export function slotSurfaces(config) {
   )
 }
 
-// A malformed mapping is a configuration error, reported by validateNagiConfig.
-// Tolerate it here so it surfaces as a diagnostic rather than a TypeError.
+// A mapping is a single base class. A malformed one is a configuration error,
+// reported by validateNagiConfig; tolerate it here so it surfaces as a
+// diagnostic rather than a TypeError.
 export function mappingBase(value) {
-  return typeof value === "string" ? value.split(/\s+/, 1)[0] : ""
-}
-
-export function mappingTokens(value) {
-  return typeof value === "string" ? value.split(/\s+/).filter(Boolean) : []
+  return typeof value === "string" ? value.trim() : ""
 }
 
 export function buildNagiSets(input) {
@@ -202,16 +196,6 @@ export function buildNagiSets(input) {
     elementNameReverse.get(base).add(tag)
   }
 
-  const fixedVariantBases = new Map()
-  const addFixedVariant = (variant, base) => {
-    if (!fixedVariantBases.has(variant)) fixedVariantBases.set(variant, new Set())
-    fixedVariantBases.get(variant).add(base)
-  }
-  for (const value of Object.values(config.elementClasses)) {
-    const [base, ...variants] = mappingTokens(value)
-    for (const variant of variants) addFixedVariant(variant, base)
-  }
-
   const surfaces = slotSurfaces(config)
 
   return {
@@ -221,7 +205,6 @@ export function buildNagiSets(input) {
     detachedSlotSurfaces: new Set(config.detachedSlotSurfaces),
     elementNameReverse,
     elementValues,
-    fixedVariantBases,
     knownNames: new Set([...elementValues, ...componentValues, ...anatomy, ...stn]),
     renderedElements: new Set(RENDERED_ELEMENTS),
     roleVocabulary: new Set(ARIA_ROLE_NAMES),
@@ -267,6 +250,12 @@ export function validateNagiConfig(config) {
   for (const [tag, value] of Object.entries(config.elementClasses ?? {})) {
     if (typeof value !== "string" || value.trim().length === 0) {
       errors.push(`elementClasses.${tag} must be a non-empty string; received ${String(value)}`)
+    } else if (/\s/.test(value.trim())) {
+      errors.push(
+        `elementClasses.${tag} must be a single base class; received "${value}". A distinction a selector can reach belongs in an attribute or an ancestor step, not a fixed variant`,
+      )
+    } else if (value.trim().startsWith("-")) {
+      errors.push(`elementClasses.${tag} must be a base class, not a variant; received "${value}"`)
     }
   }
 

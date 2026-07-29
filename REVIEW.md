@@ -12,12 +12,13 @@
 | 状態 | 項目 |
 |---|---|
 | **修正済み**（このブランチ） | #1 #2 #3 #4 #5 #6 #7 #21 #22 — 確認されたバグ全件。テスト同梱 |
+| **実装済み**（このブランチ） | #18 #23 — fixed variant 機構の廃止と表の2層化。コード・テスト・文書を同時に更新。#12 もこれで解消 |
 | **文書反映済み**（このブランチ） | 素の CSS のみ対応・単体 `.css` 対象外の方針（CONTRACT.md / README / FAQ / configuration.md） |
 | **保留** | #10（値のトークン化）— 議論待ち |
-| **未着手** | #8 #9 #11 #12 #13 #14 #15 #16 #17 #18 #19 #20 #23 |
+| **未着手** | #8 #9 #11 #13 #14 #15 #16 #17 #19 #20 |
 
-#18 と #23 は挙動変更なので、CONTRIBUTING の ground rule（コード・テスト・文書を一緒に出す）に従い、
-決定後にまとめて着手する。#11 の一部（`-search` / `-success`）は #20 の判断が前提。
+#11 の一部（`-search` / `-success`）は #20 の判断が前提。
+`<b>` `<i>` `<u>` `<s>` を `bannedClasses` に寄せる案（#23 の派生）は、既存コードを弾く変更なので未着手。
 
 ---
 
@@ -36,18 +37,18 @@
 | 9 | テンプレート↔セレクタ対応検査が未実装（README の主張が未裏付け） | 未実装 | P1 | 未着手 |
 | 10 | 値（トークン）の canonical form が未検査 | 未実装 | — | **保留（議論中）** |
 | 11 | CONTRACT.md の例3件がリンタで落ちる | 整合性 | P1 | 未着手 |
-| 12 | CONTRACT.md L478 の `thead` 自己マップ記述が表と矛盾 | 整合性 | P2 | 未着手 |
+| 12 | CONTRACT.md L478 の `thead` 自己マップ記述が表と矛盾 | 整合性 | P2 | **解消**（#18 により記述が正しくなった） |
 | 13 | 「全例がリンタを通る」を CI で検査していない | プロセス | P1 | 未着手 |
 | 14 | `tiers` 拡張（深い装飾の逃げ道）が未文書化 | 文書 | P2 | 未着手 |
 | 15 | `docs/index.html` が契約外の語彙を使用 | 整合性 | P3 | 未着手 |
 | 16 | 計算可能な全ルールを autofix 可能にする | 提案 | P1 | 未着手 |
 | 17 | 自作コンポーネント境界のゾーンを追加 | 提案 | P2 | 未着手 |
-| 18 | fixed variant 機構を廃止（`thead`/`tbody`/`tfoot` を self-map、`th`/`td` は同じ `cell`） | 提案 | P2 | 未着手 |
+| 18 | fixed variant 機構を廃止（`thead`/`tbody`/`tfoot` を self-map、`th`/`td` は同じ `cell`） | 提案 | P2 | **実装済み** |
 | 19 | 段階導入手段（severity / baseline）がない | 提案 | P2 | 未着手 |
 | 20 | state / variant の判定基準、variant 禁止語彙の判定単位 | 設計 | P2 | 未着手 |
 | 21 | `<style src="...">` が全チェックをすり抜ける（#1 と同じクラスの穴） | バグ | **P0** | **修正済み** |
 | 22 | `elementClasses` の値検証が無く、不正値が TypeError になる | バグ | P3 | **修正済み** |
-| 23 | Element Class Table を2層に分け、上書きの基準を書き換える | 設計 | P2 | 未着手 |
+| 23 | Element Class Table を2層に分け、上書きの基準を書き換える | 設計 | P2 | **実装済み** |
 
 ### 修正の内容
 
@@ -62,8 +63,15 @@
   `Teleport` は DOM を移動させるので**意図的に除外**（`detachedSlotSurfaces` の領域）
 - **#6** — `pages` より上のディレクトリを遡らない。`pages/index.vue` → `index-page`、`pages/[id].vue` → `id-page`
 - **#7** — `config.ignores` を Stylelint の `ignorePattern` に渡す
-- **#22** — `elementClasses` の値を `validateNagiConfig()` で検査。併せて `mappingBase` /
-  `mappingTokens` を非文字列に耐えるようにし、TypeError ではなく設定エラーとして出るように
+- **#22** — `elementClasses` の値を `validateNagiConfig()` で検査（非空文字列／単一 base ／変体でない）。
+  併せて `mappingBase` を非文字列に耐えるようにし、TypeError ではなく設定エラーとして出るように
+- **#18 / #23** — `thead`/`tbody`/`tfoot` を self-map、`th`/`td` を同じ `cell` に。
+  fixed variant 機構（`mappingTokens` / `fixedVariantBases` / `partialCarry` / variant シャドウの例外）を**全削除**。
+  マッピングは単一 base のみで、複数トークンは設定エラー。
+  Element Class Table を**機械的上書き**（`title` / `list` / `item` / `cell`）と
+  **可読性上書き**（`text` `note` `link` `image` `term` `definition` `row`）の2層に分け、
+  基準を「**タグがスタイルとは無関係な理由で変わりうる箇所だけ上書きする**」に置き換えた。
+  CONTRACT.md / CONTRIBUTING / naming-flow.md を同時に更新。`<thead class="thead">` が正になったので #12 も解消
 
 ---
 

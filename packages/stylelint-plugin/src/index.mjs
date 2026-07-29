@@ -202,16 +202,8 @@ function analyzeStyles(root, inputConfig, fallbackFile) {
     return true
   }
 
-  function checkVariantShadow(rule, token, compoundClasses = new Set()) {
+  function checkVariantShadow(rule, token) {
     const stem = token.slice(1)
-    const pairedBases = sets.fixedVariantBases.get(token)
-    if (
-      !sets.roleVocabulary.has(stem) &&
-      pairedBases &&
-      [...pairedBases].some((base) => compoundClasses.has(base))
-    ) {
-      return
-    }
     if (!sets.variantShadowNames.has(stem)) return
     report(
       rule,
@@ -248,12 +240,11 @@ function analyzeStyles(root, inputConfig, fallbackFile) {
   function checkAnatomy(rule, nodes) {
     if (hasDeepPseudo(nodes)) return
     checkSingleBaseIdentity(rule, nodes)
-    const compoundClasses = new Set(classNodesDeep(nodes).map((node) => node.value))
     for (const node of classNodesDeep(nodes)) {
       const token = node.value
       if (checkState(rule, token)) continue
       if (token.startsWith("-")) {
-        checkVariantShadow(rule, token, compoundClasses)
+        checkVariantShadow(rule, token)
         continue
       }
       if (isLibraryInternal(token, config)) continue
@@ -402,15 +393,12 @@ function analyzeStyles(root, inputConfig, fallbackFile) {
       if (compounds.length === 0) continue
       surfaceSubject ??= surfaceSubjectToken(compounds)
       checkBareElements(rule, compounds[0])
-      const firstCompoundClasses = new Set(
-        classNodesDeep(compounds[0]).map((node) => node.value),
-      )
       checkSingleBaseIdentity(rule, compounds[0])
       for (const node of compounds[0].filter((candidate) => candidate.type === "class")) {
         const token = node.value
         if (checkState(rule, token)) continue
         if (token.startsWith("-")) {
-          checkVariantShadow(rule, token, firstCompoundClasses)
+          checkVariantShadow(rule, token)
           continue
         }
         if (sets.banned.has(token)) {

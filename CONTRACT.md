@@ -478,31 +478,50 @@ Domain meaning is never mixed into a style element name; it lives in the surface
 
 ### Element Class Table (HTML elements, excluding `div`/`span`)
 
-An HTML element other than `div`/`span`, appearing as an **internal style element**, takes a fixed class. The rule is total: **every rendered element self-maps by default — its class is its own tag name** (`<dialog>` → `dialog`, `<form>` → `form`, `<summary>` → `summary`) — and this table lists only the **meaning-bearing overrides**, where the tag name encodes HTML history rather than stable UI meaning (`<h1>` → `title`, `<dd>` → `definition`, `<img>` → `image`). No element is ever left without a legal class. This removes naming judgment for semantic HTML and confines decisions to `div`/`span`. *When* the class must be present is governed by the linter's `emitPolicy`: **`when-styled`** (default) requires it only where the class is actually referenced in the component's `<style>` (an unstyled subtree carries none), while **`always`** requires it on every matching element for maximum uniformity. Either way the *name* is fixed by rule. Multiple same-tag elements share the base class and are differentiated by variants.
+An HTML element other than `div`/`span`, appearing as an **internal style element**, takes a fixed class. The rule is total: **every rendered element self-maps by default — its class is its own tag name** (`<dialog>` → `dialog`, `<form>` → `form`, `<summary>` → `summary`) — and this table lists only the overrides. No element is ever left without a legal class. This removes naming judgment for semantic HTML and confines decisions to `div`/`span`. *When* the class must be present is governed by the linter's `emitPolicy`: **`when-styled`** (default) requires it only where the class is actually referenced in the component's `<style>` (an unstyled subtree carries none), while **`always`** requires it on every matching element for maximum uniformity. Either way the *name* is fixed by rule. Multiple same-tag elements share the base class and are differentiated by variants.
 
-| Element | class | Notes |
+**When is an override justified?** Exactly one criterion:
+
+> **The tag varies for reasons unrelated to styling.**
+
+A class that copies such a tag would have to be edited when the tag changes even
+though nothing about the styling changed. Everything else self-maps — including
+abbreviations (`<nav>`, `<svg>`, `<dfn>`), because those tags do not vary. The
+table therefore has two tiers, and the second one is honest about being taste.
+
+**Mechanical overrides** — required by the criterion above:
+
+| Element | class | Why the tag varies |
 |---|---|---|
-| `<h1>`–`<h6>` | `title` | heading level is not encoded in the class; multiple titles are separated by surface or variant |
+| `<h1>`–`<h6>` | `title` | heading level follows the document outline, so the same title takes a different tag when the component is reused, or a dynamic one when the level is a prop |
+| `<ul>` `<ol>` `<dl>` | `list` | ordered and unordered swap for content reasons while the styling is shared |
+| `<li>` | `item` | pairs with `list` |
+| `<th>` `<td>` | `cell` | header and body cells share their skin; which one a cell is depends on its row group, and the mandatory `>` chain already names that (`.thead > .row > .cell`) |
+
+**Readability overrides** — not required by the criterion; kept because the tag
+name is cryptic and the mapping reads better. Their justification is preference,
+and the list is deliberately closed:
+
+| Element | class | |
+|---|---|---|
 | `<p>` | `text` | |
 | `<small>` | `note` | side comments and fine print |
 | `<a>` | `link` | |
 | `<img>` | `image` | |
-| `<ul>` `<ol>` `<dl>` | `list` | description list is `list -description` |
-| `<li>` | `item` | |
 | `<dt>` | `term` | |
 | `<dd>` | `definition` | matches the HTML-AAM role, paired with `term` |
-| `<thead>` | `rowgroup -head` | a mapping may fix a variant alongside its base |
-| `<tbody>` | `rowgroup` | |
-| `<tfoot>` | `rowgroup -foot` | |
 | `<tr>` | `row` | |
-| `<th>` | `cell -head` | |
-| `<td>` | `cell` | |
+
+A mapping is always **a single base class**. There is no mechanism for fixing a
+variant alongside a base: a distinction a selector can reach belongs in an
+attribute or an ancestor step (see the notes below), and one it cannot reach
+means the elements want different classes.
 
 Everything else self-maps: `<header>` → `header`, `<section>` → `section`,
 `<button>` → `button`, `<dialog>` → `dialog` (a top-layer surface, and a
 surface root when natural), `<details>` → `details`, `<form>` → `form`,
-`<select>` → `select`, `<thead>` → `thead`, and so on for every rendered
-element. Notes that survive the trimming:
+`<select>` → `select`, `<thead>` → `thead`, `<tbody>` → `tbody`, and so on for
+every rendered element. Notes that survive the trimming:
 
 - `<section>` vagueness is resolved by a variant (`section -payment`), and an
   internal `<article>` that is actually a surface root is named by identity
@@ -514,13 +533,12 @@ element. Notes that survive the trimming:
   `<path>` etc. are not style elements.
 - `<select>`/`<textarea>` self-map; a shared control skin targets
   `:is(.input, .select, .textarea)`.
-- The table-row mappings expand HTML's abbreviations and fix a variant where
-  the tag encodes position: a header row group is always
-  `.rowgroup.-head > .row > .cell.-head`. The fixed variant is part of the
-  mapping — `<thead class="rowgroup">` without `-head` is a violation.
-- A mapping fixes a variant **only for distinctions a selector cannot reach**:
-  `thead` and `tbody` differ by tag, and bare tag selectors are forbidden.
-  Distinctions that live in an attribute are selected through the attribute —
+- Row groups self-map, so head and body are distinguished by the ancestor step
+  the `>` requirement already forces:
+  `.thead > .row > .cell` and `.tbody > .row > .cell`. A row header inside the
+  body is the one case an ancestor cannot separate, and it is attribute-reachable:
+  `.cell[scope="row"]`.
+- Distinctions that live in an attribute are selected through the attribute —
   `<input>` kinds take plain `input` and are styled as
   `.input[type=checkbox]`, `.input[type=radio]`, never through a class copy
   of the `type`.
@@ -529,13 +547,10 @@ element. Notes that survive the trimming:
   `<li class="item" role="separator">` and is styled with
   `.item[role="separator"]`; `class="separator"`, `class="item separator"`,
   and `class="item -separator"` are non-canonical on `<li>`.
-- A mapping-fixed variant is legal only in compound with its base
-  (`.rowgroup.-head` conforms; `.unit.-head` is judged as an ordinary
-  variant).
 - ARIA role `menu` on a `div`/`span` still requires an explicit `role`
   attribute; the class `menu` on `<menu>` comes from the self-map.
 
-**Override is rule-based, never taste-based.** If the default is semantically wrong, either (a) the element is actually a surface root → name it by identity, or (b) add a variant. Never rename the base class.
+**Applying the table is rule-based, never taste-based.** The two tiers above are a fixed list; choosing a class from it is mechanical. If the default is semantically wrong, either (a) the element is actually a surface root → name it by identity, or (b) add a variant. Never rename the base class.
 
 **Reserved-element-name rule (machine-enforced).** A class name that equals a **rendered** HTML element name may appear **only** on that element, or on an element the tables deliberately map to it (e.g. `title` on `<h1>`–`<h6>`). So `.button` on a `<div>` is forbidden; `.header` belongs to `<header>` alone. UI library components should not borrow an element-table class just because they render similar markup: a library data-table component should use its configured boundary class, not `table`.
 

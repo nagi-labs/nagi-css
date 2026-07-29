@@ -47,30 +47,60 @@ test("requires an automatically derived UI library class", () => {
   assert.deepEqual(present.violations, [])
 })
 
-test("table mappings fix a variant alongside the base class", () => {
+test("row groups self-map and cells share one class, distinguished by ancestor", () => {
   const source = (theadClass) => `<template>
   <section class="price-table">
     <table class="table">
       <thead class="${theadClass}">
-        <tr class="row"><th class="cell -head">Plan</th></tr>
+        <tr class="row"><th class="cell">Plan</th></tr>
       </thead>
-      <tbody class="rowgroup">
+      <tbody class="tbody">
         <tr class="row"><td class="cell">Free</td></tr>
       </tbody>
     </table>
   </section>
 </template>
-<style>.price-table { > .table { > .rowgroup.-head > .row > .cell {} > .rowgroup > .row > .cell {} } }</style>`
+<style>.price-table { > .table { > .thead > .row > .cell {} > .tbody > .row > .cell {} } }</style>`
 
-  const valid = analyzeVueTemplate(source("rowgroup -head"), "/src/components/PriceTable.vue")
+  const valid = analyzeVueTemplate(source("thead"), "/src/components/PriceTable.vue")
   assert.deepEqual(valid.violations, [])
 
-  const partial = analyzeVueTemplate(source("rowgroup"), "/src/components/PriceTable.vue")
+  const legacy = analyzeVueTemplate(source("rowgroup -head"), "/src/components/PriceTable.vue")
   assert.ok(
-    partial.violations.some(
+    legacy.violations.some(
       ({ message, ruleId }) =>
-        ruleId === "element-class-required" && message.includes('"rowgroup -head"'),
+        ruleId === "element-class-required" && message.includes('"thead"'),
     ),
+  )
+  // `rowgroup` is no longer an element-table value, so it is only available to a
+  // div/span carrying the matching role.
+  assert.ok(
+    legacy.violations.some(
+      ({ message, ruleId }) =>
+        ruleId === "anatomy-allowed" && message.includes('"rowgroup"'),
+    ),
+  )
+})
+
+test("rejects a mapping that tries to fix a variant alongside its base", () => {
+  assert.deepEqual(
+    validateNagiConfig(
+      defineNagiConfig({
+        surfaceRootPrefixes: ["n-"],
+        elementClasses: { thead: "rowgroup -head" },
+      }),
+    ),
+    [
+      'elementClasses.thead must be a single base class; received "rowgroup -head". ' +
+        "A distinction a selector can reach belongs in an attribute or an ancestor step, " +
+        "not a fixed variant",
+    ],
+  )
+  assert.deepEqual(
+    validateNagiConfig(
+      defineNagiConfig({ surfaceRootPrefixes: ["n-"], elementClasses: { p: "-lead" } }),
+    ),
+    ['elementClasses.p must be a base class, not a variant; received "-lead"'],
   )
 })
 

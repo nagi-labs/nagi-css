@@ -8,7 +8,7 @@ import {
   buildNagiSets,
   defineNagiConfig,
   deriveAllowedSurfaceRootNames,
-  mappingTokens,
+  mappingBase,
   matchesClassPrefix,
 } from "./index.mjs"
 
@@ -341,14 +341,6 @@ export function analyzeVueTemplate(source, filename, inputConfig = {}) {
     for (const token of allTokens) {
       if (!isVariant(token) || sets.stateClasses.has(token)) continue
       const stem = token.slice(1)
-      const pairedBases = sets.fixedVariantBases.get(token)
-      if (
-        !sets.roleVocabulary.has(stem) &&
-        pairedBases &&
-        [...pairedBases].some((base) => staticTokens.has(base))
-      ) {
-        continue
-      }
       if (sets.variantShadowNames.has(stem)) {
         push(
           violations,
@@ -402,15 +394,10 @@ export function analyzeVueTemplate(source, filename, inputConfig = {}) {
       node.tag !== "span" &&
       Object.hasOwn(config.elementClasses, node.tag)
     ) {
-      const required = config.elementClasses[node.tag]
-      const requiredTokens = mappingTokens(required)
-      const missing = requiredTokens.filter((token) => !staticTokens.has(token))
+      const required = mappingBase(config.elementClasses[node.tag])
       const styledTrigger =
-        requiredTokens.some((token) => classRequired(token)) ||
-        [...allTokens].some((token) => styledClasses.has(token))
-      const partialCarry =
-        requiredTokens.length > 1 && staticTokens.has(requiredTokens[0])
-      if (missing.length > 0 && (styledTrigger || partialCarry)) {
+        classRequired(required) || [...allTokens].some((token) => styledClasses.has(token))
+      if (required && !staticTokens.has(required) && styledTrigger) {
         const fix = hasOwnedBaseClass(info.staticTokens, config)
           ? undefined
           : buildClassFix(node, info, required)
@@ -418,7 +405,7 @@ export function analyzeVueTemplate(source, filename, inputConfig = {}) {
           violations,
           node,
           "element-class-required",
-          `<${node.tag}> requires the static class "${required}"${config.emitPolicy === "when-styled" && !partialCarry ? " because it is styled" : ""}.`,
+          `<${node.tag}> requires the static class "${required}"${config.emitPolicy === "when-styled" ? " because it is styled" : ""}.`,
           fix,
         )
       }

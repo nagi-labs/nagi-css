@@ -27,14 +27,24 @@ node packages/cli/src/cli.mjs check \
 - **Determinism is the product.** A proposal that reintroduces judgment
   ("let authors choose…") works against the design. The decision principles
   the vocabulary already follows:
-  - the Element Class Table lists only meaning-bearing overrides; everything
-    else self-maps (class = tag name);
-  - overrides exist to expand HTML's abbreviations (`dd` → `definition`) or
-    to erase authoring-time detail (`h1`–`h6` → `title`);
-  - a mapping fixes a variant only for distinctions a selector cannot reach
-    (tag differences: `thead` → `rowgroup -head`); attribute-reachable
-    distinctions are selected through the attribute (`.input[type=checkbox]`);
+  - the Element Class Table lists only overrides; everything else self-maps
+    (class = tag name);
+  - **a mechanical override exists only where the tag varies for reasons
+    unrelated to styling** (`h1`–`h6` → `title`, since heading level follows the
+    document outline). An abbreviation alone is not a reason: `nav`, `svg`, and
+    `dfn` self-map;
+  - the remaining overrides (`p` → `text`, `a` → `link`, …) are a **closed
+    readability tier**, and the repository states plainly that their
+    justification is preference rather than rule;
+  - a mapping is a single base class. A distinction a selector can reach is
+    selected through an attribute (`.input[type=checkbox]`) or an ancestor step
+    (`.thead > .row > .cell`); one it cannot reach means the elements want
+    different classes;
   - variants never name what an element is.
+
+A table proposal must say **which tier** it belongs to. For the mechanical tier,
+name the non-styling reason the tag varies; for the readability tier, expect a
+higher bar, since the tier is closed by default.
 
 ## Proposing an Element Class Table change
 

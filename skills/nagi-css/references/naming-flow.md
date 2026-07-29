@@ -22,25 +22,26 @@ Domain meaning never goes in a style-element name — only in the surface identi
 | `small` | `note` | | `dt` | `term` |
 | `a` | `link` | | `dd` | `definition` |
 | `img` | `image` | | `tr` | `row` |
-| `thead` | `rowgroup -head` | | `th` | `cell -head` |
-| `tbody` | `rowgroup` | | `td` | `cell` |
-| `tfoot` | `rowgroup -foot` | | | |
+| `th` `td` | `cell` | | | |
 
-A mapping may fix a variant alongside its base (`thead` → `rowgroup -head`);
-the fixed variant is required whenever the base class is carried, and is legal
-only in compound with its base. A variant is fixed **only for distinctions a
-selector cannot reach** (tag differences): attribute-reachable distinctions
-are selected through the attribute — `<input>` kinds are plain `input`,
-styled as `.input[type=checkbox]`, never a class copy of `type`.
-ARIA semantics follow the same rule: `<li role="separator">` keeps `item` and
-is styled as `.item[role="separator"]`; only `div`/`span` may use `separator`
-as their base identity with a matching role.
+Every mapping is **a single base class**; there is no fixed-variant mechanism.
+A distinction a selector can reach is selected through it, not copied into a class:
+
+- **attribute** — `<input>` kinds are plain `input`, styled `.input[type=checkbox]`;
+  a row header inside the body is `.cell[scope="row"]`
+- **ancestor step** — head and body cells differ by their row group, which the
+  mandatory `>` chain already names: `.thead > .row > .cell` and `.tbody > .row > .cell`
+- ARIA follows the attribute rule: `<li role="separator">` keeps `item` and is
+  styled `.item[role="separator"]`; only `div`/`span` may use `separator` as a
+  base identity, with a matching role
 
 Every other rendered element **self-maps** (class = tag name): `header`,
-`section`, `button`, `dialog`, `form`, `select`, `textarea`, `svg`, … No
-element is left without a legal class; the table lists only meaning-bearing
-overrides. A glyph-sized `<svg>` keeps `svg`; use an `icon` `div`/`span`
-wrapper only when a separate anatomy wrapper is actually needed.
+`section`, `button`, `dialog`, `form`, `select`, `textarea`, `svg`, `thead`,
+`tbody`, `tfoot`, … No element is left without a legal class. An override exists
+only where **the tag varies for reasons unrelated to styling** (`h1`–`h6`
+follow the document outline); an abbreviation alone is not a reason, so `nav`,
+`svg`, and `dfn` self-map. A glyph-sized `<svg>` keeps `svg`; use an `icon`
+`div`/`span` wrapper only when a separate anatomy wrapper is actually needed.
 
 Multiple same-tag elements share the base class; differentiate with variants (`button -danger`).
 Override only by rule: wrong default → it's a surface root (name by identity) or add a variant. Never rename the base.
