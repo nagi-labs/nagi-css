@@ -6,9 +6,18 @@ import { pathToFileURL } from "node:url"
 import { ESLint } from "eslint"
 import stylelint from "stylelint"
 
-import { createNagiEslintConfig } from "@nagi-labs/eslint-plugin-nagi-css"
-import { defineNagiConfig, validateNagiConfig } from "@nagi-labs/nagi-css-core"
-import { createNagiStylelintConfig } from "@nagi-labs/stylelint-plugin-nagi-css"
+import { createNagiEslintConfig, rules as eslintRules } from "@nagi-labs/eslint-plugin-nagi-css"
+import {
+  defineNagiConfig,
+  validateNagiConfig,
+  validateSeverity,
+} from "@nagi-labs/nagi-css-core"
+import {
+  createNagiStylelintConfig,
+  ruleIds as stylelintRuleIds,
+} from "@nagi-labs/stylelint-plugin-nagi-css"
+
+const knownRuleIds = [...new Set([...Object.keys(eslintRules), ...stylelintRuleIds])]
 
 function parseArgs(argv) {
   const args = { command: "check", config: null, cwd: process.cwd(), fix: false }
@@ -51,7 +60,7 @@ async function runEslint(cwd, config, fix) {
     overrideConfigFile: true,
     overrideConfig: [
       { ignores: config.ignores ?? ["**/node_modules/**", "**/dist/**"] },
-      createNagiEslintConfig(config.semantic, files),
+      createNagiEslintConfig(config.semantic, files, config.severity),
     ],
   })
   const results = await eslint.lintFiles(files)
@@ -67,7 +76,7 @@ async function runStylelint(cwd, config) {
   const result = await stylelint.lint({
     cwd,
     files,
-    config: createNagiStylelintConfig(config.semantic),
+    config: createNagiStylelintConfig(config.semantic, config.severity),
     ignorePattern: config.ignores ?? ["**/node_modules/**", "**/dist/**"],
     allowEmptyInput: true,
     formatter: "string",
@@ -86,13 +95,17 @@ export async function run(argv = process.argv.slice(2)) {
 
   const loaded = await loadConfig(args.config)
   const semantic = defineNagiConfig(loaded.semantic)
-  const configErrors = validateNagiConfig(semantic)
+  const severity = loaded.severity ?? {}
+  const configErrors = [
+    ...validateNagiConfig(semantic),
+    ...validateSeverity(severity, knownRuleIds),
+  ]
   if (configErrors.length > 0) {
     for (const message of configErrors) process.stderr.write(`nagi-css: ${message}\n`)
     return 2
   }
 
-  const config = { ...loaded, semantic }
+  const config = { ...loaded, semantic, severity }
   const [eslintFailed, stylelintFailed] = await Promise.all([
     runEslint(args.cwd, config, args.fix),
     runStylelint(args.cwd, config),

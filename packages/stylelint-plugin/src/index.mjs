@@ -10,6 +10,7 @@ import {
   buildNagiSets,
   defineNagiConfig,
   matchesClassPrefix,
+  resolveSeverity,
   validateNagiConfig,
 } from "@nagi-labs/nagi-css-core"
 
@@ -514,7 +515,10 @@ function createRule(ruleId) {
   return stylelint.createPlugin(ruleName, (enabled, options = {}) => {
     return (root, result) => {
       if (!enabled) return
-      const config = defineNagiConfig(options)
+      // `severity` is Stylelint's own secondary option; keep it out of the
+      // semantic config so every rule shares one cached analysis.
+      const { severity: _severity, ...semanticOptions } = options
+      const config = defineNagiConfig(semanticOptions)
       if (ruleId === "valid-config") {
         for (const message of validateNagiConfig(config)) {
           stylelint.utils.report({
@@ -542,13 +546,20 @@ function createRule(ruleId) {
 
 const plugins = Object.fromEntries(ruleIds.map((ruleId) => [ruleId, createRule(ruleId)]))
 
-export function createNagiStylelintConfig(config) {
+export function createNagiStylelintConfig(config, severity = {}) {
   const semantic = defineNagiConfig(config)
+  const levelFor = resolveSeverity(severity)
   return {
     customSyntax: postcssHtml,
     plugins: Object.values(plugins),
     rules: Object.fromEntries(
-      ruleIds.map((ruleId) => [`nagi-css/${ruleId}`, [true, semantic]]),
+      ruleIds
+        .map((ruleId) => [ruleId, levelFor(ruleId)])
+        .filter(([, level]) => level !== "off")
+        .map(([ruleId, level]) => [
+          `nagi-css/${ruleId}`,
+          level === "warn" ? [true, { ...semantic, severity: "warning" }] : [true, semantic],
+        ]),
     ),
   }
 }

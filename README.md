@@ -173,6 +173,28 @@ Add `--fix` to apply only unambiguous missing fixed-class ESLint fixes.
 Selector, surface, anatomy, state, and ownership diagnostics are never
 rewritten.
 
+Every rule is an error by default. `severity` changes that per rule, with `*` as
+the fallback, so an existing codebase can adopt the contract without turning the
+first run into thousands of failures:
+
+```js
+export default {
+  eslintFiles: ["src/**/*.vue"],
+  stylelintFiles: ["src/**/*.vue"],
+  severity: {
+    "*": "warn",              // report everything, fail on nothing yet
+    "surface-root-name": "error",  // except the names to fix first
+    "variant-order": "off",   // a rule the project has decided against
+  },
+  semantic: { surfaceRootPrefixes: ["app-"] },
+}
+```
+
+Warnings are reported but do not fail the run; `off` removes the rule. An
+unknown rule name is a configuration error, so a typo cannot silently disable a
+check. Treat `warn` as a step during adoption — the intended steady state is
+errors in CI.
+
 ## Scope
 
 The toolchain checks **Vue single-file components**: the template together with

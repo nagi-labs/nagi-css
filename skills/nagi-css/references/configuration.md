@@ -12,6 +12,10 @@ import { defineNagiConfig } from "@nagi-labs/nagi-css-core"
 export default {
   eslintFiles: ["src/**/*.vue"],
   stylelintFiles: ["src/**/*.vue"],
+  severity: {
+    "*": "warn",
+    "surface-root-name": "error",
+  },
   semantic: defineNagiConfig({
     componentClasses: ["DataTable", "Column"],
     componentSlotPrefixes: {
@@ -28,6 +32,13 @@ export default {
   }),
 }
 ```
+
+`severity` is optional and sits outside `semantic`, because it configures the
+linters rather than the vocabulary. Every rule is `error` unless listed; `*` sets
+the fallback; `warn` reports without failing the run; `off` removes the rule.
+An unknown rule name is a configuration error, so a typo cannot quietly disable
+a check. Use `warn` to stage adoption in an existing codebase — do not leave a
+project there, since an unenforced contract is back to consistency by discipline.
 
 `componentClasses` lists only opaque third-party or UI-library components. The
 array shorthand derives each class as `pv-` plus the component name in

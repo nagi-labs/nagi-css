@@ -4,6 +4,7 @@ import typescriptParser from "@typescript-eslint/parser"
 import {
   analyzeVueTemplate,
   defineNagiConfig,
+  resolveSeverity,
   validateNagiConfig,
 } from "@nagi-labs/nagi-css-core"
 
@@ -114,10 +115,14 @@ const plugin = {
   rules,
 }
 
-export function createNagiEslintConfig(config, files = ["**/*.vue"]) {
+export function createNagiEslintConfig(config, files = ["**/*.vue"], severity = {}) {
   const semantic = defineNagiConfig(config)
+  const levelFor = resolveSeverity(severity)
   const enabledRules = Object.fromEntries(
-    Object.keys(rules).map((ruleId) => [`nagi-css/${ruleId}`, ["error", semantic]]),
+    Object.keys(rules)
+      .map((ruleId) => [ruleId, levelFor(ruleId)])
+      .filter(([, level]) => level !== "off")
+      .map(([ruleId, level]) => [`nagi-css/${ruleId}`, [level, semantic]]),
   )
   return {
     files,

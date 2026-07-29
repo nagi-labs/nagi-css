@@ -94,6 +94,12 @@ its guarantee. The value is not the naming style; it is that conformance is
 consistency-by-discipline problem every convention has. Run the checks in CI
 and treat violations as errors.
 
+Per-rule `severity` exists for one reason: adopting the contract in a codebase
+that predates it, where every rule at `error` on day one means thousands of
+failures and no adoption at all. Stage it with `warn`, then move rules to
+`error` as they go green. A project that stops halfway has bought the discipline
+cost and skipped the guarantee.
+
 ## What does this do for accessibility?
 
 Nothing directly — and that is deliberate framing. Accessibility comes from

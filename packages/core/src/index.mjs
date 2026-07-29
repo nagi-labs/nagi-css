@@ -156,6 +156,32 @@ export function defineNagiConfig(config = {}) {
   }
 }
 
+const SEVERITY_LEVELS = ["error", "warn", "off"]
+const DEFAULT_SEVERITY_KEY = "*"
+
+// Per-rule severity. `warn` exists for adopting the contract in an existing
+// codebase; the intended steady state is `error` in CI.
+export function resolveSeverity(severity = {}) {
+  const fallback = severity[DEFAULT_SEVERITY_KEY] ?? "error"
+  return (ruleId) => severity[ruleId] ?? fallback
+}
+
+export function validateSeverity(severity = {}, knownRuleIds = []) {
+  const errors = []
+  const known = new Set(knownRuleIds)
+  for (const [ruleId, level] of Object.entries(severity)) {
+    if (!SEVERITY_LEVELS.includes(level)) {
+      errors.push(
+        `severity.${ruleId} must be one of ${SEVERITY_LEVELS.join(", ")}; received ${JSON.stringify(level)}`,
+      )
+    }
+    if (ruleId !== DEFAULT_SEVERITY_KEY && known.size > 0 && !known.has(ruleId)) {
+      errors.push(`severity.${ruleId} is not a Nagi CSS rule`)
+    }
+  }
+  return errors
+}
+
 export function matchesClassPrefix(value, prefixes = []) {
   return prefixes.some((prefix) =>
     prefix.endsWith("-")
