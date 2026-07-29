@@ -135,6 +135,8 @@ Stylelint enforces:
 - selector chains that match the template they target, so a rule whose anchor
   class is absent, or whose path does not exist, is reported;
 - descendant steps across configured UI-library boundaries;
+- owned child component roots as boundaries: their placement may be styled, their
+  insides may not, derived from the component tag rather than configuration;
 - nested, component-prefixed slot sub-surfaces;
 - exactly one base identity class per selector compound;
 - anatomy and state vocabulary in selectors;

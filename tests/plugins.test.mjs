@@ -266,3 +266,21 @@ test("ESLint reports style blocks the toolchain cannot read", async () => {
   const styles = await lintStylelint(path.join(root, "fixtures/style/ScssBlock.vue"))
   assert.equal(styles.results[0].warnings.length, 0)
 })
+
+test("Stylelint allows styling an owned component root but not its inside", async () => {
+  const allowed = await lintStylelint(path.join(root, "fixtures/style/OwnedBoundary.vue"))
+  const reachIn = await lintStylelint(
+    path.join(root, "fixtures/style/OwnedBoundaryReachIn.vue"),
+  )
+
+  assert.equal(allowed.errored, false, JSON.stringify(allowed.results[0].warnings))
+
+  const rules = reachIn.results[0].warnings.map(({ rule }) => rule)
+  // both the flat and the nested spelling are caught, and neither is told to use ">"
+  assert.equal(
+    rules.filter((rule) => rule === "nagi-css/owned-surface-reach-in").length,
+    2,
+    JSON.stringify(reachIn.results[0].warnings),
+  )
+  assert.equal(rules.includes("nagi-css/owned-dom-direct-child"), false)
+})

@@ -19,6 +19,9 @@
 
 - Treat configured UI component roots as opaque boundaries.
 - List only third-party/UI-library components in `componentClasses`; owned Vue components derive their own surfaces from `surfaceRootPrefixes` and filenames.
+- A pass-through class on an owned child component names that child's root. Style the
+  root (the parent's external layout) but never descend below it — the child's file owns
+  its insides. Reported as `owned-surface-reach-in`, derived from the component tag.
 - Unless explicitly overridden, configured component classes are `pv-` plus the component name in kebab-case.
 - Do not inspect or select library-internal DOM.
 - Nest a declared slot sub-surface inside the UI boundary block.

@@ -579,6 +579,14 @@ export function analyzeVueTemplate(source, filename, inputConfig = {}) {
     siblings.push(record)
     for (const token of record.classes) {
       if (isLibraryInternal(token, config) || sets.slotSurfaces.has(token)) continue
+      // A configured library root is a declared boundary with its own edge rules;
+      // this set is only about application-owned components.
+      if (
+        sets.componentValues.has(token) ||
+        matchesClassPrefix(token, config.libraryBoundaryPrefixes)
+      ) {
+        continue
+      }
       if (node.tagType === COMPONENT) componentRootClasses.add(token)
       else elementRootClasses.add(token)
     }

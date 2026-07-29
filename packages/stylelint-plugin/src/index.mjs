@@ -21,6 +21,7 @@ const ruleIds = [
   "boundary-nesting",
   "dead-rule",
   "owned-dom-direct-child",
+  "owned-surface-reach-in",
   "selector-mirrors-template",
   "single-base-identity",
   "slot-surface-top-level",
@@ -185,12 +186,17 @@ function analyzeStyles(root, inputConfig, fallbackFile) {
   const config = defineNagiConfig(inputConfig)
   const sets = buildNagiSets(config)
   const {
+    componentRootClasses = new Set(),
     expectedClasses = new Set(),
     roleNames,
     surfaceRoots,
     topLayerSurfaces = new Set(),
     tree = [],
   } = readTemplateContext(root, config, fallbackFile)
+
+  const isOwnedComponentRoot = (token) => componentRootClasses.has(token)
+  const endsInOwnedComponentRoot = (chain) =>
+    chain !== null && (chain.at(-1)?.classes ?? []).some(isOwnedComponentRoot)
   const violations = []
 
   // Only compounds whose classes are all plainly written can be matched against
@@ -218,6 +224,23 @@ function analyzeStyles(root, inputConfig, fallbackFile) {
       return null
     }
     return classes
+  }
+
+  // A class on an owned component root may be styled, but nothing below it: that
+  // DOM belongs to the child's own surface. Works on the resolved chain, so a
+  // step written in a nested rule is caught the same as a flat one.
+  function checkReachIn(rule, chain) {
+    if (chain === null || componentRootClasses.size === 0) return
+    for (let index = 0; index < chain.length - 1; index += 1) {
+      const owner = chain[index].classes.find(isOwnedComponentRoot)
+      if (!owner) continue
+      report(
+        rule,
+        "owned-surface-reach-in",
+        `Selector "${rule.selector}" reaches below ".${owner}", the root of an owned child component; that DOM belongs to the child's surface, so style it there or pass a value in.`,
+      )
+      return
+    }
   }
 
   function checkMirror(rule, chain) {
@@ -370,10 +393,25 @@ function analyzeStyles(root, inputConfig, fallbackFile) {
     }
   }
 
-  function checkEdge(rule, combinator, left, right, parentEndsInBoundary = false) {
+  function checkEdge(
+    rule,
+    combinator,
+    left,
+    right,
+    parentEndsInBoundary = false,
+    leftIsOwnedComponentRoot = false,
+  ) {
     // Sibling combinators express order among siblings, not a parent/child step,
     // so the direct-child requirement does not apply to them.
     if (combinator === "+" || combinator === "~") return
+    // Below an owned component root neither combinator is right; telling the author
+    // to switch to ">" would only make the reach-in more emphatic.
+    if (
+      leftIsOwnedComponentRoot ||
+      classNodesDeep(left ?? []).some((node) => isOwnedComponentRoot(node.value))
+    ) {
+      return
+    }
     const leftBoundary = parentEndsInBoundary || hasLibraryBoundary(left ?? [], sets, config)
     const rightCrossesBoundary = hasDeepPseudo(right ?? [])
     if (combinator === ">") {
@@ -482,6 +520,7 @@ function analyzeStyles(root, inputConfig, fallbackFile) {
       const chain = extendChain([], compounds, combinators, ">")
       ruleChain ??= chain
       checkMirror(rule, chain)
+      checkReachIn(rule, chain)
       checkBareElements(rule, compounds[0])
       checkSingleBaseIdentity(rule, compounds[0])
       for (const node of compounds[0].filter((candidate) => candidate.type === "class")) {
@@ -556,12 +595,20 @@ function analyzeStyles(root, inputConfig, fallbackFile) {
       )
       ruleChain ??= chain
       checkMirror(rule, chain)
+      checkReachIn(rule, chain)
       checkFlattenedBoundary(rule, compounds)
       if (mode === "merge") {
         if (compounds.length === 1) surfaceSubject ??= parentSurfaceToken
         checkAnatomy(rule, compounds[0])
       } else {
-        checkEdge(rule, combinator, null, compounds[0], parentEndsInBoundary)
+        checkEdge(
+          rule,
+          combinator,
+          null,
+          compounds[0],
+          parentEndsInBoundary,
+          endsInOwnedComponentRoot(parentChain),
+        )
         checkBareElements(rule, compounds[0])
         checkAnatomy(rule, compounds[0])
       }

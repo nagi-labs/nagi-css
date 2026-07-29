@@ -992,6 +992,26 @@ The contract does not require the entire compound UI to collapse into one root.
 
 This keeps component relationships simple: a parent does not need to know whether a child exposes pass-through classes, custom properties, or internal wrapper elements in order to style the compound UI correctly.
 
+**A child component's root is a boundary too (machine-enforced).** When a parent
+places a pass-through class on an owned child component, that class names the
+child's root element and nothing more. The parent may style the root — its own
+external layout responsibility — but must not descend past it, because that DOM
+belongs to the child's surface and the child is free to change it. The linter
+derives this from the template: a class sitting on a component tag is a child
+surface root, and `owned-surface-reach-in` reports any selector that continues
+below it. No configuration lists owned components; the tag is the evidence.
+
+```css
+.profile-header {
+  > .media { margin-inline-end: 0.75rem; }  /* the child's placement: the parent's business */
+  > .media > .icon { … }                    /* the child's insides: not the parent's business */
+}
+```
+
+Unlike a UI-library boundary, there is no descendant-step escape here: a library
+inserts wrappers you must cross to reach your own slot content, whereas a child
+component you own has a file of its own to style it in.
+
 Preferred example:
 
 ```html
