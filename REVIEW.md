@@ -5,6 +5,10 @@
 `packages/core` の `analyzeVueTemplate` を直接叩いた挙動確認を併用。
 記載した症状はすべて再現済み（推測のみの項目には「未確認」と明記）。
 
+**このブランチで既に反映済み**: 対応構文を素の CSS のみに限定し、単体 `.css` を対象外とする方針
+（`48a9e14`。CONTRACT.md の Required と新節、README の Scope、FAQ、configuration.md）。
+**保留中**: #10（値のトークン化）は影響範囲が大きいため、方針を別途議論する。
+
 ---
 
 ## サマリ
@@ -20,7 +24,7 @@
 | 7 | `config.ignores` が Stylelint 側に渡っていない | バグ | P2 |
 | 8 | 2リンタの出力形式・パス表記が不統一 | UX | P2 |
 | 9 | テンプレート↔セレクタ対応検査が未実装（README の主張が未裏付け） | 未実装 | P1 |
-| 10 | 値（トークン）の canonical form が未検査 | 未実装 | P1 |
+| 10 | 値（トークン）の canonical form が未検査 | 未実装 | **保留（議論中）** |
 | 11 | CONTRACT.md の例3件がリンタで落ちる | 整合性 | P1 |
 | 12 | CONTRACT.md L478 の `thead` 自己マップ記述が表と矛盾 | 整合性 | P2 |
 | 13 | 「全例がリンタを通る」を CI で検査していない | プロセス | P1 |
@@ -28,9 +32,12 @@
 | 15 | `docs/index.html` が契約外の語彙を使用 | 整合性 | P3 |
 | 16 | 計算可能な全ルールを autofix 可能にする | 提案 | P1 |
 | 17 | 自作コンポーネント境界のゾーンを追加 | 提案 | P2 |
-| 18 | fixed variant 機構を廃止（テーブル要素は自己マップ） | 提案 | P2 |
+| 18 | fixed variant 機構を廃止（`thead`/`tbody`/`tfoot` を self-map、`th`/`td` は同じ `cell`） | 提案 | P2 |
 | 19 | 段階導入手段（severity / baseline）がない | 提案 | P2 |
 | 20 | state / variant の判定基準、variant 禁止語彙の判定単位 | 設計 | P2 |
+| 21 | `<style src="...">` が全チェックをすり抜ける（#1 と同じクラスの穴） | バグ | **P0** |
+| 22 | `elementClasses` の値検証が無く、不正値が TypeError になる | バグ | P3 |
+| 23 | Element Class Table を2層に分け、上書きの基準を書き換える | 設計 | P2 |
 
 ---
 
@@ -73,6 +80,36 @@ ScssSurface.vue (lang="scss") → (no report)   ← 中身は同じ違反
 - **解析できなかった `<style>` を落とす**（`nagi-css/unsupported-style-syntax` 等）。
   スキップして緑になるのが問題の本体で、対応言語を増やす話ではない
 - `postcss-scss` / `postcss-less` の追加は**不要**（除外を選んだので実装は A より小さい）
+
+### 21. `<style src="...">` が全チェックをすり抜ける
+
+**症状**: Vue SFC の正式機能である外部スタイル参照を使うと、**検査が実質無効になる**。
+
+```vue
+<template>
+  <section class="app-user-card">
+    <h2>Ada</h2>
+    <div class="wrapper"><p>text</p></div>
+  </section>
+</template>
+<style src="./UserCard.css" scoped></style>
+```
+```
+<style src=...>  → anatomy-allowed のみ（wrapper だけがテンプレート単独で検出される）
+インライン        → element-class-required ×2, anatomy-allowed
+```
+
+**原因**: `collectStyledClasses()` は `descriptor.styles[].content` を読むが、`src` 参照ではこれが空。
+`emitPolicy: when-styled` の既定と組み合わさり、**参照クラスが0個＝何も必須にならない**と判定される。
+外部の `.css` 側も（方針決定により）対象外なので、**構造 CSS が丸ごと無検査のまま緑になる**。
+
+**期待**: 2択で、どちらでも筋は通る。**黙って通すのは不可**（#1 と同じ「緑なのに未検査」）。
+
+- `src` を解決して検査する — `src` は「コンポーネント自身の style ブロック」の置き場所違いなので、定義上は含まれる
+- `src` 付き style ブロックを非対応として落とす — 対応構文を絞る方針と一貫する
+
+**併せて**: 境界の言い方を「拡張子」ではなく **「テンプレートと対になっている style ブロック」** に寄せると、
+`.css` を外す理由と、将来フレームワークを増やしたときの線引き（React の `.module.css` は対になっている）が同じ1文から出る。
 
 ### 2. 単体 `.css` ファイルが無検査 → **対象外と決定**
 
@@ -211,7 +248,12 @@ README / FAQ の以下の主張が、現状のツールでは裏付けられて�
 
 これは Nagi CSS が他システムに対して**唯一無二になれる**検査でもある。
 
-### 10. 値（トークン）の canonical form が未検査
+### 10. 値（トークン）の canonical form が未検査 — **保留（議論中）**
+
+> 影響範囲が大きいため、方針を別途議論する。以下は検討の出発点として残す提案であり、決定事項ではない。
+> 決めるべき論点: どこまでを必須にするか（色だけ / 間隔まで / 全部）、既存コードの移行、
+> `@media` のブレークポイント、トークン定義ファイルの扱い（**検査対象外だが参照する** —
+> 「`.css` は対象外」という決定と衝突しない書き方が必要）。
 
 **症状**: `padding: 13px; color: #f0a; margin-top: 7px` はすべて通る。
 デザイントークンは CONTRACT.md の SHOULD に留まり、Stylelint 側に値の検査ルールが1本もない。
@@ -287,6 +329,20 @@ g より深い側に足す                       → 非対応（floor / reach-g
 ESLint 側は絶対パス、Stylelint 側は相対パス。集計行が2つ出て合計が読めない。
 CLI として1本のレポートに統合するのが望ましい。
 
+### 22. `elementClasses` の値検証が無い
+
+`validateNagiConfig()` は `elementClasses` を一切検証しないため、不正値が不透明な例外になる。
+
+```
+elementClasses: { p: null }
+→ TypeError: Cannot read properties of null (reading 'split')
+```
+
+`buildNagiSets()` が全値に `mappingBase()`（`value.split`）をかけるため、設定構築の時点で落ちる。
+**期待**: 値が非空文字列であることを `validateNagiConfig()` で検査し、設定エラーとして報告する。
+なお `elementClasses` は既定表への浅いマージなので**個別上書きは可能だがマッピングの削除はできない**。
+これは仕様として文書化してよい。
+
 ---
 
 ## P1〜P2 — 提案（議論を経た結論）
@@ -342,20 +398,103 @@ CLI として1本のレポートに統合するのが望ましい。
 CONTRACT.md L543 は「非不透明な `ownedComponentClasses` は定義しない」と明示的に選択しているが、
 **「他人のサーフェスに降りていく」という頻出の設計違反が検出可能になる**ため再考の価値がある。
 
-### 18. fixed variant 機構を廃止（テーブル要素を自己マップに）
+### 18. fixed variant 機構を廃止
 
 `thead → rowgroup -head` / `tfoot → rowgroup -foot` / `th → cell -head` の**3件のためだけ**に、
 表の値がマルチトークンになり（`mappingBase` / `mappingTokens` / `fixedVariantBases`）、
 `partialCarry` 判定が入り、「base との複合でのみ合法」の例外が variant シャドウ検査にも波及している。
 
-**提案**: `thead`/`tbody`/`tfoot`/`th`/`td` を自己マップにして機構ごと削除。根拠:
+**提案**: `thead`/`tbody`/`tfoot` を self-map、`th`/`td` は**同じ `cell`** にする。
+head と body の区別は**必須の `>` チェーンが祖先として既に持っている**ので、`-head` は不要。
 
-- 表の方針は「意味を担う上書きだけを載せる」。`thead`/`tbody` は**タグ名自体が意味を担っている**ので上書き対象ではない
-- `figcaption` や `optgroup` を自己マップにしておいて `thead` を上書きするのは一貫していない
-- `th` は文脈により ARIA で `columnheader` / `rowheader` の両方になりうるので、単一名に固定すると嘘になる
+```vue
+<table class="table">
+  <thead class="thead">
+    <tr class="row"><th class="cell">Plan</th></tr>
+  </thead>
+  <tbody class="tbody">
+    <tr class="row"><td class="cell">Free</td></tr>
+  </tbody>
+</table>
+```
+```css
+> .table {
+  > .thead > .row > .cell { }
+  > .tbody > .row > .cell { }
+}
+```
+
+実測: 違反ゼロで成立（`elementClasses` 上書きで確認）。根拠:
+
+- **fixed variant は `>` チェーンと情報が重複している**。`>` は必須なので祖先の鎖は必ず書くことになる
+  （STN のティア名がネスト構造の冗長符号化だったのと同じ構図）
+- **現行方式にはセレクタ重複の実害がある**。`<thead class="rowgroup -head">` は両方のクラスを持つので、
+  `tests/core.test.mjs:63` の正例にある `> .rowgroup > .row > .cell`（tbody 用のつもり）が **thead にも当たる**。
+  tbody だけを指すには `.rowgroup:not(.-head)` が必要になる
+- `th` は文脈により ARIA で `columnheader` / `rowheader` の両方になりうるので、単一名への固定は嘘になる
 - `headcell` のような代替名は発明語で、契約が禁じる「false UI anatomy」に当たる
+- `<tbody>` 内の行ヘッダだけは祖先で分けられないが、そこは契約の既定路線どおり
+  **属性で届く**（`.cell[scope="row"]`、`.input[type=checkbox]` と同じ扱い）
 
 `tr → row` / `dd → definition` などの単一トークン上書きは機構不要なのでそのまま残す。
+
+**「全部 self-map」は行き過ぎ**（検討して却下）。#23 の3件は機械的な価値があり、
+かつ全 self-map は「非 div 要素にクラスを強制する理由」そのものを壊す（下記）。
+
+### 23. Element Class Table を2層に分け、上書きの基準を書き換える
+
+**問題**: 上書きの基準が2箇所で食い違い、どちらも既存の表を説明できていない。
+
+- CONTRACT.md:455 — 「タグ名が安定した UI 意味ではなく **HTML の歴史**を符号化している場合」
+- CONTRIBUTING — **略語の展開**（`dd → definition`）と**著者時の詳細の消去**（`h1–h6 → title`）の2つ
+
+実際の表には、この基準で説明できない行が並んでいる（既定マッピングを出力して確認）。
+
+```
+<img>  → .image  (override)   略語を展開している
+<nav>  → .nav    (self-map)   navigation の略なのに展開しない
+<a>    → .link   (override)
+<b> <i> → .b .i  (self-map)   ← <i class="i"> が合法
+<dfn> <kbd> <samp> <var> <abbr> <figcaption> → self-map
+```
+
+`img → image` と `nav → nav` を同時に説明する基準は立たない（どちらも「同義の長い綴り」）。
+つまり**表そのものは人の判断で作られた語彙表で、基準は事後の説明**。表より下流は決定論的だが、
+表は taste である。それ自体は問題ないが、issue テンプレートが提案に
+「meaning-bearing justification」を要求しているのに**既存の表がその基準を満たしていない**ため、
+レビュー基準として機能しない。
+
+**提案する基準**:
+
+> **タグが、スタイルとは無関係な理由で変わりうる箇所だけを上書きする。**
+
+この基準は既存の self-map をすべて説明でき（`nav` `svg` `b` `dfn` `figcaption` はスタイル外の理由で別タグに変わらない）、
+必要な上書きだけを残す。表は2層に分けて書く。
+
+| 層 | 内容 | 根拠 |
+|---|---|---|
+| **機械的上書き** | `h1`–`h6` → `title` / `ul` `ol` `dl` → `list` / `li` → `item` / `td` `th` → `cell` | 規則から導出 |
+| **可読性上書き** | `p`→`text` `small`→`note` `a`→`link` `img`→`image` `dt`→`term` `dd`→`definition` `tr`→`row` | **明示的に taste と認める**。維持してよいが根拠は好み |
+| **廃止** | `thead` `tbody` `tfoot` → `rowgroup ±変体` | 祖先として区別が必要なので self-map が良い（#18） |
+| **self-map** | 残り全部 | 既定 |
+
+機械的上書きが必須である理由（全 self-map を却下した理由でもある）:
+
+- **`h1`–`h6` → `title`**: 見出しレベルは文書アウトラインで決まり、見た目とは独立に変わる。
+  self-map だと、a11y のためにレベルを下げるだけで CSS の書き換えが必要になり、
+  `<component :is="\`h${level}\`">` のようにレベルが動く設計では**静的クラスが原理的に付けられない**
+  （契約が要求する静的クラスと矛盾する）。`<input>` の `type` をクラスに写さないのと同じ理由
+- **`ul`/`ol` → `list`、`li` → `item`**: ul ↔ ol は入れ替わり、両者は同一スタイルが常態。
+  self-map だと `:is(.ul, .ol)` が常に必要になる
+- **`td`/`th` → `cell`**: セルの共通スタイルが常態。#18 の案では祖先で head/body を分けるので、この共有はより重要になる
+
+全 self-map の根本問題は、契約の第一原則（Semantic）と衝突すること。`.p` `.dd` `.tr` `.h2` は
+実装の偶発的詳細（タグの綴り）のコピーであり、そうなると `bare-element-selector` で
+素のタグセレクタを禁止している根拠——「クラスは意味を運びタグ変更に耐える」——が消え、
+「`> p` でいいじゃないか」に答えられなくなる。
+
+**併せて検討**: `<b>` `<i>` `<u>` `<s>` は純粋に見た目由来で UI 意味を持たない。
+上書きではなく `bannedClasses` 側に寄せる（意味的 HTML を推す契約の立場と一貫する）。
 
 ### 19. 段階導入の手段がない
 
@@ -437,9 +576,13 @@ CLI に severity 指定が無いため、既存リポジトリに入れると数
 
 ## 着手順の推奨
 
-1. **#1 / #3**（サイレントなスキップと契約矛盾）— 独立していて安全、影響が最大。#2 は方針決定で消え、CLI 既定値の1行だけが残った
+1. **#1 / #21 / #3**（サイレントなスキップ2件と契約矛盾）— 独立していて安全、影響が最大。
+   #1 と #21 は同じ「緑なのに未検査」で、まとめて直すのが自然。#2 は方針決定で消え、CLI 既定値の1行だけが残った
 2. **#4 / #5 / #6**（誤検出）— 小さく独立
 3. **#13**（ドキュメント例の CI 検査）— #11 の再発を止める
 4. **#16**（autofix 化）— 導出の回収。学習コストと文書量を同時に下げる
-5. **#10**（値のトークン化）— 最大の空白。他システムに対する差別化にもなる
-6. **#9**（テンプレート↔セレクタ対応）— README の主張の裏付け。Nagi CSS 固有の検査
+5. **#9**（テンプレート↔セレクタ対応）— README の主張の裏付け。Nagi CSS 固有の検査
+6. **#18 / #23**（表の整理）— 挙動変更なのでコード・テスト・文書を一緒に出す必要がある
+   （CONTRIBUTING の ground rule。だから文書だけ先に直していない）
+
+**#10（値のトークン化）は保留**。着手順に入れる前に方針を議論する。
