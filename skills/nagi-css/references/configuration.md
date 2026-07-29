@@ -2,12 +2,16 @@
 
 Keep configuration outside the target repository and export a default object.
 
+Both globs point at Vue single-file components. Style blocks must be plain CSS:
+preprocessor syntax and standalone `.css` files are out of scope, so do not add
+them to `stylelintFiles`.
+
 ```js
 import { defineNagiConfig } from "@nagi-labs/nagi-css-core"
 
 export default {
   eslintFiles: ["src/**/*.vue"],
-  stylelintFiles: ["src/**/*.{vue,css}"],
+  stylelintFiles: ["src/**/*.vue"],
   semantic: defineNagiConfig({
     componentClasses: ["DataTable", "Column"],
     componentSlotPrefixes: {

@@ -115,6 +115,26 @@ static anchor. But the required vocabulary (surface, fixed, anatomy, STN,
 slot classes) must stay intact; a hybrid where utilities replace owned
 structure forfeits the canonical form that makes the contract checkable.
 
+## Can I write my styles in Sass/SCSS?
+
+No — style blocks are plain CSS. This is not a gap waiting to be filled: native
+CSS absorbed the reasons a preprocessor existed (nesting, variables, color
+functions, math), and its versions are better for this contract, because custom
+properties are live at runtime while `$` variables are compile-time constants.
+What is left that only a preprocessor does, this contract either forbids or
+cannot verify: `&__title` concatenation produces the BEM name the contract
+rejects, `@each` generates the standalone utilities it bans, and `@extend` or a
+selector-emitting `@mixin` hides selectors from the linter — which would mean
+shipping a supported way to bypass the checks. Migrating an SFC's style block is
+mostly mechanical, since the nesting itself is compatible.
+
+## Why aren't standalone `.css` files checked?
+
+Because there is nothing there that the contract governs. Global stylesheets
+hold resets, element defaults, token declarations, and cross-surface exceptions
+— by definition not the owned DOM of a styling surface. The unit the contract
+verifies is a component: its template and its own style block, checked together.
+
 ## Why invent a new vocabulary instead of reusing an existing one?
 
 Because no existing vocabulary was built to be *derived*. Existing systems

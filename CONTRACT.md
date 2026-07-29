@@ -78,13 +78,37 @@ Nagi CSS assumes the following capabilities:
 ### Required
 
 - **Component-based architecture**: UI is split into dedicated components or subcomponents.
-- **CSS nesting support**: Native CSS nesting or equivalent preprocessing.
+- **Native CSS nesting**: Owned structure is written with native CSS nesting.
+- **Statically analyzable style syntax**: every class name and selector edge must be
+  readable from the source without compiling it. Verifiability is what this contract
+  trades for, so analyzability is a requirement rather than a preference.
 
 ### Recommended
 
 - **Scoped CSS support**: Style isolation where available.
 - **CSS custom properties**: For design tokens and theming.
 - **Container queries**: For component-level responsive behavior.
+
+### Preprocessor syntax is outside the contract
+
+Styles are plain CSS. Sass/SCSS, Less, and Stylus are not supported.
+
+Native CSS has absorbed what a preprocessor used to be needed for — nesting,
+variables (as custom properties, which this contract prefers anyway because they
+are live at runtime and cascade), color functions, and math. What remains
+specific to a preprocessor is either forbidden here or breaks verifiability:
+
+| Preprocessor-specific feature | Status under this contract |
+|---|---|
+| `&__title` selector concatenation | produces a BEM name the contract rejects |
+| `@each` generating utility classes | standalone utilities are not allowed |
+| `$` variables as design tokens | tokens are CSS custom properties |
+| `@extend`, selector-emitting `@mixin` | moves or hides selectors from analysis |
+| nesting | already native |
+
+So the exclusion follows from the contract's own rules rather than from a tooling
+limitation. Support may be reconsidered if a concrete need appears; nothing is
+scaffolded for it in advance.
 
 ---
 
@@ -222,6 +246,8 @@ It does **not** directly govern:
 - internal DOM of third-party UI libraries
 - portal destinations
 - shadow-internal DOM that is not publicly exposed
+- global stylesheets: resets, element defaults, token declarations, and
+  cross-surface exceptions, none of which is a surface's owned styling
 
 This distinction is essential.
 

@@ -155,7 +155,7 @@ A minimal configuration:
 ```js
 export default {
   eslintFiles: ["src/**/*.vue"],
-  stylelintFiles: ["src/**/*.{vue,css}"],
+  stylelintFiles: ["src/**/*.vue"],
   semantic: { surfaceRootPrefixes: ["app-"] },
 }
 ```
@@ -171,6 +171,24 @@ application-owned Vue components in that table.
 Add `--fix` to apply only unambiguous missing fixed-class ESLint fixes.
 Selector, surface, anatomy, state, and ownership diagnostics are never
 rewritten.
+
+## Scope
+
+The toolchain checks **Vue single-file components**: the template together with
+the component's own `<style>` blocks, written in **plain CSS**.
+
+Two things are deliberately out of scope:
+
+- **Preprocessor syntax** — Sass/SCSS, Less, Stylus. Native nesting and custom
+  properties already cover what the contract needs, and the features that remain
+  specific to a preprocessor are ones the contract forbids or cannot verify. See
+  [CONTRACT.md](CONTRACT.md#preprocessor-syntax-is-outside-the-contract).
+- **Standalone `.css` files** — global stylesheets carry resets, element
+  defaults, token declarations, and cross-surface exceptions. None of that is a
+  surface's owned styling, which is the only thing this contract governs.
+
+Either could be added if a concrete need appears; neither is designed around in
+advance.
 
 ## Agent skill
 

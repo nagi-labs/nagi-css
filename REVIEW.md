@@ -11,8 +11,8 @@
 
 | # | 内容 | 種別 | 優先 |
 |---|---|---|---|
-| 1 | `<style lang="scss">` が**サイレントに無検査** | バグ | **P0** |
-| 2 | 単体 `.css` ファイルが**サイレントに無検査** | バグ | **P0** |
+| 1 | 解析できない `<style>`（`lang="scss"` 等）が**サイレントにスキップされる** ※方針決定済み、修正は「落とす」だけ | バグ | **P0** |
+| 2 | 単体 `.css` が無検査 → **対象外と決定**（文書化済み）。CLI 既定値の修正のみ残る | 仕様化 | P2 |
 | 3 | ARIA ロール identity が `reserved-element-name` と衝突（契約と矛盾） | バグ | **P0** |
 | 4 | `+` / `~` 兄弟結合子を誤検出 | バグ | P1 |
 | 5 | `<Transition>` などがルートを包むと surface 検出が崩壊 | バグ | P1 |
@@ -64,16 +64,20 @@ ScssSurface.vue (lang="scss") → (no report)   ← 中身は同じ違反
 **原因**: `postcss-scss` が依存に無く、`postcss-html` が scss ブロックを解決できない。
 `packages/stylelint-plugin/src/index.mjs` の `createNagiStylelintConfig()`（`customSyntax: postcssHtml`）。
 
-**期待**:
-- `postcss-scss` / `postcss-less` を依存に追加し、対応言語は正しく解析する
-- **未対応の `lang` は「スキップ」ではなく明示エラーにする**（`nagi-css/unparsable-style-block` 等）
-- 対応言語一覧を README に明記
+**方針（決定済み）**: **素の CSS のみ対応**。SCSS / Less / Stylus は非対応で、将来に向けた作り込みもしない
+（需要が出たら追加する）。ドキュメントは反映済み — CONTRACT.md の Required と新節、README の Scope、FAQ、
+`skills/nagi-css/references/configuration.md`。
 
-### 2. 単体 `.css` ファイルが無検査
+**したがって残る修正はひとつだけ**:
 
-**症状**: README が例示する `stylelintFiles: ["src/**/*.{vue,css}"]` の `.css` 側が機能しない。
+- **解析できなかった `<style>` を落とす**（`nagi-css/unsupported-style-syntax` 等）。
+  スキップして緑になるのが問題の本体で、対応言語を増やす話ではない
+- `postcss-scss` / `postcss-less` の追加は**不要**（除外を選んだので実装は A より小さい）
 
-**再現**: 以下の `tokens.css` で違反ゼロ。
+### 2. 単体 `.css` ファイルが無検査 → **対象外と決定**
+
+**当初の症状**: README が例示していた `stylelintFiles: ["src/**/*.{vue,css}"]` の `.css` 側が機能しない
+（以下の `tokens.css` で違反ゼロ）。
 
 ```css
 .wrapper { margin: 0; }    /* banned name */
@@ -81,9 +85,15 @@ ScssSurface.vue (lang="scss") → (no report)   ← 中身は同じ違反
 .card div { color: blue; } /* bare element */
 ```
 
-**原因**: 同上（`customSyntax: postcssHtml` を全ファイルに適用しているため、素の CSS が空ドキュメントになる）。
+**方針（決定済み）**: 単体 `.css` は**検査対象外**。グローバルスタイルシートに書かれるのは
+リセット、要素の既定値、トークン宣言、サーフェス横断の例外であって、いずれもサーフェスの owned styling ではない。
+契約が統べる対象が存在しないので、検査しないのが正しい。**バグではなく仕様**として文書化済み。
 
-**期待**: 拡張子に応じて `customSyntax` を切り替える（`.vue`/`.html` → `postcss-html`、`.css` → 既定、`.scss` → `postcss-scss`）。
+**残る修正**:
+
+- `packages/cli/src/cli.mjs:66` の既定値 `["**/*.vue", "**/*.css"]` → `["**/*.vue"]`
+  （ドキュメントを直したのに既定値が `.css` を拾うままだと、新しい記述と食い違う）
+- `.css` が明示的に渡された場合の扱いを決める（黙って無視 / 対象外として警告）
 
 ### 3. ARIA ロール identity が `reserved-element-name` に潰される
 
@@ -427,7 +437,7 @@ CLI に severity 指定が無いため、既存リポジトリに入れると数
 
 ## 着手順の推奨
 
-1. **#1 / #2 / #3**（サイレント無検査と契約矛盾）— 独立していて安全、影響が最大
+1. **#1 / #3**（サイレントなスキップと契約矛盾）— 独立していて安全、影響が最大。#2 は方針決定で消え、CLI 既定値の1行だけが残った
 2. **#4 / #5 / #6**（誤検出）— 小さく独立
 3. **#13**（ドキュメント例の CI 検査）— #11 の再発を止める
 4. **#16**（autofix 化）— 導出の回収。学習コストと文書量を同時に下げる
