@@ -63,11 +63,12 @@ async function runEslint(cwd, config, fix) {
 }
 
 async function runStylelint(cwd, config) {
-  const files = config.stylelintFiles ?? ["**/*.vue", "**/*.css"]
+  const files = config.stylelintFiles ?? ["**/*.vue"]
   const result = await stylelint.lint({
     cwd,
     files,
     config: createNagiStylelintConfig(config.semantic),
+    ignorePattern: config.ignores ?? ["**/node_modules/**", "**/dist/**"],
     allowEmptyInput: true,
     formatter: "string",
   })

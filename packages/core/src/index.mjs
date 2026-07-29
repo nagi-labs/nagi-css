@@ -173,12 +173,14 @@ export function slotSurfaces(config) {
   )
 }
 
+// A malformed mapping is a configuration error, reported by validateNagiConfig.
+// Tolerate it here so it surfaces as a diagnostic rather than a TypeError.
 export function mappingBase(value) {
-  return value.split(/\s+/, 1)[0]
+  return typeof value === "string" ? value.split(/\s+/, 1)[0] : ""
 }
 
 export function mappingTokens(value) {
-  return value.split(/\s+/).filter(Boolean)
+  return typeof value === "string" ? value.split(/\s+/).filter(Boolean) : []
 }
 
 export function buildNagiSets(input) {
@@ -262,6 +264,12 @@ export function validateNagiConfig(config) {
     }
   }
 
+  for (const [tag, value] of Object.entries(config.elementClasses ?? {})) {
+    if (typeof value !== "string" || value.trim().length === 0) {
+      errors.push(`elementClasses.${tag} must be a non-empty string; received ${String(value)}`)
+    }
+  }
+
   for (const [component, slots] of Object.entries(config.componentSlots ?? {})) {
     const owner = config.componentSlotPrefixes?.[component] ?? config.componentClasses?.[component]
     if (!owner) {
@@ -297,9 +305,13 @@ export function deriveSurfaceRootName(filename) {
 
   let name = basename
   if (name === "index" || name.startsWith("[")) {
-    name = [...parts.slice(0, -1)]
-      .reverse()
-      .find((part) => part && part !== "pages" && !part.startsWith("[")) ?? basename
+    // Look for the nearest meaningful directory *below* `pages`; never walk above
+    // it, or a route at the root of `pages` would inherit the source directory.
+    const directories = parts.slice(0, -1)
+    const withinPages = directories.slice(directories.lastIndexOf("pages") + 1)
+    name =
+      [...withinPages].reverse().find((part) => part && !part.startsWith("[")) ??
+      basename.replace(/^\[(.*)\]$/, "$1")
   }
   return `${kebabCase(name)}-page`
 }

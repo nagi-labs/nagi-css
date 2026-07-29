@@ -122,7 +122,8 @@ ESLint enforces:
 - variant names that stay outside the protocol vocabulary, including ARIA roles;
 - attribute-based runtime state;
 - the STN floor, consecutive-tier, and reach-`g` rules;
-- component slot configuration; and
+- component slot configuration;
+- style blocks the toolchain cannot read, rather than skipping them; and
 - safe autofixes for unambiguous missing fixed classes.
 
 Stylelint enforces:
@@ -188,7 +189,9 @@ Two things are deliberately out of scope:
   surface's owned styling, which is the only thing this contract governs.
 
 Either could be added if a concrete need appears; neither is designed around in
-advance.
+advance. A style block the toolchain cannot read — a `lang` it does not support,
+or styles pulled in through `src` — is reported rather than skipped, so passing
+checks means the styles were actually read.
 
 ## Agent skill
 

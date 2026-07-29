@@ -444,3 +444,108 @@ test("variant shadow check covers banned names, rendered elements, and dynamic l
     false,
   )
 })
+
+test("keeps a role-name identity on div/span that shares an element spelling", () => {
+  for (const role of ["dialog", "menu", "table", "form", "figure", "main", "option"]) {
+    const result = analyzeVueTemplate(
+      `<template><section class="role-host"><div class="${role}" role="${role}">x</div></section></template>
+<style>.role-host { > .${role} {} }</style>`,
+      "/src/components/RoleHost.vue",
+    )
+    assert.deepEqual(result.violations, [], role)
+    assert.equal(result.roleNames.has(role), true, role)
+  }
+
+  const mismatched = analyzeVueTemplate(
+    `<template><section class="role-host"><div class="dialog">x</div></section></template>`,
+    "/src/components/RoleHost.vue",
+  )
+  assert.equal(
+    mismatched.violations.some(({ ruleId }) => ruleId === "reserved-element-name"),
+    true,
+  )
+})
+
+test("treats level-free wrappers as transparent so the surface root stays at the root", () => {
+  const wrappers = [
+    (inner) => `<Transition name="fade">${inner}</Transition>`,
+    (inner) => `<TransitionGroup>${inner}</TransitionGroup>`,
+    (inner) => `<KeepAlive>${inner}</KeepAlive>`,
+    (inner) => `<Suspense>${inner}</Suspense>`,
+    (inner) => `<template v-if="ready">${inner}</template>`,
+  ]
+  const surface = `<section class="fade-panel"><h2 class="title">Hi</h2></section>`
+
+  for (const wrap of wrappers) {
+    const result = analyzeVueTemplate(
+      `<template>${wrap(surface)}</template><style>.fade-panel { > .title {} }</style>`,
+      "/src/components/FadePanel.vue",
+    )
+    assert.deepEqual(result.violations, [], wrap(""))
+    assert.deepEqual([...result.surfaceRoots], ["fade-panel"])
+  }
+})
+
+test("a transparent wrapper does not add an STN tier", () => {
+  const result = analyzeVueTemplate(
+    `<template><section class="stn-host"><div class="unit"><Transition><div class="seg" /></Transition></div></section></template>`,
+    "/src/components/StnHost.vue",
+  )
+
+  assert.deepEqual(result.violations, [])
+})
+
+test("derives page names without walking above the pages directory", () => {
+  assert.equal(deriveSurfaceRootName("/src/pages/index.vue"), "index-page")
+  assert.equal(deriveSurfaceRootName("/src/pages/[id].vue"), "id-page")
+  assert.equal(deriveSurfaceRootName("/src/pages/reports/index.vue"), "reports-page")
+  assert.equal(
+    deriveSurfaceRootName("/src/pages/procedure/[key]/index.vue"),
+    "procedure-page",
+  )
+})
+
+test("reports malformed element mappings as configuration errors", () => {
+  assert.deepEqual(
+    validateNagiConfig(
+      defineNagiConfig({ surfaceRootPrefixes: ["n-"], elementClasses: { p: null } }),
+    ),
+    ["elementClasses.p must be a non-empty string; received null"],
+  )
+
+  const analysis = analyzeVueTemplate(
+    `<template><section class="broken-config"><p>x</p></section></template>`,
+    "/src/components/BrokenConfig.vue",
+    { elementClasses: { p: null } },
+  )
+  assert.ok(Array.isArray(analysis.violations))
+})
+
+test("reports unreadable style blocks", () => {
+  const scss = analyzeVueTemplate(
+    `<template><section class="scss-host" /></template><style lang="scss">.scss-host { .unit {} }</style>`,
+    "/src/components/ScssHost.vue",
+  )
+  const external = analyzeVueTemplate(
+    `<template><section class="src-host" /></template><style src="./SrcHost.css"></style>`,
+    "/src/components/SrcHost.vue",
+  )
+  const plain = analyzeVueTemplate(
+    `<template><section class="plain-host" /></template><style>.plain-host {}</style>`,
+    "/src/components/PlainHost.vue",
+  )
+
+  assert.deepEqual(scss.styleBlocks, [{ kind: "lang", line: 1, value: "scss" }])
+  assert.deepEqual(external.styleBlocks, [
+    { kind: "src", line: 1, value: "./SrcHost.css" },
+  ])
+  assert.deepEqual(plain.styleBlocks, [])
+
+  for (const result of [scss, external]) {
+    assert.equal(
+      result.violations.some(({ ruleId }) => ruleId === "unsupported-style-syntax"),
+      true,
+    )
+  }
+  assert.deepEqual(plain.violations, [])
+})

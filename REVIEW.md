@@ -5,39 +5,65 @@
 `packages/core` の `analyzeVueTemplate` を直接叩いた挙動確認を併用。
 記載した症状はすべて再現済み（推測のみの項目には「未確認」と明記）。
 
-**このブランチで既に反映済み**: 対応構文を素の CSS のみに限定し、単体 `.css` を対象外とする方針
-（`48a9e14`。CONTRACT.md の Required と新節、README の Scope、FAQ、configuration.md）。
 **保留中**: #10（値のトークン化）は影響範囲が大きいため、方針を別途議論する。
+
+## 状態
+
+| 状態 | 項目 |
+|---|---|
+| **修正済み**（このブランチ） | #1 #2 #3 #4 #5 #6 #7 #21 #22 — 確認されたバグ全件。テスト同梱 |
+| **文書反映済み**（このブランチ） | 素の CSS のみ対応・単体 `.css` 対象外の方針（CONTRACT.md / README / FAQ / configuration.md） |
+| **保留** | #10（値のトークン化）— 議論待ち |
+| **未着手** | #8 #9 #11 #12 #13 #14 #15 #16 #17 #18 #19 #20 #23 |
+
+#18 と #23 は挙動変更なので、CONTRIBUTING の ground rule（コード・テスト・文書を一緒に出す）に従い、
+決定後にまとめて着手する。#11 の一部（`-search` / `-success`）は #20 の判断が前提。
 
 ---
 
 ## サマリ
 
-| # | 内容 | 種別 | 優先 |
-|---|---|---|---|
-| 1 | 解析できない `<style>`（`lang="scss"` 等）が**サイレントにスキップされる** ※方針決定済み、修正は「落とす」だけ | バグ | **P0** |
-| 2 | 単体 `.css` が無検査 → **対象外と決定**（文書化済み）。CLI 既定値の修正のみ残る | 仕様化 | P2 |
-| 3 | ARIA ロール identity が `reserved-element-name` と衝突（契約と矛盾） | バグ | **P0** |
-| 4 | `+` / `~` 兄弟結合子を誤検出 | バグ | P1 |
-| 5 | `<Transition>` などがルートを包むと surface 検出が崩壊 | バグ | P1 |
-| 6 | `pages/index.vue` → `src-page` になる導出バグ | バグ | P1 |
-| 7 | `config.ignores` が Stylelint 側に渡っていない | バグ | P2 |
-| 8 | 2リンタの出力形式・パス表記が不統一 | UX | P2 |
-| 9 | テンプレート↔セレクタ対応検査が未実装（README の主張が未裏付け） | 未実装 | P1 |
-| 10 | 値（トークン）の canonical form が未検査 | 未実装 | **保留（議論中）** |
-| 11 | CONTRACT.md の例3件がリンタで落ちる | 整合性 | P1 |
-| 12 | CONTRACT.md L478 の `thead` 自己マップ記述が表と矛盾 | 整合性 | P2 |
-| 13 | 「全例がリンタを通る」を CI で検査していない | プロセス | P1 |
-| 14 | `tiers` 拡張（深い装飾の逃げ道）が未文書化 | 文書 | P2 |
-| 15 | `docs/index.html` が契約外の語彙を使用 | 整合性 | P3 |
-| 16 | 計算可能な全ルールを autofix 可能にする | 提案 | P1 |
-| 17 | 自作コンポーネント境界のゾーンを追加 | 提案 | P2 |
-| 18 | fixed variant 機構を廃止（`thead`/`tbody`/`tfoot` を self-map、`th`/`td` は同じ `cell`） | 提案 | P2 |
-| 19 | 段階導入手段（severity / baseline）がない | 提案 | P2 |
-| 20 | state / variant の判定基準、variant 禁止語彙の判定単位 | 設計 | P2 |
-| 21 | `<style src="...">` が全チェックをすり抜ける（#1 と同じクラスの穴） | バグ | **P0** |
-| 22 | `elementClasses` の値検証が無く、不正値が TypeError になる | バグ | P3 |
-| 23 | Element Class Table を2層に分け、上書きの基準を書き換える | 設計 | P2 |
+| # | 内容 | 種別 | 優先 | 状態 |
+|---|---|---|---|---|
+| 1 | 解析できない `<style>`（`lang="scss"` 等）が**サイレントにスキップされる** | バグ | **P0** | **修正済み** |
+| 2 | 単体 `.css` が無検査 → **対象外と決定** | 仕様化 | P2 | **修正済み** |
+| 3 | ARIA ロール identity が `reserved-element-name` と衝突（契約と矛盾） | バグ | **P0** | **修正済み** |
+| 4 | `+` / `~` 兄弟結合子を誤検出 | バグ | P1 | **修正済み** |
+| 5 | `<Transition>` などがルートを包むと surface 検出が崩壊 | バグ | P1 | **修正済み** |
+| 6 | `pages/index.vue` → `src-page` になる導出バグ | バグ | P1 | **修正済み** |
+| 7 | `config.ignores` が Stylelint 側に渡っていない | バグ | P2 | **修正済み** |
+| 8 | 2リンタの出力形式・パス表記が不統一 | UX | P2 | 未着手 |
+| 9 | テンプレート↔セレクタ対応検査が未実装（README の主張が未裏付け） | 未実装 | P1 | 未着手 |
+| 10 | 値（トークン）の canonical form が未検査 | 未実装 | — | **保留（議論中）** |
+| 11 | CONTRACT.md の例3件がリンタで落ちる | 整合性 | P1 | 未着手 |
+| 12 | CONTRACT.md L478 の `thead` 自己マップ記述が表と矛盾 | 整合性 | P2 | 未着手 |
+| 13 | 「全例がリンタを通る」を CI で検査していない | プロセス | P1 | 未着手 |
+| 14 | `tiers` 拡張（深い装飾の逃げ道）が未文書化 | 文書 | P2 | 未着手 |
+| 15 | `docs/index.html` が契約外の語彙を使用 | 整合性 | P3 | 未着手 |
+| 16 | 計算可能な全ルールを autofix 可能にする | 提案 | P1 | 未着手 |
+| 17 | 自作コンポーネント境界のゾーンを追加 | 提案 | P2 | 未着手 |
+| 18 | fixed variant 機構を廃止（`thead`/`tbody`/`tfoot` を self-map、`th`/`td` は同じ `cell`） | 提案 | P2 | 未着手 |
+| 19 | 段階導入手段（severity / baseline）がない | 提案 | P2 | 未着手 |
+| 20 | state / variant の判定基準、variant 禁止語彙の判定単位 | 設計 | P2 | 未着手 |
+| 21 | `<style src="...">` が全チェックをすり抜ける（#1 と同じクラスの穴） | バグ | **P0** | **修正済み** |
+| 22 | `elementClasses` の値検証が無く、不正値が TypeError になる | バグ | P3 | **修正済み** |
+| 23 | Element Class Table を2層に分け、上書きの基準を書き換える | 設計 | P2 | 未着手 |
+
+### 修正の内容
+
+- **#1 / #21** — `lang` 付き・`src` 参照の `<style>` を `unsupported-style-syntax` で報告。
+  **報告は ESLint 側**：Stylelint はブロックが1つも解析できなかったファイルでは**ルールを呼ばない**ため
+  （検証済み: `called: 0`）、Stylelint 側では原理的に報告できない
+- **#2** — CLI の既定 `stylelintFiles` を `["**/*.vue"]` に
+- **#3** — div/span が一致する `role` を持つ場合は `reserved-element-name` を免除（`dialog` `menu` `table` `form` `figure` `main` `option`）
+- **#4** — `+` / `~` は親子ステップではないので直接子要求の対象外に
+- **#5** — `Transition` / `TransitionGroup` / `KeepAlive` / `Suspense` / `<template>` / `<slot>` を
+  透過扱いに統一（テンプレート直下でも、STN チェーンの段数としても）。
+  `Teleport` は DOM を移動させるので**意図的に除外**（`detachedSlotSurfaces` の領域）
+- **#6** — `pages` より上のディレクトリを遡らない。`pages/index.vue` → `index-page`、`pages/[id].vue` → `id-page`
+- **#7** — `config.ignores` を Stylelint の `ignorePattern` に渡す
+- **#22** — `elementClasses` の値を `validateNagiConfig()` で検査。併せて `mappingBase` /
+  `mappingTokens` を非文字列に耐えるようにし、TypeError ではなく設定エラーとして出るように
 
 ---
 

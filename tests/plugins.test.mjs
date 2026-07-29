@@ -240,3 +240,28 @@ test("Stylelint rejects the legacy zone STN name", async () => {
     ),
   )
 })
+
+test("Stylelint allows sibling combinators inside owned DOM", async () => {
+  const result = await lintStylelint(path.join(root, "fixtures/style/SiblingList.vue"))
+
+  assert.equal(result.errored, false, JSON.stringify(result.results[0].warnings))
+})
+
+test("ESLint reports style blocks the toolchain cannot read", async () => {
+  const scss = await lintEslint(path.join(root, "fixtures/style/ScssBlock.vue"))
+  const external = await lintEslint(path.join(root, "fixtures/style/ExternalStyle.vue"))
+
+  for (const [label, result] of [["scss", scss], ["src", external]]) {
+    assert.ok(
+      result.messages.some(
+        ({ ruleId }) => ruleId === "nagi-css/unsupported-style-syntax",
+      ),
+      `${label}: ${JSON.stringify(result.messages)}`,
+    )
+  }
+
+  // Stylelint cannot cover this: it never invokes rules on a file whose style
+  // blocks all failed to parse.
+  const styles = await lintStylelint(path.join(root, "fixtures/style/ScssBlock.vue"))
+  assert.equal(styles.results[0].warnings.length, 0)
+})

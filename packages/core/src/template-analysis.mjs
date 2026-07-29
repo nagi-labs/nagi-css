@@ -16,6 +16,45 @@ const STATE_PREFIX_RE = /^(?:is-|has-)/
 const ELEMENT = 1
 const NATIVE = 0
 const COMPONENT = 1
+const TEMPLATE = 3
+
+// Wrappers that add no DOM level of their own, so they neither shift a surface
+// root off the template root nor count as a step in an STN chain. Teleport is
+// deliberately absent: it moves its content out of the surface, which is what
+// detachedSlotSurfaces covers.
+const TRANSPARENT_TAGS = new Set([
+  "slot",
+  "Transition",
+  "transition",
+  "TransitionGroup",
+  "transition-group",
+  "KeepAlive",
+  "keep-alive",
+  "Suspense",
+  "suspense",
+])
+
+function isTransparentWrapper(node) {
+  return (
+    node?.type === ELEMENT && (node.tagType === TEMPLATE || TRANSPARENT_TAGS.has(node.tag))
+  )
+}
+
+const SUPPORTED_STYLE_LANGS = new Set(["css"])
+
+// Style blocks the toolchain cannot read. Reported rather than skipped: a file
+// whose styles were never parsed must not pass as conforming.
+export function unreadableStyleBlocks(styles = []) {
+  const blocks = []
+  for (const style of styles) {
+    const line = style.loc?.start.line ?? 1
+    if (style.src) blocks.push({ kind: "src", line, value: style.src })
+    else if (style.lang && !SUPPORTED_STYLE_LANGS.has(style.lang)) {
+      blocks.push({ kind: "lang", line, value: style.lang })
+    }
+  }
+  return blocks
+}
 
 function isVariant(token) {
   return token.startsWith("-")
@@ -176,8 +215,24 @@ export function analyzeVueTemplate(source, filename, inputConfig = {}) {
   const roleNames = new Set()
   const topLayerSurfaces = new Set()
   const { descriptor } = parse(source, { filename })
+  const styleBlocks = unreadableStyleBlocks(descriptor.styles)
+  // Stylelint never runs on a file whose style blocks all failed to parse, so this
+  // has to be reported from the template side or it would pass as conforming.
+  for (const block of styleBlocks) {
+    violations.push({
+      ruleId: "unsupported-style-syntax",
+      message:
+        block.kind === "src"
+          ? `Style block loads "${block.value}" through src, so its selectors are never checked; write the styles in the block.`
+          : `Style block uses lang="${block.value}", which is not supported; styles must be plain CSS.`,
+      line: block.line,
+      column: 1,
+    })
+  }
   const template = descriptor.template?.ast
-  if (!template) return { roleNames, surfaceRoots, topLayerSurfaces, violations }
+  if (!template) {
+    return { roleNames, styleBlocks, surfaceRoots, topLayerSurfaces, violations }
+  }
 
   const styledClasses = collectStyledClasses(descriptor.styles)
   const expectedRoots = new Set(
@@ -393,6 +448,9 @@ export function analyzeVueTemplate(source, filename, inputConfig = {}) {
       for (const token of allTokens) {
         if (isVariant(token) || isLibraryInternal(token, config)) continue
         if (!sets.renderedElements.has(token)) continue
+        // A div/span carrying the matching role keeps the role name as its base
+        // identity, even when an element shares that spelling (dialog, menu, …).
+        if (acceptsRoleIdentity && token === role && staticTokens.has(token)) continue
         const allowed = sets.elementNameReverse.get(token)
         if (!allowed?.has(node.tag)) {
           push(
@@ -436,17 +494,13 @@ export function analyzeVueTemplate(source, filename, inputConfig = {}) {
         : stnIndex != null
           ? stnIndex
           : nearestStnIndex
-      for (const child of node.children ?? []) {
-        const transparent =
-          child.type === ELEMENT && (child.tagType === 3 || child.tag === "slot")
-        if (transparent) {
-          for (const grandchild of child.children ?? []) {
-            visit(grandchild, depth + 1, childNearest, context)
-          }
-        } else {
-          visit(child, depth + 1, childNearest, context)
+      const visitChildren = (children, childDepth) => {
+        for (const child of children ?? []) {
+          if (isTransparentWrapper(child)) visitChildren(child.children, childDepth)
+          else visit(child, childDepth, childNearest, context)
         }
       }
+      visitChildren(node.children, depth + 1)
     }
 
     if (isSurfaceRoot && context?.coarse.length > 0 && !context.hasLeaf) {
@@ -460,13 +514,20 @@ export function analyzeVueTemplate(source, filename, inputConfig = {}) {
     }
   }
 
-  for (const child of template.children ?? []) {
-    if (child.type === ELEMENT) visit(child, 0)
+  // A transparent wrapper at the template root keeps the surface root at depth 0.
+  const visitRoots = (children) => {
+    for (const child of children ?? []) {
+      if (child?.type !== ELEMENT) continue
+      if (isTransparentWrapper(child)) visitRoots(child.children)
+      else visit(child, 0)
+    }
   }
+  visitRoots(template.children)
 
   return {
     expectedRoots,
     roleNames,
+    styleBlocks,
     surfaceRoots,
     topLayerSurfaces,
     violations,

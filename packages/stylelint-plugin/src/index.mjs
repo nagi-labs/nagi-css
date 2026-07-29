@@ -146,33 +146,44 @@ function selectorAlternatives(selector) {
   return selectorParser().astSync(selector).nodes.map((node) => node.nodes)
 }
 
-function findInputFile(root) {
+function findInputFile(root, fallback) {
   let filename = root.source?.input.file
   if (filename) return filename
+  // A document whose style blocks were never parsed has no rules to ask, so fall
+  // back to the name Stylelint was given.
+  for (const node of root.nodes ?? []) {
+    filename ??= node.source?.input.file
+  }
   root.walkRules((rule) => {
     filename ??= rule.source?.input.file
   })
-  return filename
+  return filename ?? fallback
 }
 
-function readTemplateContext(root, config) {
-  const filename = findInputFile(root)
-  if (!filename || path.extname(filename) !== ".vue") {
-    return { roleNames: new Set(), surfaceRoots: new Set(), topLayerSurfaces: new Set() }
-  }
+const emptyTemplateContext = () => ({
+  roleNames: new Set(),
+  styleBlocks: [],
+  surfaceRoots: new Set(),
+  topLayerSurfaces: new Set(),
+})
+
+function readTemplateContext(root, config, fallbackFile) {
+  const filename = findInputFile(root, fallbackFile)
+  if (!filename || path.extname(filename) !== ".vue") return emptyTemplateContext()
   try {
     return analyzeVueTemplate(fs.readFileSync(filename, "utf8"), filename, config)
   } catch {
-    return { roleNames: new Set(), surfaceRoots: new Set(), topLayerSurfaces: new Set() }
+    return emptyTemplateContext()
   }
 }
 
-function analyzeStyles(root, inputConfig) {
+function analyzeStyles(root, inputConfig, fallbackFile) {
   const config = defineNagiConfig(inputConfig)
   const sets = buildNagiSets(config)
   const { roleNames, surfaceRoots, topLayerSurfaces = new Set() } = readTemplateContext(
     root,
     config,
+    fallbackFile,
   )
   const violations = []
 
@@ -283,6 +294,9 @@ function analyzeStyles(root, inputConfig) {
   }
 
   function checkEdge(rule, combinator, left, right, parentEndsInBoundary = false) {
+    // Sibling combinators express order among siblings, not a parent/child step,
+    // so the direct-child requirement does not apply to them.
+    if (combinator === "+" || combinator === "~") return
     const leftBoundary = parentEndsInBoundary || hasLibraryBoundary(left ?? [], sets, config)
     const rightCrossesBoundary = hasDeepPseudo(right ?? [])
     if (combinator === ">") {
@@ -496,14 +510,14 @@ function analyzeStyles(root, inputConfig) {
   return violations
 }
 
-function cachedAnalysis(root, config) {
+function cachedAnalysis(root, config, fallbackFile) {
   let analyses = analysisCache.get(root)
   if (!analyses) {
     analyses = new Map()
     analysisCache.set(root, analyses)
   }
   const key = JSON.stringify(config)
-  if (!analyses.has(key)) analyses.set(key, analyzeStyles(root, config))
+  if (!analyses.has(key)) analyses.set(key, analyzeStyles(root, config, fallbackFile))
   return analyses.get(key)
 }
 
@@ -524,7 +538,7 @@ function createRule(ruleId) {
         }
         return
       }
-      for (const violation of cachedAnalysis(root, config)) {
+      for (const violation of cachedAnalysis(root, config, result.opts?.from)) {
         if (violation.ruleId !== ruleId) continue
         stylelint.utils.report({
           message: violation.message,
