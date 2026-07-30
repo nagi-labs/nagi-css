@@ -813,3 +813,34 @@ test("a tone word is a variant, not a state class", () => {
 
   assert.deepEqual(result.violations, [])
 })
+
+test("purely presentational elements get no class of their own", () => {
+  const config = { surfaceRootPrefixes: ["app-"] }
+  const host = (markup) =>
+    analyzeVueTemplate(
+      `<template><section class="app-visual-host">${markup}</section></template>
+<style>.app-visual-host { > .icon {} > .strong {} }</style>`,
+      "/src/components/VisualHost.vue",
+      config,
+    ).violations
+
+  for (const tag of ["b", "i", "u", "s"]) {
+    const violations = host(`<${tag} class="${tag}">x</${tag}>`)
+    assert.ok(
+      violations.some(
+        ({ message, ruleId }) =>
+          ruleId === "anatomy-allowed" && message.includes("names a rendering"),
+      ),
+      tag,
+    )
+    // one message, not also reserved-element-name
+    assert.deepEqual(violations.map(({ ruleId }) => ruleId), ["anatomy-allowed"], tag)
+    // an unstyled one in prose needs no class at all
+    assert.deepEqual(host(`<${tag}>x</${tag}>`), [], tag)
+  }
+
+  // the semantic elements the author should reach for keep their self-map
+  assert.deepEqual(host(`<strong class="strong">x</strong>`), [])
+  // and the contract's sanctioned icon use of <i> is untouched
+  assert.deepEqual(host(`<i class="icon" />`), [])
+})

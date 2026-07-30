@@ -538,6 +538,14 @@ surface root when natural), `<details>` → `details`, `<form>` → `form`,
 `<select>` → `select`, `<thead>` → `thead`, `<tbody>` → `tbody`, and so on for
 every rendered element. Notes that survive the trimming:
 
+- **`<b>` `<i>` `<u>` `<s>` self-map to nothing.** Their tag names describe a
+  rendering (bold, italic, underline, strike-through), not a meaning, so a
+  self-map would hand out `.b` and `.i` — the "raw visual appearance" the
+  Semantic principle rejects. They are banned as class names instead. In prose
+  they need no class and are untouched; a *styled* one has no legal class, which
+  is the pressure to use `<strong>`, `<em>`, or a variant on the surrounding
+  element. The contract's icon use of `<i>` is unaffected, because that element
+  takes the `icon` anatomy name rather than its tag name.
 - `<section>` vagueness is resolved by a variant (`section -payment`), and an
   internal `<article>` that is actually a surface root is named by identity
   (`card`, …).

@@ -66,17 +66,27 @@ const ARIA_ROLE_NAMES = [
   "tooltip", "tree", "treegrid", "treeitem",
 ]
 
+// Elements the table deliberately leaves without a class of their own.
+// div/span carry no meaning to begin with and go to the Semantics model.
+// b/i/u/s name a rendering, not a meaning, so self-mapping them would hand out
+// `.b` and `.i` — exactly the "raw visual appearance" the contract rejects.
+// A styled one has no legal class, which is the pressure to use <strong>/<em>;
+// an unstyled one in prose needs no class and is untouched.
+const UNMAPPED_ELEMENTS = new Set(["b", "div", "i", "s", "span", "u"])
+
 // The table lists only meaning-bearing overrides; every other rendered
 // element self-maps so no element is left without a legal class.
 for (const tag of RENDERED_ELEMENTS) {
-  if (tag !== "div" && tag !== "span" && !(tag in ELEMENT_CLASSES)) {
+  if (!UNMAPPED_ELEMENTS.has(tag) && !(tag in ELEMENT_CLASSES)) {
     ELEMENT_CLASSES[tag] = tag
   }
 }
 
 const DEFAULT_CONFIG = Object.freeze({
   anatomyClasses: ["actions", "field", "icon", "media", "value"],
-  bannedClasses: ["box", "container", "content-area", "inner", "thing", "wrapper"],
+  bannedClasses: [
+    "b", "box", "container", "content-area", "i", "inner", "s", "thing", "u", "wrapper",
+  ],
   componentClassPrefix: "pv-",
   componentClasses: {},
   componentSlotPrefixes: {},

@@ -37,7 +37,11 @@ A distinction a selector can reach is selected through it, not copied into a cla
 
 Every other rendered element **self-maps** (class = tag name): `header`,
 `section`, `button`, `dialog`, `form`, `select`, `textarea`, `svg`, `thead`,
-`tbody`, `tfoot`, … No element is left without a legal class. An override exists
+`tbody`, `tfoot`, … No element is left without a legal class, except
+`<b>` `<i>` `<u>` `<s>`, whose tag names describe a rendering rather than a
+meaning: they are banned as class names, so a styled one has to become
+`<strong>`/`<em>` or a variant on its surroundings (unstyled prose is untouched,
+and `<i class="icon">` still works — that is the anatomy name, not the tag name). An override exists
 only where **the tag varies for reasons unrelated to styling** (`h1`–`h6`
 follow the document outline); an abbreviation alone is not a reason, so `nav`,
 `svg`, and `dfn` self-map. A glyph-sized `<svg>` keeps `svg`; use an `icon`

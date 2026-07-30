@@ -509,14 +509,15 @@ export function analyzeVueTemplate(source, filename, inputConfig = {}) {
     }
 
     for (const token of allTokens) {
-      if (sets.banned.has(token)) {
-        push(
-          violations,
-          node,
-          "anatomy-allowed",
-          `Class "${token}" is a banned generic anatomy name.`,
-        )
-      }
+      if (!sets.banned.has(token)) continue
+      push(
+        violations,
+        node,
+        "anatomy-allowed",
+        sets.renderedElements.has(token)
+          ? `Class "${token}" names a rendering rather than a meaning; use a semantic element such as <strong> or <em>, or a variant on the surrounding element.`
+          : `Class "${token}" is a banned generic anatomy name.`,
+      )
     }
 
     for (const token of allTokens) {
@@ -594,6 +595,8 @@ export function analyzeVueTemplate(source, filename, inputConfig = {}) {
       for (const token of allTokens) {
         if (isVariant(token) || isLibraryInternal(token, config)) continue
         if (!sets.renderedElements.has(token)) continue
+        // Already reported as a banned name, with a message that explains why.
+        if (sets.banned.has(token)) continue
         // A div/span carrying the matching role keeps the role name as its base
         // identity, even when an element shares that spelling (dialog, menu, …).
         if (acceptsRoleIdentity && token === role && staticTokens.has(token)) continue
