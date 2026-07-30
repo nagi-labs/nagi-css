@@ -206,6 +206,12 @@ unknown rule name is a configuration error, so a typo cannot silently disable a
 check. Treat `warn` as a step during adoption — the intended steady state is
 errors in CI.
 
+One category defaults to `warn` on purpose: rules that report what the toolchain
+**could not verify**, rather than a violation. `unverifiable-dynamic-class` covers
+a class binding whose names are assembled at runtime (`:class="iconName"`), where
+the code is probably fine but no rule can see the classes it applies. Setting
+`"*"` or the rule itself overrides that default in either direction.
+
 ## Scope
 
 The toolchain checks **Vue single-file components**: the template together with

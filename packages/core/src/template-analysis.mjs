@@ -188,10 +188,42 @@ function collectLiteralClassTokens(node, output) {
   }
 }
 
+// Whether every class name a binding can apply is written out in the expression.
+// An identifier, a template literal, or a call hides its result, so no rule can
+// see the classes that land on the element.
+function isReadableClassExpression(node) {
+  if (!node || typeof node !== "object") return false
+  if (node.type === "StringLiteral" || node.type === "Literal") {
+    return typeof node.value === "string"
+  }
+  if (node.type === "ArrayExpression") {
+    return (node.elements ?? []).every(isReadableClassExpression)
+  }
+  if (node.type === "ObjectExpression") {
+    return (node.properties ?? []).every((property) => {
+      if (property.type !== "ObjectProperty" && property.type !== "Property") return false
+      if (property.computed) return false
+      const key = property.key
+      return (
+        key?.type === "Identifier" ||
+        ((key?.type === "StringLiteral" || key?.type === "Literal") &&
+          typeof key.value === "string")
+      )
+    })
+  }
+  if (node.type === "ConditionalExpression") {
+    return (
+      isReadableClassExpression(node.consequent) && isReadableClassExpression(node.alternate)
+    )
+  }
+  return false
+}
+
 function extractClassInfo(node) {
   const info = {
     dynamic: false,
     dynamicTokens: [],
+    opaqueExpressions: [],
     staticProp: null,
     staticTokens: [],
   }
@@ -211,6 +243,9 @@ function extractClassInfo(node) {
     ) {
       info.dynamic = true
       collectLiteralClassTokens(property.exp?.ast, info.dynamicTokens)
+      if (!isReadableClassExpression(property.exp?.ast)) {
+        info.opaqueExpressions.push(property.exp?.content ?? "")
+      }
     }
   }
   return info
@@ -466,6 +501,17 @@ export function analyzeVueTemplate(source, filename, inputConfig = {}) {
         "variant-order",
         `Variant classes must be alphabetical: "${sorted.join(" ")}".`,
         rewriteClassFix(info, [...info.staticTokens.filter((token) => !isVariant(token)), ...sorted]),
+      )
+    }
+
+    // Not a violation: a report of what could not be checked. Every other rule
+    // silently skips an element whose classes it cannot read, so say so.
+    for (const expression of info.opaqueExpressions) {
+      push(
+        violations,
+        node,
+        "unverifiable-dynamic-class",
+        `Class binding "${expression}" does not spell out the classes it applies, so none of them are checked on this element; write it as an object with literal keys ({ '-lead': isLead }) to have them verified.`,
       )
     }
 

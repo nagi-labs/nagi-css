@@ -7,6 +7,7 @@ import {
   defineNagiConfig,
   deriveSurfaceRootName,
   matchSelectorChain,
+  resolveSeverity,
   validateNagiConfig,
 } from "@nagi-labs/nagi-css-core"
 
@@ -843,4 +844,42 @@ test("purely presentational elements get no class of their own", () => {
   assert.deepEqual(host(`<strong class="strong">x</strong>`), [])
   // and the contract's sanctioned icon use of <i> is untouched
   assert.deepEqual(host(`<i class="icon" />`), [])
+})
+
+test("reports a class binding whose names cannot be read", () => {
+  const config = { surfaceRootPrefixes: ["app-"] }
+  const host = (binding) =>
+    analyzeVueTemplate(
+      `<template><section class="app-opaque-host"><span class="icon" ${binding} /></section></template>
+<style>.app-opaque-host { > .icon {} }</style>`,
+      "/src/components/OpaqueHost.vue",
+      config,
+    ).violations.filter(({ ruleId }) => ruleId === "unverifiable-dynamic-class")
+
+  // readable: every class the binding can apply is written out
+  assert.deepEqual(host(`:class="{ 'icon-large': big }"`), [])
+  assert.deepEqual(host(`:class="big ? 'icon-large' : 'icon-small'"`), [])
+  assert.deepEqual(host(`:class="['icon-large']"`), [])
+
+  // unreadable: the result is decided at runtime
+  for (const binding of [':class="iconName"', ':class="`icon-${size}`"', ':class="pick()"']) {
+    assert.equal(host(binding).length, 1, binding)
+  }
+})
+
+test("a coverage rule warns by default and explicit configuration wins", () => {
+  const levelFor = resolveSeverity()
+  assert.equal(levelFor("unverifiable-dynamic-class"), "warn")
+  assert.equal(levelFor("anatomy-allowed"), "error")
+
+  // "*" is an explicit choice about everything, so it overrides the rule default
+  assert.equal(resolveSeverity({ "*": "error" })("unverifiable-dynamic-class"), "error")
+  assert.equal(resolveSeverity({ "*": "off" })("unverifiable-dynamic-class"), "off")
+  // and a rule-specific entry wins over both
+  assert.equal(
+    resolveSeverity({ "*": "off", "unverifiable-dynamic-class": "error" })(
+      "unverifiable-dynamic-class",
+    ),
+    "error",
+  )
 })

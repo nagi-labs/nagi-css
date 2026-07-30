@@ -40,6 +40,8 @@ const ruleDescriptions = {
   "stn-reach-g": "Make surfaces above unit reach the g tier",
   "unsupported-style-syntax":
     "Report style blocks the toolchain cannot read instead of skipping them",
+  "unverifiable-dynamic-class":
+    "Report class bindings whose class names the toolchain cannot read",
   "variant-must-be-static":
     "Keep variants out of class bindings, so a variant cannot express runtime state",
   "variant-order": "Keep static variant classes in alphabetical order",

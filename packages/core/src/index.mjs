@@ -172,11 +172,17 @@ export function defineNagiConfig(config = {}) {
 const SEVERITY_LEVELS = ["error", "warn", "off"]
 const DEFAULT_SEVERITY_KEY = "*"
 
+// Rules that report what the toolchain could not verify rather than a violation.
+// The code may well be correct, so the default is a warning: it tells a project
+// where the linter is blind without failing a build over it.
+const COVERAGE_RULES = { "unverifiable-dynamic-class": "warn" }
+
 // Per-rule severity. `warn` exists for adopting the contract in an existing
-// codebase; the intended steady state is `error` in CI.
+// codebase; the intended steady state is `error` in CI. Explicit configuration
+// always wins over a rule's own default, so `"*": "error"` tightens everything.
 export function resolveSeverity(severity = {}) {
-  const fallback = severity[DEFAULT_SEVERITY_KEY] ?? "error"
-  return (ruleId) => severity[ruleId] ?? fallback
+  const fallback = severity[DEFAULT_SEVERITY_KEY]
+  return (ruleId) => severity[ruleId] ?? fallback ?? COVERAGE_RULES[ruleId] ?? "error"
 }
 
 export function validateSeverity(severity = {}, knownRuleIds = []) {

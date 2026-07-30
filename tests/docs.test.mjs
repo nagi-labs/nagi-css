@@ -4,7 +4,11 @@ import path from "node:path"
 import test from "node:test"
 import { fileURLToPath } from "node:url"
 
-import { analyzeVueTemplate } from "@nagi-labs/nagi-css-core"
+import { analyzeVueTemplate, resolveSeverity } from "@nagi-labs/nagi-css-core"
+
+// An example has to be free of violations; a coverage warning is not one. The
+// README's icon binding is deliberately unreadable, and saying so is correct.
+const levelFor = resolveSeverity()
 
 const repository = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 
@@ -69,6 +73,7 @@ test("every annotated documentation example passes the linter", async () => {
         ...(options.emit ? { emitPolicy: options.emit } : {}),
       })
       for (const violation of violations) {
+        if (levelFor(violation.ruleId) !== "error") continue
         failures.push(`${file} (${options.file}) ${violation.ruleId}: ${violation.message}`)
       }
     }

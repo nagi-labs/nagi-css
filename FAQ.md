@@ -101,6 +101,14 @@ failures and no adoption at all. Stage it with `warn`, then move rules to
 `error` as they go green. A project that stops halfway has bought the discipline
 cost and skipped the guarantee.
 
+One category is a warning by default, and stays one: rules that report what the
+toolchain **could not verify** rather than something wrong. A class binding whose
+names are assembled at runtime (`:class="iconName"`) is very likely correct — the
+honest statement is "this element was not checked", not "this element is broken".
+Those reports tell you where the linter is blind so you can decide: rewrite the
+binding so the names are readable, accept the gap, or raise the rule to `error`
+if the guarantee matters more than the convenience.
+
 ## What does this do for accessibility?
 
 Nothing directly — and that is deliberate framing. Accessibility comes from

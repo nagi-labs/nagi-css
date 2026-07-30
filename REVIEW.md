@@ -12,7 +12,7 @@
 | 状態 | 項目 |
 |---|---|
 | **修正済み**（このブランチ） | #1 #2 #3 #4 #5 #6 #7 #21 #22 — 確認されたバグ全件。テスト同梱 |
-| **実装済み**（このブランチ） | #18 #23 — fixed variant 機構の廃止と表の2層化。#12 もこれで解消<br>#19 — per-rule `severity`（`error` / `warn` / `off`、`*` フォールバック、未知名は設定エラー）<br>#9 — `dead-rule` / `selector-mirrors-template`（テンプレートの owned ツリーとセレクタ鎖の照合）<br>#16 — autofix を6ルールに拡大<br>#17 — 自作コンポーネント境界（`owned-component-identity` / `owned-surface-reach-in`）。パススルー方式は廃止<br>#20 — `variant-must-be-static`＋変体禁止語彙を base identity に限定<br>#8 — 2リンタの出力を1本に統合<br>#13 — 注釈付きドキュメント例を CI で検査（11パターン＋README）<br>#14 #15 — `tiers` 拡張の文書化、docs サイトの語彙修正 |
+| **実装済み**（このブランチ） | #18 #23 — fixed variant 機構の廃止と表の2層化。#12 もこれで解消<br>#19 — per-rule `severity`（`error` / `warn` / `off`、`*` フォールバック、未知名は設定エラー）<br>#9 — `dead-rule` / `selector-mirrors-template`（テンプレートの owned ツリーとセレクタ鎖の照合）<br>#16 — autofix を6ルールに拡大<br>#17 — 自作コンポーネント境界（`owned-component-identity` / `owned-surface-reach-in`）。パススルー方式は廃止<br>#20 — `variant-must-be-static`＋変体禁止語彙を base identity に限定<br>#8 — 2リンタの出力を1本に統合<br>#13 — 注釈付きドキュメント例を CI で検査（11パターン＋README）<br>#14 #15 — `tiers` 拡張の文書化、docs サイトの語彙修正<br>派生 — 見た目由来タグ（`<b>` `<i>` `<u>` `<s>`）の自己マップ廃止、`unverifiable-dynamic-class`（検証不能の通知、既定 warning） |
 | **文書反映済み**（このブランチ） | 素の CSS のみ対応・単体 `.css` 対象外の方針（CONTRACT.md / README / FAQ / configuration.md） |
 | **保留** | #10（値のトークン化）— 議論待ち |
 | **未着手** | なし（#10 のみ議論待ち） |
@@ -116,6 +116,18 @@
 - **#15** — docs サイトの `codeblock` / `snippet` を `pre` / `code`（自己マップ）に修正。
   `style.css` 冒頭にあった "Site profile mappings" の宣言も削除（#23 で上書きは閉じたリストにしたため）。
   他の逸脱に見えたクラスはコード例の中身（エスケープ済みテキスト）で、実マークアップではなかった
+- **派生1（#23 から）** — `<b>` `<i>` `<u>` `<s>` の自己マップを廃止し、クラス名として禁止。
+  タグ名が「太字・斜体・下線・打ち消し」という**描画**を指しており、`.b` `.i` は
+  契約の Semantic 原則が拒否する「生の見た目」そのものだった。
+  影響は狭く、**スタイルを当てている場合だけ**合法なクラスが無くなる（`<strong>`/`<em>` へ誘導）。
+  文中の装飾的な `<b>`（クラス無し）と `<i class="icon">` は無関係。
+  併せて、禁止語となった要素名に `reserved-element-name` が二重報告するのもやめた
+- **派生2（#20 から）** — `unverifiable-dynamic-class` を追加。読めない `:class` 式
+  （`iconName`、`` `-${tone}` ``、`pick()`）を報告する。**既定は warning**：
+  これは「違反」ではなく**「検証できなかった」の通知**で、コードは正しい可能性が高い。
+  そのためルール単位の既定値の仕組みを導入した（優先順位は
+  個別指定 > `"*"` > ルール既定 > `error`）。README の適合例 `:class="iconName"` は
+  警告が出るだけで通り、それは事実として正しい。オブジェクト形式（リテラルキー）で書けば検証される
 
 ---
 

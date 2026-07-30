@@ -46,6 +46,11 @@ An unknown rule name is a configuration error, so a typo cannot quietly disable
 a check. Use `warn` to stage adoption in an existing codebase — do not leave a
 project there, since an unenforced contract is back to consistency by discipline.
 
+`unverifiable-dynamic-class` is the exception: it defaults to `warn` because it
+reports what could not be checked rather than a violation. Raise it to `error`
+where every element must be verifiable, or turn it `off` if the gaps are known
+and accepted.
+
 `componentClasses` lists only opaque third-party or UI-library components. The
 array shorthand derives each class as `pv-` plus the component name in
 kebab-case: `DataTable` becomes `pv-data-table`. Change the default with

@@ -21,3 +21,9 @@ anchor and moving the toggle to `data-muted`.
 
 A static variant is still the right tool when it does not change at runtime:
 `<span class="value -lead" />` is fine, and only the binding form is rejected.
+
+`:class="iconName"` also draws `unverifiable-dynamic-class`, a **warning**: the
+names are assembled at runtime, so no rule can see what lands on the element.
+That is a statement about coverage, not a violation. Write the binding as an
+object with literal keys when the names should be verified
+(`:class="{ 'icon-large': big }"`), or accept the gap.
