@@ -99,6 +99,20 @@ rule, and surface root + the element's base identity on an owned element
 (`container-query-scope`); querying a parent's container name couples this surface
 to a name it does not own. Unnamed queries are always allowed.
 
+## Motion and Cascade
+
+Prefix a `@keyframes` name with the surface root (`app-toast-slide-in`); the tail is
+a free choice like a variant stem. A `@keyframes` no `animation` in the component
+references is reported (`dead-keyframes`) — a scoped block renames it per component,
+so it is unreachable, not just unused. Shared motion belongs in a global stylesheet.
+Reduced motion is not linted: there is no unique correct reduced variant, so it
+would be a presence check rather than a derivation.
+
+`@layer` is not used inside a surface (`cascade-layer-in-surface`). The structural
+rules keep specificity flat so cascade order never needs adjusting; global layer
+ordering belongs in a global stylesheet, and a consumer override is a public
+custom property, not a cascade trick.
+
 ## Stacking Order
 
 `z-index` on a surface's own rule is external layout: its order among its siblings

@@ -69,6 +69,9 @@ the judgments the linter cannot make.
     included: a surface's order among its siblings is the parent's decision, and a
     surface that legitimately owns its stacking order takes the level from a token.
     Layering a surface's own children against each other is unrestricted.
+  - `@keyframes` names carry the surface root prefix, and every one declared is
+    referenced by an animation in the same component.
+  - `@layer` is absent from surface style blocks.
   - Containers are unnamed where possible. A named container is the surface root, or
     the surface root plus the declaring element's base identity, and a named
     `@container` query references a container declared in the same file.

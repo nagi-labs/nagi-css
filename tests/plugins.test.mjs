@@ -397,3 +397,20 @@ test("Stylelint derives container names and keeps queries inside the file", asyn
     JSON.stringify(invalid.results[0].warnings),
   )
 })
+
+test("Stylelint reports unused keyframes and cascade layers inside a surface", async () => {
+  const result = await lintStylelint(path.join(root, "fixtures/style/MotionSurface.vue"), {})
+
+  assert.deepEqual(
+    result.results[0].warnings
+      .filter(({ rule }) =>
+        rule === "nagi-css/dead-keyframes" || rule === "nagi-css/cascade-layer-in-surface",
+      )
+      .map(({ line, rule }) => [line, rule]),
+    [
+      [16, "nagi-css/cascade-layer-in-surface"],
+      [12, "nagi-css/dead-keyframes"],
+    ],
+    JSON.stringify(result.results[0].warnings),
+  )
+})

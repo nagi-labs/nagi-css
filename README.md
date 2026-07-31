@@ -155,6 +155,10 @@ Stylelint enforces:
 - explicit detached configuration for top-level teleported surfaces;
 - container names derived from the surface and the element declaring them, and
   named `@container` queries kept to containers the same file declares;
+- `@keyframes` no animation in the component references, which a scoped block makes
+  unreachable rather than merely unused;
+- no `@layer` inside a surface, since the contract keeps specificity flat so cascade
+  order never needs adjusting;
 - colors written as a token reference rather than a raw value;
 - lengths on scale properties (spacing, radius, border width, type size,
   elevation) written as a token or as a named `--local-*` one-off; and

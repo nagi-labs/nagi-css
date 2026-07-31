@@ -1267,6 +1267,43 @@ the same file (`container-query-scope`). An unnamed query is always allowed —
 matching the nearest ancestor container is a relationship, not a dependency on a
 name.
 
+### Animation names are derived too, and unused ones are reported
+
+A `@keyframes` name is an identifier, so it follows the same rule as a container
+name: prefix it with the surface root (`app-toast-slide-in`). The tail — what the
+motion actually is — is a choice the contract does not make, exactly like a variant
+stem.
+
+More useful is the other half: a `@keyframes` that no `animation` in the component
+references is reported (`dead-keyframes`). Under scoped styles the compiler renames
+keyframes per component, so an unreferenced one is not merely unused — it is
+unreachable, and nothing outside the component could animate with it either. A
+motion meant to be shared belongs in a global stylesheet.
+
+Reduced motion is deliberately **not** checked. There is no unique correct reduced
+variant of an animation, so a rule could only assert that
+`prefers-reduced-motion` is mentioned somewhere — a presence check, not a canonical
+form, and the contract does not claim authority it cannot derive. Respecting the
+preference remains an accessibility obligation regardless.
+
+### Cascade layers are not used inside a surface
+
+`@layer` reorders the cascade. Everything in this contract exists so that the order
+never has to be adjusted: one base identity per compound, `>` chains that mirror the
+template, no bare element selectors, no utilities. Specificity inside a surface is
+flat by construction.
+
+So a layer inside a surface is an escape hatch back to "make this rule win", which
+is the judgment the contract removes everywhere else. Reported as
+`cascade-layer-in-surface`.
+
+Two legitimate needs are met elsewhere:
+
+- **Global ordering** — reset, base, theme — belongs in a global stylesheet, which
+  is outside the contract by the same decision that excludes standalone `.css`.
+- **Letting a consumer override** a component is a public contract: expose a custom
+  property. A cascade trick makes the override possible without making it declared.
+
 ### Reserve viewport media queries for layout-level changes
 
 Global `@media` rules should primarily handle page-level layout decisions rather than local component behavior.
@@ -1446,6 +1483,9 @@ Nagi CSS preserves readable styling surfaces rather than collapsing meaning into
 - prefer an unnamed container; where a container is named, the name MUST be derived
   from the surface and the element declaring it, and a named query MUST reference a
   container declared in the same file
+- `@keyframes` names are prefixed with the surface root, and an unreferenced
+  `@keyframes` MUST NOT be left in a component
+- `@layer` MUST NOT be used inside a surface
 - prefer public styling contracts over DOM chasing
 - keep surface structure readable from markup alone
 - use CSS custom properties for tokens and theming
@@ -1462,6 +1502,8 @@ Avoid the following:
 - overusing STN where UI-semantic names would work
 - styling third-party internals as if they were owned DOM
 - pushing external layout concerns into reusable surfaces
+- reaching for `@layer` or `z-index` to win a cascade or stacking argument the
+  structure should have prevented
 - collapsing all styling meaning into utility class strings
 
 ---

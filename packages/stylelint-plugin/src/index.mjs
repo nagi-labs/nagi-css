@@ -49,8 +49,10 @@ const ruleIds = [
   "anatomy-allowed",
   "bare-element-selector",
   "boundary-nesting",
+  "cascade-layer-in-surface",
   "container-name-derived",
   "container-query-scope",
+  "dead-keyframes",
   "dead-rule",
   "length-token-required",
   "owned-dom-direct-child",
@@ -856,6 +858,57 @@ function analyzeStyles(root, inputConfig, fallbackFile) {
       name,
     )
   })
+
+  // Cascade layers reorder the cascade, and the contract's structural rules exist so
+  // that the order never needs adjusting: one base identity per compound, `>` chains,
+  // no bare element selectors. A layer inside a surface is an escape hatch back to
+  // "make this win", and a component that must lose to its consumer has a public
+  // contract for that (custom properties), not a cascade trick. Global layer
+  // ordering — reset, base, theme — lives in global stylesheets, which are outside
+  // the contract by the same decision that excludes standalone `.css`.
+  root.walkAtRules("layer", (atRule) => {
+    report(
+      atRule,
+      "cascade-layer-in-surface",
+      `"@layer" adjusts cascade order inside a surface; the contract keeps specificity flat so ordering never has to be adjusted. Put global layer ordering in a global stylesheet, and expose a custom property where a consumer must override.`,
+      "@layer",
+    )
+  })
+
+  // A `@keyframes` nobody animates with is dead weight the same way an unmatched
+  // selector is, and Vue rewrites the name per component, so in a scoped block an
+  // unreferenced one is unreachable rather than merely unused. A keyframes meant to
+  // be shared belongs in a global stylesheet.
+  const blockRootOf = (node) => {
+    let current = node
+    while (current.parent && current.parent.type !== "document") current = current.parent
+    return current
+  }
+  const isScopedBlock = (node) =>
+    /\bscoped\b/.test(blockRootOf(node).raws?.codeBefore?.match(/<style[^>]*>\s*$/i)?.[0] ?? "")
+
+  const animationNames = new Set()
+  let animationsResolvable = true
+  root.walkDecls(/^(?:-\w+-)?animation(?:-name)?$/i, (decl) => {
+    // A name assembled from a custom property cannot be resolved, so nothing here
+    // can be called dead.
+    if (decl.value.includes("var(")) animationsResolvable = false
+    for (const token of decl.value.split(/[^\w-]+/)) {
+      if (token) animationNames.add(token)
+    }
+  })
+  if (animationsResolvable) {
+    root.walkAtRules(/^(?:-\w+-)?keyframes$/i, (atRule) => {
+      const name = atRule.params.trim().replace(/^(['"])(.*)\1$/, "$2")
+      if (!name || animationNames.has(name) || !isScopedBlock(atRule)) return
+      report(
+        atRule,
+        "dead-keyframes",
+        `"@keyframes ${name}" is never referenced in this component; a scoped block renames it per component, so nothing outside can animate with it either.`,
+        name,
+      )
+    })
+  }
 
   // Token references are a property of the declaration, not of the selector, so
   // they are checked across the whole stylesheet rather than per surface. Custom
