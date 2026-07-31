@@ -163,17 +163,21 @@
   <section class="section -usage">
     <h2 class="title">Usage</h2>
     <p class="text">
-      The CLI accepts configuration from outside the application being checked,
-      so a target repository needs no lint setup of its own.
+      Add Nagi CSS after the framework's official ESLint flat config. The
+      framework keeps ownership of its parser and generated settings.
     </p>
-    <pre class="pre"><code>nagi-css check \
-  --config /absolute/path/to/nagi.config.mjs \
-  --cwd /absolute/path/to/application</code></pre>
+    <pre class="pre"><code>import nagiCss from "@nagi-labs/eslint-plugin-nagi-css"
+
+export default [
+  // framework config first
+  ...nagiCss.configs.recommended({
+    surfaceRootPrefixes: ["app-"],
+  }),
+]</code></pre>
     <p class="text">
-      ESLint validates templates and cross-block contracts; Stylelint validates
-      selectors and CSS nesting. <code class="code">--fix</code> applies only
-      unambiguous missing fixed-class fixes. The toolchain targets Vue
-      single-file components first; the contract itself is framework-agnostic.
+      One ESLint run validates templates, selectors, CSS nesting, ownership, and
+      values. Stylelint and <code class="code">nagi.config.mjs</code> are not
+      required for normal Vue, Nuxt, Svelte, or Astro setup.
     </p>
   </section>
 

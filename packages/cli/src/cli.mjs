@@ -4,20 +4,18 @@ import path from "node:path"
 import { pathToFileURL } from "node:url"
 
 import { ESLint } from "eslint"
-import stylelint from "stylelint"
 
-import { createNagiEslintConfig, rules as eslintRules } from "@nagi-labs/eslint-plugin-nagi-css"
+import {
+  createNagiStandaloneEslintConfigs,
+  rules as eslintRules,
+} from "@nagi-labs/eslint-plugin-nagi-css"
 import {
   defineNagiConfig,
   validateNagiConfig,
   validateSeverity,
 } from "@nagi-labs/nagi-css-core"
-import {
-  createNagiStylelintConfig,
-  ruleIds as stylelintRuleIds,
-} from "@nagi-labs/stylelint-plugin-nagi-css"
 
-const knownRuleIds = [...new Set([...Object.keys(eslintRules), ...stylelintRuleIds])]
+const knownRuleIds = Object.keys(eslintRules)
 
 function parseArgs(argv) {
   const args = { command: "check", config: null, cwd: process.cwd(), fix: false }
@@ -41,7 +39,7 @@ function usage() {
   nagi-css check --config <external-config.mjs> --cwd <target-directory> [--fix]
 
 The configuration file may live outside the target repository. --fix only
-applies unambiguous ESLint fixed-class fixes.`
+applies fixes whose correct output the contract can derive.`
 }
 
 async function loadConfig(configPath) {
@@ -52,7 +50,7 @@ async function loadConfig(configPath) {
 }
 
 async function runEslint(cwd, config, fix) {
-  const files = config.eslintFiles ?? ["**/*.vue"]
+  const files = config.files ?? ["**/*.{vue,svelte,astro}"]
   const eslint = new ESLint({
     cwd,
     errorOnUnmatchedPattern: false,
@@ -60,7 +58,9 @@ async function runEslint(cwd, config, fix) {
     overrideConfigFile: true,
     overrideConfig: [
       { ignores: config.ignores ?? ["**/node_modules/**", "**/dist/**"] },
-      createNagiEslintConfig(config.semantic, files, config.severity),
+      ...createNagiStandaloneEslintConfigs(config.semantic, {
+        severity: config.severity,
+      }),
     ],
   })
   const results = await eslint.lintFiles(files)
@@ -77,29 +77,7 @@ async function runEslint(cwd, config, fix) {
   )
 }
 
-async function runStylelint(cwd, config) {
-  const files = config.stylelintFiles ?? ["**/*.vue"]
-  const { results } = await stylelint.lint({
-    cwd,
-    files,
-    config: createNagiStylelintConfig(config.semantic, config.severity),
-    ignorePattern: config.ignores ?? ["**/node_modules/**", "**/dist/**"],
-    allowEmptyInput: true,
-  })
-  return results.flatMap((result) =>
-    [...result.parseErrors, ...result.warnings].map((warning) => ({
-      column: warning.column ?? 1,
-      file: result.source,
-      line: warning.line ?? 1,
-      rule: warning.rule ?? "stylelint",
-      severity: warning.severity === "warning" ? "warning" : "error",
-      text: warning.text.replace(/\s*\([^)]*\)$/, ""),
-    })),
-  )
-}
-
-// One report for both linters: paths relative to the target, sorted by position,
-// and a single summary line.
+// Paths relative to the target, sorted by position, with one summary line.
 function formatReport(diagnostics, cwd) {
   const byFile = new Map()
   for (const diagnostic of diagnostics) {
@@ -166,11 +144,7 @@ export async function run(argv = process.argv.slice(2)) {
   }
 
   const config = { ...loaded, semantic, severity }
-  const reports = await Promise.all([
-    runEslint(args.cwd, config, args.fix),
-    runStylelint(args.cwd, config),
-  ])
-  const diagnostics = reports.flat()
+  const diagnostics = await runEslint(args.cwd, config, args.fix)
   const report = formatReport(diagnostics, args.cwd)
   if (report) process.stdout.write(`${report}\n`)
   return diagnostics.some((diagnostic) => diagnostic.severity === "error") ? 1 : 0

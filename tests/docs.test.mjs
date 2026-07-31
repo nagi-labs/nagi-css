@@ -4,7 +4,11 @@ import path from "node:path"
 import test from "node:test"
 import { fileURLToPath } from "node:url"
 
-import { analyzeVueTemplate, resolveSeverity } from "@nagi-labs/nagi-css-core"
+import {
+  analyzeComponentStyles,
+  analyzeTemplate,
+  resolveSeverity,
+} from "@nagi-labs/nagi-css-core"
 
 // An example has to be free of violations; a coverage warning is not one. The
 // README's icon binding is deliberately unreadable, and saying so is correct.
@@ -35,11 +39,13 @@ function parseAnnotation(raw) {
 
 async function markdownFiles() {
   const roots = ["CONTRACT.md", "README.md", "FAQ.md", "CONTRIBUTING.md"]
+  const docs = await fs.readdir(path.join(repository, "docs"), { recursive: true })
   const skills = await fs.readdir(path.join(repository, "skills/nagi-css/references"), {
     recursive: true,
   })
   return [
     ...roots,
+    ...docs.filter((name) => name.endsWith(".md")).map((name) => path.join("docs", name)),
     ...skills
       .filter((name) => name.endsWith(".md"))
       .map((name) => path.join("skills/nagi-css/references", name)),
@@ -56,7 +62,8 @@ test("every annotated documentation example passes the linter", async () => {
     for (const [, raw, language, block] of source.matchAll(ANNOTATION)) {
       const options = parseAnnotation(raw)
       assert.ok(options.file, `${file}: nagi-check needs file=`)
-      assert.equal(language, "vue", `${file}: only vue blocks can be checked`)
+      const extension = path.extname(options.file).slice(1)
+      assert.equal(language, extension, `${file}: block language must match file extension`)
       checked += 1
 
       const componentSlots = {}
@@ -66,12 +73,17 @@ test("every annotated documentation example passes the linter", async () => {
         componentSlots[component] = { ...componentSlots[component], [slot]: className }
       }
 
-      const { violations } = analyzeVueTemplate(block, `/${options.file}`, {
+      const config = {
         surfaceRootPrefixes: [options.prefix ?? "app-"],
         ...(options.components ? { componentClasses: options.components.split(",") } : {}),
         ...(Object.keys(componentSlots).length > 0 ? { componentSlots } : {}),
         ...(options.emit ? { emitPolicy: options.emit } : {}),
-      })
+      }
+      const template = analyzeTemplate(block, `/${options.file}`, config)
+      const violations = [
+        ...template.violations,
+        ...analyzeComponentStyles(block, `/${options.file}`, config, template),
+      ]
       for (const violation of violations) {
         if (levelFor(violation.ruleId) !== "error") continue
         failures.push(`${file} (${options.file}) ${violation.ruleId}: ${violation.message}`)

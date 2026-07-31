@@ -4,4 +4,6 @@ coverage/
 *.log
 .DS_Store
 .playwright-cli/
+docs/.vitepress/cache/
+docs/.vitepress/dist/
 .claude/settings.local.json

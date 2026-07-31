@@ -23,7 +23,7 @@ test("CLI applies only safe fixed-class fixes from an external config", async (c
   )
   await fs.writeFile(
     config,
-    `export default { eslintFiles: ["*.vue"], stylelintFiles: ["*.vue"], semantic: { surfaceRootPrefixes: ["test-"] } }`,
+    `export default { files: ["*.vue"], semantic: { surfaceRootPrefixes: ["test-"] } }`,
   )
 
   await execute(process.execPath, [cli, "check", "--config", config, "--cwd", directory, "--fix"])
@@ -31,11 +31,38 @@ test("CLI applies only safe fixed-class fixes from an external config", async (c
   assert.match(await fs.readFile(component, "utf8"), /<button class="button">/)
 })
 
+test("CLI discovers and fixes Svelte and Astro files by default", async (context) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "nagi-css-frameworks-"))
+  context.after(() => fs.rm(directory, { force: true, recursive: true }))
+  const config = path.join(directory, "nagi.config.mjs")
+  const files = [
+    path.join(directory, "SvelteSurface.svelte"),
+    path.join(directory, "AstroSurface.astro"),
+  ]
+  for (const file of files) {
+    await fs.writeFile(
+      file,
+      `<section class="test-${path.basename(file).startsWith("Svelte") ? "svelte" : "astro"}-surface"><button>Save</button></section>
+<style>.test-${path.basename(file).startsWith("Svelte") ? "svelte" : "astro"}-surface { > .button {} }</style>`,
+    )
+  }
+  await fs.writeFile(
+    config,
+    `export default { semantic: { surfaceRootPrefixes: ["test-"] } }`,
+  )
+
+  await execute(process.execPath, [cli, "check", "--config", config, "--cwd", directory, "--fix"])
+
+  for (const file of files) {
+    assert.match(await fs.readFile(file, "utf8"), /<button class="button">/)
+  }
+})
+
 test("CLI honours per-rule severity, and warnings do not fail the run", async (context) => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "nagi-css-"))
   context.after(() => fs.rm(directory, { force: true, recursive: true }))
   const config = path.join(directory, "nagi.config.mjs")
-  // Two violations: a banned template class (ESLint) and a missing `>` (Stylelint).
+  // Two violations: a banned template class and a missing `>` in its style block.
   await fs.writeFile(
     path.join(directory, "SeveritySurface.vue"),
     `<template><section class="test-severity-surface"><div class="wrapper"><p class="text">x</p></div></section></template>
@@ -45,7 +72,7 @@ test("CLI honours per-rule severity, and warnings do not fail the run", async (c
   const run = async (severity) => {
     await fs.writeFile(
       config,
-      `export default { eslintFiles: ["*.vue"], stylelintFiles: ["*.vue"], severity: ${JSON.stringify(severity)}, semantic: { surfaceRootPrefixes: ["test-"] } }`,
+      `export default { files: ["*.vue"], severity: ${JSON.stringify(severity)}, semantic: { surfaceRootPrefixes: ["test-"] } }`,
     )
     try {
       const { stdout } = await execute(process.execPath, [
@@ -114,7 +141,7 @@ test("CLI resolves token sources against the checked directory, not the config f
   )
   await fs.writeFile(
     config,
-    `export default { eslintFiles: ["*.vue"], stylelintFiles: ["*.vue"], semantic: {
+    `export default { files: ["*.vue"], semantic: {
       surfaceRootPrefixes: ["test-"],
       tokens: { sources: [{ file: "tokens.css", layer: "semantic" }] },
     } }`,

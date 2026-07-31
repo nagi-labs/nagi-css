@@ -43,7 +43,7 @@ Use this when revising existing markup/CSS to follow the Nagi CSS contract.
    - Split styled slot content into independent owned surfaces when it must carry local CSS.
 
 8. Verify with the linter.
-   - Run `nagi-css check` with the project's external configuration; use `--fix` only for unambiguous missing fixed classes.
+   - Run the project's normal ESLint command; use `--fix` only for unambiguous derived fixes.
 
 ## Common Refactors
 

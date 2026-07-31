@@ -2,6 +2,7 @@ import assert from "node:assert/strict"
 import test from "node:test"
 
 import {
+  analyzeTemplate,
   analyzeVueTemplate,
   deriveAllowedSurfaceRootNames,
   defineNagiConfig,
@@ -992,4 +993,46 @@ test("requires a token for a length only where the design system owns a scale", 
   // neither an angle nor a duration is a length
   assert.deepEqual(raw("rotate", "45deg"), [])
   assert.deepEqual(raw("transition", "0.2s ease"), [])
+})
+
+test("Svelte and Astro use the same semantic template analysis", () => {
+  const config = { surfaceRootPrefixes: ["test-"] }
+  const cases = [
+    [
+      "/src/components/SharedCard.svelte",
+      `<section class="test-shared-card"><button class="button">Save</button></section>`,
+    ],
+    [
+      "/src/components/SharedCard.astro",
+      `<section class="test-shared-card"><button class="button">Save</button></section>`,
+    ],
+  ]
+
+  for (const [filename, source] of cases) {
+    const result = analyzeTemplate(source, filename, config)
+    assert.deepEqual(result.violations, [], filename)
+    assert.deepEqual([...result.surfaceRoots], ["test-shared-card"], filename)
+    assert.equal(result.tree[0].children[0].tag, "button", filename)
+  }
+})
+
+test("dynamic HTML keeps selector-tree conclusions unknown", () => {
+  const config = { surfaceRootPrefixes: ["test-"] }
+  const cases = [
+    [
+      "/src/components/RawSurface.svelte",
+      `<section class="test-raw-surface">{@html content}</section>`,
+    ],
+    [
+      "/src/components/RawSurface.astro",
+      `<section class="test-raw-surface"><div set:html={content} /></section>`,
+    ],
+  ]
+
+  for (const [filename, source] of cases) {
+    const result = analyzeTemplate(source, filename, config)
+    const target =
+      filename.endsWith(".svelte") ? result.tree[0] : result.tree[0].children[0]
+    assert.equal(target.children.some((child) => child.opaque), true, filename)
+  }
 })

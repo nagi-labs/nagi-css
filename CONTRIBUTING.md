@@ -3,15 +3,15 @@
 ## Setup
 
 ```sh
-pnpm install
-pnpm test        # plain `node --test` — Node >= 22.18
+vp install -- --frozen-lockfile
+vp run test        # plain `node --test` — Node >= 22.18
 ```
 
-Run the CLI against an application without touching that application's
-configuration:
+Application integration belongs in its existing framework `eslint.config.*`.
+The optional CLI can still check an application from an external config:
 
 ```sh
-node packages/cli/src/cli.mjs check \
+vp exec node packages/cli/src/cli.mjs check \
   --config /absolute/path/to/nagi.config.mjs \
   --cwd /absolute/path/to/application
 ```
