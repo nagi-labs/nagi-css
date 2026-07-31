@@ -6,9 +6,23 @@ Nagi CSS is a styling contract for structuring and writing HTML and CSS in moder
 
 It is designed for component-based development, AI-assisted implementation, and long-lived codebases where styling must remain readable, stable, and reviewable over time.
 
+The contract begins where component boundaries stop. Scoped styles already
+ended the classic naming problems — collisions, leakage, unclear ownership —
+and this document assumes that world instead of re-solving it. What a
+boundary does not provide is a canonical form for its inside: there, names
+are still chosen by taste, selectors can silently outlive the template they
+described, and nothing is checkable because nothing defines *correct*. Nagi
+CSS supplies that definition. Given the markup, the correct class for each
+node is unique and derived, which is what makes conformance
+machine-verifiable and lets any two authors — human or AI — converge on the
+same output.
+
 It is **not** a universal rule for the entire rendered tree. Instead, it defines strict rules for styling **owned DOM inside a styling surface**, and lighter contract-based rules for everything outside that boundary.
 
-The contract is built on six principles:
+The contract is built on six principles. The last one, Deterministic, is the
+load-bearing wall: the first five describe qualities many conventions aspire
+to, and determinism is what turns them from aspirations into checkable
+claims.
 
 ### Semantic
 

@@ -80,8 +80,11 @@ CSS attribute selectors both already look.
 
 ## Why
 
-The property everything else falls out of is **canonical form**: given the
-markup, the correct class for a node is unique. That is what makes the
+Not for the problems component boundaries already solved. Scoped styles ended
+collisions, leakage, and ownership disputes, and the contract assumes that
+world rather than re-litigating it. What no boundary provides is a
+**canonical form** for its inside: given the markup, the correct class for a
+node is unique. That is what makes the
 contract machine-checkable, what lets a linter drive any author — human or
 model — to the same answer, and what keeps a large codebase from silently
 accumulating entropy. Names carry meaning in the source

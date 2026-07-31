@@ -4,6 +4,28 @@ Objections we expect, answered up front. The recurring theme: Nagi CSS trades
 writing convenience for a **canonical, machine-checkable form**. Most
 criticisms below are real costs — and each one is the price of that trade.
 
+## Component boundaries already solved naming. What is left to solve?
+
+Largely true, and the contract assumes it. Collisions, leakage, unclear
+ownership — the problems BEM was invented for — dissolve the moment styles are
+scoped to a component. Nagi CSS does not re-solve them, and if they were the
+whole problem, it would have no reason to exist.
+
+What a boundary does not give the code is a **form**. Inside a scoped block,
+every name is still chosen by taste (`wrapper`? `inner`? `box`?), a selector
+can silently outlive the template structure it once described, state still
+lands in classes, and none of this is checkable — not because tools are
+missing, but because without a definition of *correct* there is nothing to
+check against. Each instance is small, invisible, and local; multiplied by
+every component, it is the maintenance profile of the codebase.
+
+That is the problem Nagi CSS addresses: it gives the inside of the boundary a
+canonical form. The correct class for a node is unique and derived, so a
+linter can enforce it, any two authors — human or AI — converge on identical
+output, a diff reads as changed meaning, and a rule whose anchor left the
+template is found mechanically. Scoped CSS decides *where* styles apply; the
+contract decides *what they may say*.
+
 ## Why not Tailwind?
 
 Tailwind is optimized for *writing*: appearance is local to the element and
@@ -60,13 +82,6 @@ a smell detector, not a naming style to lean on.
 The honest costs — unfamiliar vocabulary, no prior art, sometimes wanting a
 meaning-name where a depth tier is required — are the bounded price of
 removing the last bit of judgment from naming.
-
-## Doesn't Vue scoped CSS already solve this?
-
-Scoped CSS solves *leakage*, not *structure*. Inside a scoped block you can
-still write flattened selectors, style library internals, name things
-`wrapper`, and encode state in classes. Nagi CSS operates within scoped (or
-plain) style blocks and constrains what the selectors and names may be.
 
 ## Styles are no longer local to the element. Isn't co-location strictly better?
 
