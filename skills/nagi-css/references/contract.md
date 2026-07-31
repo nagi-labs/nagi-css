@@ -89,6 +89,16 @@ ambiguous. The canonical contract records why `pane`, `area`, `space`, and
 SVG and MathML internals are excluded. `:deep()` marks non-owned DOM and is not
 checked as owned anatomy.
 
+## Stacking Order
+
+`z-index` on a surface's own rule is external layout: its order among its siblings
+is the parent's decision, and this is what removes the `z-index: 9999` race — every
+escalation targets something outside the component. A surface that owns its
+coordinate context (top-layer, anchor-positioned) may set it, and there the level
+must come from a token, since ordering modals against toasts is a system-wide
+decision. Layering a surface's own children against each other is a local
+structural choice and is unrestricted.
+
 ## Design Tokens
 
 Nagi CSS ships no tokens; the design system owns which values exist.

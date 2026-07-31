@@ -1,13 +1,13 @@
 <template>
-  <dialog class="test-confirm-modal">
+  <dialog class="test-raw-stacking">
     <p class="text">Sure?</p>
   </dialog>
 </template>
 <style scoped>
-.test-confirm-modal {
+.test-raw-stacking {
   margin: auto;
   inset: 0;
-  z-index: var(--z-modal);
-  > .text { color: inherit; }
+  z-index: 100;
+  > .text { color: inherit; z-index: 2; }
 }
 </style>

@@ -149,8 +149,9 @@ Stylelint enforces:
 - exactly one base identity class per selector compound;
 - anatomy and state vocabulary in selectors;
 - variant names that stay outside the protocol vocabulary, including ARIA roles;
-- no external layout (`position`, inset, `margin`) on a surface's own rule,
-  with a top-layer and anchor-positioning exception;
+- no external layout (`position`, inset, `margin`, `z-index`) on a surface's own
+  rule, with a top-layer and anchor-positioning exception — where that exception
+  applies, the stacking level itself must come from a token;
 - explicit detached configuration for top-level teleported surfaces;
 - colors written as a token reference rather than a raw value;
 - lengths on scale properties (spacing, radius, border width, type size,

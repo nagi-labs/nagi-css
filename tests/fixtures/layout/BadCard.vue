@@ -7,6 +7,7 @@
 .test-bad-card {
   margin: 1rem;
   position: absolute;
+  z-index: 10;
   top: 0;
   padding: 1rem;
   > .title { margin: 0; }

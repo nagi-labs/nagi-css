@@ -56,6 +56,7 @@ const ruleIds = [
   "selector-mirrors-template",
   "single-base-identity",
   "slot-surface-top-level",
+  "stacking-token-required",
   "state-not-class",
   "surface-external-layout",
   "token-layer",
@@ -66,8 +67,12 @@ const ruleIds = [
   "variant-shadows-vocabulary",
 ]
 
+// `z-index` belongs here for the same reason as `position` and `margin`: where a
+// surface sits in the stacking order relative to its siblings is a decision the
+// parent makes. Returning it to the parent is what stops the `z-index: 9999` race,
+// since every escalation is an attempt to beat something outside the component.
 const EXTERNAL_LAYOUT_PROPS = new Set([
-  "position", "top", "right", "bottom", "left", "inset", "margin",
+  "position", "top", "right", "bottom", "left", "inset", "margin", "z-index",
 ])
 
 function isExternalLayoutProp(prop) {
@@ -580,13 +585,32 @@ function analyzeStyles(root, inputConfig, fallbackFile) {
     }
   }
 
+  // A surface that owns its stacking order legitimately — a top-layer or
+  // anchor-positioned one — is the only place a cross-component stacking scale
+  // applies, and the only place `--z-modal` style tokens mean anything. Inside a
+  // surface, layering its own children is a local structural decision with no
+  // scale behind it, the same reason `max-inline-size` is not a scale property.
+  function checkStackingToken(decl) {
+    if (decl.prop.toLowerCase() !== "z-index") return
+    const value = decl.value.trim()
+    if (!/^[+-]?\d+$/.test(value) || Number(value) === 0) return
+    report(
+      decl,
+      "stacking-token-required",
+      `"${value}" is a raw stacking level on a surface that owns its own stacking order; reference a token so the order between overlays is decided in one place.`,
+      value,
+    )
+  }
+
   function checkSurfaceLayout(rule, token) {
-    if (!token || topLayerSurfaces.has(token)) return
-    if (ownDeclsAnchored(rule)) return
+    if (!token) return
+    const ownsPlacement = topLayerSurfaces.has(token) || ownDeclsAnchored(rule)
     const walkOwnDecls = (container) => {
       container.each?.((node) => {
         if (node.type === "decl") {
-          if (isExternalLayoutProp(node.prop)) {
+          if (ownsPlacement) {
+            checkStackingToken(node)
+          } else if (isExternalLayoutProp(node.prop)) {
             report(
               node,
               "surface-external-layout",

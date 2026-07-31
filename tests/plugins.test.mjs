@@ -157,7 +157,7 @@ test("Stylelint keeps external layout off surfaces except top-layer or anchored 
   )
   assert.deepEqual(
     layoutWarnings.map(({ text }) => text.match(/"([a-z-]+)" belongs/)[1]),
-    ["margin", "position", "top", "margin-inline"],
+    ["margin", "position", "z-index", "top", "margin-inline"],
   )
 
   const dialog = await lintStylelint(path.join(root, "fixtures/layout/ConfirmModal.vue"), {})
@@ -359,5 +359,17 @@ test("Stylelint requires a token for lengths on scale properties only", async ()
       [20, "1.125rem"],
     ],
     JSON.stringify(result.results[0].warnings),
+  )
+})
+
+test("Stylelint returns a surface's stacking order to the parent, or to a token", async () => {
+  const raw = await lintStylelint(path.join(root, "fixtures/layout/RawStacking.vue"), {})
+
+  // A top-layer surface owns its own stacking order, so the value is checked
+  // rather than rejected; layering its own children stays a local decision.
+  assert.deepEqual(
+    raw.results[0].warnings.map(({ line, rule }) => [line, rule]),
+    [[10, "nagi-css/stacking-token-required"]],
+    JSON.stringify(raw.results[0].warnings),
   )
 })

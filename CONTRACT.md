@@ -1027,17 +1027,29 @@ Nesting should reinforce the owned structure of the surface.
 A styling surface should contain its own visual skin, but not external layout responsibility.
 
 This rule is machine-enforced (`surface-external-layout`): the linter reports
-`position`, inset, and `margin` declarations in a surface root's own rule,
-with the top-layer and anchored exception below.
+`position`, inset, `margin`, and `z-index` declarations in a surface root's own
+rule, with the top-layer and anchored exception below.
 
 ### Avoid on the surface element
 
 - `position`
 - `top`, `right`, `bottom`, `left`
 - `margin`
+- `z-index`
 - context-dependent `width` and `height`
 
 These belong to the parent layout.
+
+`z-index` is on that list for the same reason as the rest: where a surface sits
+in the stacking order *relative to its siblings* is a decision only the parent can
+make correctly. This is also the whole answer to the `z-index: 9999` race — every
+escalation is an attempt to beat something outside the component, so returning the
+property to the parent removes the battlefield rather than refereeing it.
+
+Layering a surface's **own children** against each other is different: it is a
+local structural decision (`> .overlay` sits above `> .content`), the values are
+small integers, and no design system publishes a scale for them. That stays
+unrestricted.
 
 ### Allowed on the surface element
 
@@ -1059,6 +1071,18 @@ allowed on the surface element itself.
 This preserves the rule's intent rather than weakening it: placement belongs
 to whoever owns the coordinate context. In normal flow that is the parent; in
 the top layer it is the surface itself.
+
+Such a surface also owns its stacking order, and that is the one place a stacking
+scale genuinely exists — the ordering of modals against toasts against popovers is
+a system-wide decision, which is what `--z-modal` style tokens are for. So
+`z-index` is allowed here but its value is checked
+(`stacking-token-required`): a raw level is a system decision written in one
+component.
+
+```css
+/* Correct, on a top-layer or anchored surface */
+.app-confirm-modal { z-index: var(--z-modal) }
+```
 
 In short:
 
@@ -1364,7 +1388,9 @@ Nagi CSS preserves readable styling surfaces rather than collapsing meaning into
 - every configured UI library component carries its fixed class from the Library Component Class Table, and that class never descends into library internals
 - vague structural names should be avoided when stable UI semantics exist
 - STN are fallback names only, and their tiers obey the floor, consecutive-tier, and reach-`g` relations
-- external layout responsibility must remain outside the surface
+- external layout responsibility, including `z-index`, must remain outside the
+  surface; where a surface legitimately owns its stacking order, the level MUST
+  come from a token
 - colors MUST come from a token; a raw color has no `--local-*` escape
 - lengths on scale properties (spacing, radius, border width, type size, elevation)
   MUST come from a token or be declared as a named `--local-*` value
