@@ -7,7 +7,9 @@ import {
   defineNagiConfig,
   deriveSurfaceRootName,
   matchSelectorChain,
+  parseTokenDeclarations,
   resolveSeverity,
+  tokenReferences,
   validateNagiConfig,
 } from "@nagi-labs/nagi-css-core"
 
@@ -881,5 +883,55 @@ test("a coverage rule warns by default and explicit configuration wins", () => {
       "unverifiable-dynamic-class",
     ),
     "error",
+  )
+})
+
+test("reads the custom properties a token source declares", () => {
+  const names = parseTokenDeclarations(`
+    /* --color-commented: red; */
+    :root { --color-surface: var(--palette-gray-100); --space-3: 0.75rem }
+    [data-theme="dark"] {
+      --color-surface: var(--palette-gray-900);
+    }
+    .thing { color: var(--color-surface) }
+  `)
+
+  assert.deepEqual([...names].sort(), ["--color-surface", "--space-3"])
+})
+
+test("collects the tokens a declaration value references", () => {
+  assert.deepEqual(tokenReferences("var(--color-text, #333)"), ["--color-text"])
+  assert.deepEqual(tokenReferences("calc(var( --space-3 ) * -1)"), ["--space-3"])
+  assert.deepEqual(tokenReferences("1px solid oklch(62% 0.21 25)"), [])
+  assert.deepEqual(tokenReferences("color-mix(in oklab, var(--a), var(--b) 20%)"), ["--a", "--b"])
+})
+
+test("validates the token source declaration", () => {
+  assert.deepEqual(
+    validateNagiConfig(
+      defineNagiConfig({
+        surfaceRootPrefixes: ["n-"],
+        tokens: { sources: [{ file: "tokens/semantic.css", layer: "semantic" }] },
+      }),
+    ),
+    [],
+  )
+  assert.deepEqual(
+    validateNagiConfig(
+      defineNagiConfig({
+        surfaceRootPrefixes: ["n-"],
+        tokens: {
+          exposedPrefixes: ["date-picker-"],
+          localPrefix: "local-",
+          sources: [{ layer: "brand" }],
+        },
+      }),
+    ),
+    [
+      "tokens.sources[0].file must be a non-empty string",
+      'tokens.sources[0].layer must be one of primitive, semantic; received "brand"',
+      'tokens.localPrefix entries must be custom property prefixes starting with "--"',
+      'tokens.exposedPrefixes entries must be custom property prefixes starting with "--"',
+    ],
   )
 })

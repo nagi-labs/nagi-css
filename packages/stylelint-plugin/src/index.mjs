@@ -11,9 +11,37 @@ import {
   defineNagiConfig,
   matchSelectorChain,
   matchesClassPrefix,
+  parseTokenDeclarations,
   resolveSeverity,
+  tokenReferences,
   validateNagiConfig,
 } from "@nagi-labs/nagi-css-core"
+
+// Token sources are read as data, never linted. Cached per resolved path so a run
+// over hundreds of files reads each source once.
+const tokenSourceCache = new Map()
+
+function loadTokenLayers(sources = []) {
+  const layers = new Map()
+  for (const { file, layer } of sources) {
+    const resolved = path.resolve(file)
+    if (!tokenSourceCache.has(resolved)) {
+      try {
+        tokenSourceCache.set(resolved, parseTokenDeclarations(fs.readFileSync(resolved, "utf8")))
+      } catch {
+        tokenSourceCache.set(resolved, null)
+      }
+    }
+    const names = tokenSourceCache.get(resolved)
+    if (!names) continue
+    for (const name of names) {
+      // A name declared in more than one layer is treated as the narrower one:
+      // being reachable through the semantic layer is what matters.
+      if (layer === "semantic" || !layers.has(name)) layers.set(name, layer)
+    }
+  }
+  return layers
+}
 
 const ruleIds = [
   "anatomy-allowed",
@@ -27,7 +55,9 @@ const ruleIds = [
   "slot-surface-top-level",
   "state-not-class",
   "surface-external-layout",
+  "token-layer",
   "top-level-surface-only",
+  "unknown-token",
   "valid-config",
   "variant-shadows-vocabulary",
 ]
@@ -478,6 +508,46 @@ function analyzeStyles(root, inputConfig, fallbackFile) {
     return anchored
   }
 
+  // Which tokens this stylesheet may reference. Inactive until the project points
+  // at a source, because the set of legal names is the project's to define.
+  const tokenLayers = loadTokenLayers(config.tokens?.sources)
+  const declaredHere = new Set()
+  if (tokenLayers.size > 0) {
+    root.walkDecls((decl) => {
+      if (decl.prop.startsWith("--")) declaredHere.add(decl.prop)
+    })
+  }
+
+  function checkTokenReferences(decl) {
+    if (tokenLayers.size === 0) return
+    for (const name of tokenReferences(decl.value)) {
+      // Declared in this stylesheet: a --local-* one-off, or a value the surface
+      // passes into a component it owns.
+      if (declaredHere.has(name)) continue
+      if (name.startsWith(config.tokens.localPrefix)) continue
+      if (matchesClassPrefix(name, config.tokens.exposedPrefixes)) continue
+
+      const layer = tokenLayers.get(name)
+      if (!layer) {
+        report(
+          decl,
+          "unknown-token",
+          `"${name}" is not declared by any configured token source, so this declaration silently does nothing; check the spelling or add the token to the design system.`,
+          name,
+        )
+        continue
+      }
+      if (layer === "primitive") {
+        report(
+          decl,
+          "token-layer",
+          `"${name}" is a primitive token; reference a semantic token instead, so a theme change stays inside the token files.`,
+          name,
+        )
+      }
+    }
+  }
+
   function checkSurfaceLayout(rule, token) {
     if (!token || topLayerSurfaces.has(token)) return
     if (ownDeclsAnchored(rule)) return
@@ -663,6 +733,11 @@ function analyzeStyles(root, inputConfig, fallbackFile) {
   }
 
   walkRoot(root)
+  // Token references are a property of the declaration, not of the selector, so
+  // they are checked across the whole stylesheet rather than per surface.
+  root.walkDecls((decl) => {
+    if (!decl.prop.startsWith("--")) checkTokenReferences(decl)
+  })
   return violations
 }
 

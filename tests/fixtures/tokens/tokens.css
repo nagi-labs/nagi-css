@@ -1,0 +1,5 @@
+:root {
+  --color-surface: var(--palette-gray-100);
+  --color-danger-text: var(--palette-red-500);
+  --space-3: 0.75rem;
+}

@@ -147,8 +147,10 @@ Stylelint enforces:
 - anatomy and state vocabulary in selectors;
 - variant names that stay outside the protocol vocabulary, including ARIA roles;
 - no external layout (`position`, inset, `margin`) on a surface's own rule,
-  with a top-layer and anchor-positioning exception; and
-- explicit detached configuration for top-level teleported surfaces.
+  with a top-layer and anchor-positioning exception;
+- explicit detached configuration for top-level teleported surfaces; and
+- token references that resolve, and that read the semantic layer rather than
+  primitives, where the project declares its token sources.
 
 ## Usage
 
@@ -211,6 +213,30 @@ One category defaults to `warn` on purpose: rules that report what the toolchain
 a class binding whose names are assembled at runtime (`:class="iconName"`), where
 the code is probably fine but no rule can see the classes it applies. Setting
 `"*"` or the rule itself overrides that default in either direction.
+
+Nagi CSS ships no design tokens — which values exist is the design system's call.
+Point it at the files that declare them and it checks the boundary instead:
+
+```js
+semantic: {
+  surfaceRootPrefixes: ["app-"],
+  tokens: {
+    sources: [
+      { file: "src/tokens/palette.css", layer: "primitive" },
+      { file: "src/tokens/semantic.css", layer: "semantic" },
+    ],
+    exposedPrefixes: ["--pv-datepicker-"],
+  },
+}
+```
+
+Paths are resolved against `--cwd`. Sources are read as data, never linted. A
+referenced custom property that no source declares is `unknown-token`, an error
+because CSS swallows the typo silently; a primitive referenced from a surface is
+`token-layer`. Both stay inactive until `sources` names a file. Exempt: a property
+the same stylesheet declares — including the `--local-*` one-off escape
+(`tokens.localPrefix`) — and prefixes a library exposes as its public styling
+contract (`tokens.exposedPrefixes`).
 
 ## Scope
 

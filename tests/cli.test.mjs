@@ -99,3 +99,37 @@ test("CLI rejects an unknown or malformed severity entry", async (context) => {
   assert.match(failure.stderr, /severity\.no-such-rule is not a Nagi CSS rule/)
   assert.match(failure.stderr, /severity\.stn-order must be one of error, warn, off/)
 })
+
+test("CLI resolves token sources against the checked directory, not the config file", async (context) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "nagi-css-"))
+  const elsewhere = await fs.mkdtemp(path.join(os.tmpdir(), "nagi-css-config-"))
+  context.after(() => fs.rm(directory, { force: true, recursive: true }))
+  context.after(() => fs.rm(elsewhere, { force: true, recursive: true }))
+  const config = path.join(elsewhere, "nagi.config.mjs")
+  await fs.writeFile(path.join(directory, "tokens.css"), ":root { --color-surface: #fff }")
+  await fs.writeFile(
+    path.join(directory, "TokenSurface.vue"),
+    `<template><section class="test-token-surface"/></template>
+<style>.test-token-surface { background: var(--color-surface); border-color: var(--color-edge) }</style>`,
+  )
+  await fs.writeFile(
+    config,
+    `export default { eslintFiles: ["*.vue"], stylelintFiles: ["*.vue"], semantic: {
+      surfaceRootPrefixes: ["test-"],
+      tokens: { sources: [{ file: "tokens.css", layer: "semantic" }] },
+    } }`,
+  )
+
+  const failure = await execute(process.execPath, [
+    cli,
+    "check",
+    "--config",
+    config,
+    "--cwd",
+    directory,
+  ]).catch((error) => error)
+
+  assert.equal(failure.code, 1)
+  assert.match(failure.stdout, /"--color-edge" is not declared/)
+  assert.doesNotMatch(failure.stdout, /--color-surface/)
+})

@@ -150,6 +150,24 @@ hold resets, element defaults, token declarations, and cross-surface exceptions
 — by definition not the owned DOM of a styling surface. The unit the contract
 verifies is a component: its template and its own style block, checked together.
 
+## Why doesn't Nagi CSS ship design tokens?
+
+Because a naming contract and a palette are two different products. Which colors
+and spacing steps exist, and what they are called, depends on the design system —
+and a project already using Open Props, Radix Colors, or its own scale should not
+have to abandon it to get class-name checking.
+
+What Nagi CSS does check is the boundary, once the project points at the files
+that declare its tokens: that a referenced custom property is actually declared
+somewhere, and that it comes from the semantic layer rather than the raw palette.
+The first is worth an error because CSS fails silently — `var(--color-surfce)`
+leaves the property unset with nothing to notice, in a diff that looks fine. The
+second is what keeps a theme change inside the token files instead of scattered
+across surfaces.
+
+Both checks stay off until `tokens.sources` names a file, so nothing is imposed
+on a project without a token layer.
+
 ## Why invent a new vocabulary instead of reusing an existing one?
 
 Because no existing vocabulary was built to be *derived*. Existing systems

@@ -1204,6 +1204,50 @@ Do not encode breakpoint behavior into class names such as `-sm`, `-md`, or `-lg
 
 Color, spacing, radius, shadow, and typography should be defined through CSS custom properties.
 
+Nagi CSS ships no tokens. Which values exist, and what they are called, is the
+design system's decision — a naming contract that also dictated a palette would
+be two products in one. What Nagi CSS checks is the **boundary**: that a token a
+surface references actually exists, and that it comes from the layer surfaces are
+meant to read.
+
+Point the config at the files that declare them, tagged by layer:
+
+```js
+tokens: {
+  sources: [
+    { file: "src/tokens/palette.css", layer: "primitive" },
+    { file: "src/tokens/semantic.css", layer: "semantic" },
+  ],
+}
+```
+
+Sources are read as data and never linted; only the custom property names they
+declare are collected. Both checks stay inactive until `sources` names at least
+one file, so a project that has no token layer is not asked to invent one.
+
+| layer | holds | surfaces may reference |
+| --- | --- | --- |
+| `primitive` | raw values: `--palette-red-500`, `--size-4` | no |
+| `semantic` | roles: `--color-danger-text`, `--space-3` | yes |
+
+Two layers, not three. A third component-level tier
+(`--button-background-color`) only pays for itself where a component must be
+themeable from outside it, and Nagi CSS already has a name for that case:
+whatever a library exposes goes in `exposedPrefixes` and is checked by the
+library, not here.
+
+A reference that no source declares is an error rather than a warning, because
+CSS swallows it silently: `var(--color-surfce)` leaves the property unset with no
+sign that a typo happened.
+
+Three references are exempt:
+
+- a custom property the same stylesheet declares, including the `--local-*`
+  one-off escape (`localPrefix`)
+- a prefix the project exposes as a component's public styling contract
+  (`exposedPrefixes`), which a library owns rather than the token layer
+- everything, when `sources` is empty
+
 ### Utilities
 
 Standalone utility classes are not allowed.
@@ -1241,6 +1285,9 @@ Nagi CSS preserves readable styling surfaces rather than collapsing meaning into
 - vague structural names should be avoided when stable UI semantics exist
 - STN are fallback names only, and their tiers obey the floor, consecutive-tier, and reach-`g` relations
 - external layout responsibility must remain outside the surface
+- where the project declares token sources, every referenced custom property MUST
+  be declared by one of them and MUST come from the semantic layer, unless it is
+  declared in the same stylesheet or exposed by a library
 
 ### SHOULD
 

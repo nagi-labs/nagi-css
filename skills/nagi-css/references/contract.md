@@ -88,3 +88,16 @@ ambiguous. The canonical contract records why `pane`, `area`, `space`, and
 
 SVG and MathML internals are excluded. `:deep()` marks non-owned DOM and is not
 checked as owned anatomy.
+
+## Design Tokens
+
+Nagi CSS ships no tokens; the design system owns which values exist. Where the
+project declares `tokens.sources`, a surface may reference only tokens those files
+declare, and only from the `semantic` layer — a `primitive`
+(`--palette-red-500`) read from a surface is a violation, because a theme change
+should stay inside the token files.
+
+Exempt: a custom property declared in the same stylesheet, including a `--local-*`
+one-off for a value that is genuinely local, and a prefix a component exposes as
+its public styling contract (`exposedPrefixes`). Nothing is checked while
+`sources` is empty.

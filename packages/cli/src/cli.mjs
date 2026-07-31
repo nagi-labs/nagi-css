@@ -146,6 +146,15 @@ export async function run(argv = process.argv.slice(2)) {
 
   const loaded = await loadConfig(args.config)
   const semantic = defineNagiConfig(loaded.semantic)
+  // Token sources are written relative to the application being checked, not to
+  // wherever the external config file happens to live.
+  semantic.tokens = {
+    ...semantic.tokens,
+    sources: (semantic.tokens.sources ?? []).map((source) => ({
+      ...source,
+      file: source?.file ? path.resolve(args.cwd, source.file) : source?.file,
+    })),
+  }
   const severity = loaded.severity ?? {}
   const configErrors = [
     ...validateNagiConfig(semantic),

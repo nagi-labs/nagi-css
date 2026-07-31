@@ -109,6 +109,36 @@ Use `libraryBoundaryPrefixes` for opaque component root classes and
 ending in `-` matches by `startsWith`; another prefix matches itself and its
 hyphenated family.
 
+`tokens` declares where design tokens come from. Nagi CSS ships none: which
+values exist is the design system's decision, so it checks only that a referenced
+token resolves and reads the right layer.
+
+```js
+tokens: {
+  sources: [
+    { file: "src/tokens/palette.css", layer: "primitive" },
+    { file: "src/tokens/semantic.css", layer: "semantic" },
+  ],
+  exposedPrefixes: ["--pv-datepicker-"],
+  localPrefix: "--local-",
+}
+```
+
+`sources` paths are resolved against `--cwd`, and each file is read as data —
+never linted, only scanned for the custom properties it declares. `layer` is
+`primitive` or `semantic`; a name declared in both counts as semantic. Both
+checks are inactive while `sources` is empty, so a project without a token layer
+is not asked to invent one.
+
+A reference no source declares is `unknown-token`, an error rather than a warning
+because CSS drops it silently: `var(--color-surfce)` leaves the property unset
+with nothing to notice. A primitive referenced from a surface is `token-layer`.
+
+Exempt from both: a custom property the same stylesheet declares — including a
+`--local-*` one-off (`localPrefix`) — and a prefix a component exposes as its
+public styling contract (`exposedPrefixes`), which the library owns rather than
+the token layer. Both prefixes must start with `--`.
+
 The semantic object also accepts `surfaceRootPrefixes`, `componentClassPrefix`, `elementClasses`, `anatomyClasses`,
 `bannedClasses`, `stateClasses`, and `tiers`. Prefer narrow project mappings
 over growing anatomy vocabulary to accommodate one local component.

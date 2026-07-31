@@ -105,7 +105,32 @@ const DEFAULT_CONFIG = Object.freeze({
   ],
   surfaceRootPrefixes: [],
   tiers: ["stratum", "region", "block", "unit", "seg", "fr", "g"],
+  // Nagi CSS ships no tokens: design values belong to the design system, not to a
+  // naming contract. It checks the boundary instead — that a referenced token was
+  // declared somewhere the project pointed at, and which layer it came from.
+  // Both checks are inactive until `sources` names at least one file.
+  tokens: {
+    exposedPrefixes: [],
+    localPrefix: "--local-",
+    sources: [],
+  },
 })
+
+const TOKEN_LAYERS = ["primitive", "semantic"]
+
+// Custom properties a stylesheet declares. Used on token sources, which are read
+// as data and never linted.
+export function parseTokenDeclarations(css) {
+  const names = new Set()
+  for (const [, , name] of css.matchAll(/(^|[;{]|\*\/)\s*(--[\w-]+)\s*:/g)) {
+    names.add(name)
+  }
+  return names
+}
+
+export function tokenReferences(value) {
+  return [...value.matchAll(/var\(\s*(--[\w-]+)/g)].map(([, name]) => name)
+}
 
 function unique(values) {
   return [...new Set(values)]
@@ -166,6 +191,7 @@ export function defineNagiConfig(config = {}) {
       DEFAULT_CONFIG.surfaceRootPrefixes,
     ),
     tiers: unique(config.tiers ?? DEFAULT_CONFIG.tiers),
+    tokens: { ...DEFAULT_CONFIG.tokens, ...config.tokens },
   }
 }
 
@@ -309,6 +335,30 @@ export function validateNagiConfig(config) {
     }
   }
 
+  const tokens = config.tokens ?? {}
+  if (!Array.isArray(tokens.sources)) {
+    errors.push("tokens.sources must be an array")
+  } else {
+    for (const [index, source] of tokens.sources.entries()) {
+      if (typeof source?.file !== "string" || source.file.length === 0) {
+        errors.push(`tokens.sources[${index}].file must be a non-empty string`)
+      }
+      if (!TOKEN_LAYERS.includes(source?.layer)) {
+        errors.push(
+          `tokens.sources[${index}].layer must be one of ${TOKEN_LAYERS.join(", ")}; received ${JSON.stringify(source?.layer)}`,
+        )
+      }
+    }
+  }
+  for (const [key, value] of [
+    ["localPrefix", tokens.localPrefix],
+    ...(tokens.exposedPrefixes ?? []).map((prefix) => ["exposedPrefixes", prefix]),
+  ]) {
+    if (typeof value !== "string" || !value.startsWith("--")) {
+      errors.push(`tokens.${key} entries must be custom property prefixes starting with "--"`)
+    }
+  }
+
   for (const [component, slots] of Object.entries(config.componentSlots ?? {})) {
     const owner = config.componentSlotPrefixes?.[component] ?? config.componentClasses?.[component]
     if (!owner) {
@@ -362,7 +412,7 @@ export function deriveAllowedSurfaceRootNames(filename, prefixes = []) {
     : [name]
 }
 
-export { DEFAULT_CONFIG, ELEMENT_CLASSES, RENDERED_ELEMENTS }
+export { DEFAULT_CONFIG, ELEMENT_CLASSES, RENDERED_ELEMENTS, TOKEN_LAYERS }
 export {
   analyzeVueTemplate,
   matchSelectorChain,

@@ -284,3 +284,41 @@ test("Stylelint allows styling an owned component root but not its inside", asyn
   )
   assert.equal(rules.includes("nagi-css/owned-dom-direct-child"), false)
 })
+
+test("Stylelint checks token references against the configured sources", async () => {
+  const tokens = {
+    exposedPrefixes: ["--date-picker-"],
+    sources: [
+      { file: path.join(root, "fixtures/tokens/palette.css"), layer: "primitive" },
+      { file: path.join(root, "fixtures/tokens/tokens.css"), layer: "semantic" },
+    ],
+  }
+  const surface = await lintStylelint(path.join(root, "fixtures/tokens/TokenSurface.vue"), {
+    ...testSurface,
+    tokens,
+  })
+  const violations = await lintStylelint(path.join(root, "fixtures/tokens/TokenViolations.vue"), {
+    ...testSurface,
+    tokens,
+  })
+
+  // semantic tokens, a --local-* one-off, and a prefix the project exposed
+  assert.equal(surface.errored, false, JSON.stringify(surface.results[0].warnings))
+
+  assert.deepEqual(
+    violations.results[0].warnings.map(({ line, rule }) => [line, rule]),
+    [
+      [9, "nagi-css/token-layer"],
+      [11, "nagi-css/unknown-token"],
+    ],
+    JSON.stringify(violations.results[0].warnings),
+  )
+})
+
+test("Stylelint leaves token references alone until a source is configured", async () => {
+  const result = await lintStylelint(path.join(root, "fixtures/tokens/TokenViolations.vue"), {
+    ...testSurface,
+  })
+
+  assert.equal(result.errored, false, JSON.stringify(result.results[0].warnings))
+})
