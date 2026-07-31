@@ -734,10 +734,10 @@ function analyzeStyles(root, inputConfig, fallbackFile) {
 
   walkRoot(root)
   // Token references are a property of the declaration, not of the selector, so
-  // they are checked across the whole stylesheet rather than per surface.
-  root.walkDecls((decl) => {
-    if (!decl.prop.startsWith("--")) checkTokenReferences(decl)
-  })
+  // they are checked across the whole stylesheet rather than per surface. Custom
+  // property declarations are included: `--local-accent: var(--palette-red-500)`
+  // reads the primitive layer just as directly as the property that uses it.
+  root.walkDecls(checkTokenReferences)
   return violations
 }
 

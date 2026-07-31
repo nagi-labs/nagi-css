@@ -308,8 +308,10 @@ test("Stylelint checks token references against the configured sources", async (
   assert.deepEqual(
     violations.results[0].warnings.map(({ line, rule }) => [line, rule]),
     [
+      // the alias declaration reads the primitive layer just as directly
       [9, "nagi-css/token-layer"],
-      [11, "nagi-css/unknown-token"],
+      [11, "nagi-css/token-layer"],
+      [13, "nagi-css/unknown-token"],
     ],
     JSON.stringify(violations.results[0].warnings),
   )
