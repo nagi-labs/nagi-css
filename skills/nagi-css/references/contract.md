@@ -91,13 +91,20 @@ checked as owned anatomy.
 
 ## Design Tokens
 
-Nagi CSS ships no tokens; the design system owns which values exist. Where the
-project declares `tokens.sources`, a surface may reference only tokens those files
-declare, and only from the `semantic` layer — a `primitive`
+Nagi CSS ships no tokens; the design system owns which values exist.
+
+Colors must come from a token, with no configuration and no `--local-*` escape:
+`#f0a`, `rgb(0 0 0 / .1)`, and a named color inside a gradient are violations.
+`currentColor`, `transparent`, the system colors (`Canvas`, `GrayText`), and
+relative color syntax over a token are not.
+
+Where the project declares `tokens.sources`, a surface may reference only tokens
+those files declare, and only from the `semantic` layer — a `primitive`
 (`--palette-red-500`) read from a surface is a violation, because a theme change
 should stay inside the token files.
 
 Exempt: a custom property declared in the same stylesheet, including a `--local-*`
 one-off for a value that is genuinely local, and a prefix a component exposes as
-its public styling contract (`exposedPrefixes`). Nothing is checked while
-`sources` is empty.
+its public styling contract (`exposedPrefixes`) — which also makes
+`var(--pv-thing-fg, #333)` legal where `var(--color-text, #333)` is not. Layer and
+declaration checks are inactive while `sources` is empty.

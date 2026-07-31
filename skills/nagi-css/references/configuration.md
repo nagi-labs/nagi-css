@@ -109,9 +109,15 @@ Use `libraryBoundaryPrefixes` for opaque component root classes and
 ending in `-` matches by `startsWith`; another prefix matches itself and its
 hyphenated family.
 
+`value-token-required` needs no configuration: a raw color
+(`#f0a`, `rgb(0 0 0 / .1)`, a named color in a gradient) is an error anywhere in a
+surface, including inside a `--local-*` declaration and a `var()` fallback. Colors
+have no local escape. Turn it off with `severity` if a codebase is not ready for
+it, rather than expecting it to be inactive by default.
+
 `tokens` declares where design tokens come from. Nagi CSS ships none: which
-values exist is the design system's decision, so it checks only that a referenced
-token resolves and reads the right layer.
+values exist is the design system's decision, so the remaining two checks only ask
+that a referenced token resolves and reads the right layer.
 
 ```js
 tokens: {
@@ -126,9 +132,9 @@ tokens: {
 
 `sources` paths are resolved against `--cwd`, and each file is read as data —
 never linted, only scanned for the custom properties it declares. `layer` is
-`primitive` or `semantic`; a name declared in both counts as semantic. Both
-checks are inactive while `sources` is empty, so a project without a token layer
-is not asked to invent one.
+`primitive` or `semantic`; a name declared in both counts as semantic. These two
+checks are inactive while `sources` is empty — they compare against a set the
+project defines — so a project without a token layer is not asked to invent one.
 
 A reference no source declares is `unknown-token`, an error rather than a warning
 because CSS drops it silently: `var(--color-surfce)` leaves the property unset
@@ -137,7 +143,9 @@ with nothing to notice. A primitive referenced from a surface is `token-layer`.
 Exempt from both: a custom property the same stylesheet declares — including a
 `--local-*` one-off (`localPrefix`) — and a prefix a component exposes as its
 public styling contract (`exposedPrefixes`), which the library owns rather than
-the token layer. Both prefixes must start with `--`.
+the token layer. Both prefixes must start with `--`. `exposedPrefixes` also
+exempts a fallback, so `var(--pv-datepicker-fg, #333)` documents an exposed
+default while `var(--color-text, #333)` is a raw color.
 
 The semantic object also accepts `surfaceRootPrefixes`, `componentClassPrefix`, `elementClasses`, `anatomyClasses`,
 `bannedClasses`, `stateClasses`, and `tiers`. Prefer narrow project mappings

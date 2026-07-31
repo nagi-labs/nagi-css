@@ -8,6 +8,6 @@
   position: fixed;
   position-anchor: --hint;
   position-area: block-end;
-  > .text { color: red; }
+  > .text { color: inherit; }
 }
 </style>

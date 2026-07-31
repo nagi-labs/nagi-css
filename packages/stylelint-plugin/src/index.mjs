@@ -12,6 +12,7 @@ import {
   matchSelectorChain,
   matchesClassPrefix,
   parseTokenDeclarations,
+  rawColorLiterals,
   resolveSeverity,
   tokenReferences,
   validateNagiConfig,
@@ -59,6 +60,7 @@ const ruleIds = [
   "top-level-surface-only",
   "unknown-token",
   "valid-config",
+  "value-token-required",
   "variant-shadows-vocabulary",
 ]
 
@@ -548,6 +550,25 @@ function analyzeStyles(root, inputConfig, fallbackFile) {
     }
   }
 
+  // A color is always a design decision, so it always belongs to the token layer.
+  // Unlike the two rules above this needs no configured source: it does not ask
+  // which token is right, only that one is used. There is deliberately no
+  // `--local-*` escape — a one-off length can be an optical correction, but a
+  // one-off color is a decision made in the wrong file.
+  function checkValueTokens(decl) {
+    for (const literal of rawColorLiterals(decl.value, {
+      property: decl.prop,
+      exposedPrefixes: config.tokens?.exposedPrefixes,
+    })) {
+      report(
+        decl,
+        "value-token-required",
+        `"${literal}" is a raw color; reference a token instead, so the color is a decision the design system owns.`,
+        literal,
+      )
+    }
+  }
+
   function checkSurfaceLayout(rule, token) {
     if (!token || topLayerSurfaces.has(token)) return
     if (ownDeclsAnchored(rule)) return
@@ -737,7 +758,10 @@ function analyzeStyles(root, inputConfig, fallbackFile) {
   // they are checked across the whole stylesheet rather than per surface. Custom
   // property declarations are included: `--local-accent: var(--palette-red-500)`
   // reads the primitive layer just as directly as the property that uses it.
-  root.walkDecls(checkTokenReferences)
+  root.walkDecls((decl) => {
+    checkTokenReferences(decl)
+    checkValueTokens(decl)
+  })
   return violations
 }
 

@@ -29,6 +29,7 @@
   "dependencies": {
     "@vue/compiler-sfc": "^3.5.0",
     "postcss": "^8.5.0",
-    "postcss-selector-parser": "^7.1.0"
+    "postcss-selector-parser": "^7.1.0",
+    "postcss-value-parser": "^4.2.0"
   }
 }

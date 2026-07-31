@@ -66,6 +66,9 @@ the judgments the linter cannot make.
   - Selectors do not cross third-party internals or named slot insertion boundaries.
   - A class placed on a third-party component root is not used as proof that slotted markup is a direct owned descendant.
   - External layout responsibility stays outside reusable surfaces.
+  - Colors come from a token. A raw color is a finding wherever it appears — in a
+    fallback, a gradient, or a `--local-*` declaration — since colors have no local
+    escape. `currentColor`, `transparent`, and system colors are not colors here.
   - Where the project declares `tokens.sources`, every referenced custom property
     resolves to a declared token and comes from the semantic layer. A primitive
     (`--palette-red-500`) read from a surface is a finding; a `--local-*` one-off

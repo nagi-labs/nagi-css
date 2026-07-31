@@ -8,6 +8,7 @@ import {
   deriveSurfaceRootName,
   matchSelectorChain,
   parseTokenDeclarations,
+  rawColorLiterals,
   resolveSeverity,
   tokenReferences,
   validateNagiConfig,
@@ -934,4 +935,33 @@ test("validates the token source declaration", () => {
       'tokens.exposedPrefixes entries must be custom property prefixes starting with "--"',
     ],
   )
+})
+
+test("tells a raw color from a token, a keyword, and an author-chosen name", () => {
+  const raw = (value, property = "color") =>
+    rawColorLiterals(value, { property, exposedPrefixes: ["--pv-"] })
+
+  assert.deepEqual(raw("#f0a"), ["#f0a"])
+  assert.deepEqual(raw("rgb(0 0 0 / 0.1)"), ["rgb(0 0 0 / 0.1)"])
+  assert.deepEqual(raw("linear-gradient(to right, #fff, var(--color-a))", "background"), ["#fff"])
+  assert.deepEqual(raw("color-mix(in oklab, var(--a), white 20%)", "background"), ["white"])
+
+  // tokens, keywords, and platform colors decide nothing here
+  assert.deepEqual(raw("var(--color-text)"), [])
+  assert.deepEqual(raw("currentColor"), [])
+  assert.deepEqual(raw("transparent"), [])
+  assert.deepEqual(raw("CanvasText", "outline-color"), [])
+  assert.deepEqual(raw("color-mix(in oklab, var(--a), var(--b) 20%)", "background"), [])
+  // relative color syntax derives from a token rather than stating a color
+  assert.deepEqual(raw("oklch(from var(--color-accent) l c calc(h + 20))"), [])
+
+  // a fallback is a raw color, unless the token is a contract the project exposes
+  assert.deepEqual(raw("var(--color-text, #333)"), ["#333"])
+  assert.deepEqual(raw("var(--pv-datepicker-fg, #333)"), [])
+
+  // not colors: a string, a URL fragment, and a font family that shares a name
+  assert.deepEqual(raw('"#fff"', "content"), [])
+  assert.deepEqual(raw("url(icon.svg#red)", "background"), [])
+  assert.deepEqual(raw("Tan, serif", "font-family"), [])
+  assert.deepEqual(raw("13px 0", "padding"), [])
 })

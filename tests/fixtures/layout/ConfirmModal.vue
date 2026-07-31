@@ -7,6 +7,6 @@
 .test-confirm-modal {
   margin: auto;
   inset: 0;
-  > .text { color: red; }
+  > .text { color: inherit; }
 }
 </style>

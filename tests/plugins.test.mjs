@@ -324,3 +324,22 @@ test("Stylelint leaves token references alone until a source is configured", asy
 
   assert.equal(result.errored, false, JSON.stringify(result.results[0].warnings))
 })
+
+test("Stylelint requires a token for colors, with no configured source needed", async () => {
+  const result = await lintStylelint(path.join(root, "fixtures/tokens/RawColors.vue"), {
+    ...testSurface,
+  })
+
+  assert.deepEqual(
+    result.results[0].warnings
+      .filter(({ rule }) => rule === "nagi-css/value-token-required")
+      .map(({ line, text }) => [line, text.match(/"([^"]+)"/)[1]]),
+    [
+      [9, "#f0a"], // a --local-* declaration is no escape for a color
+      [12, "rgb(0 0 0 / 0.1)"],
+      [13, "#333"], // a raw fallback is a raw color
+      [17, "white"], // inside a gradient
+    ],
+    JSON.stringify(result.results[0].warnings),
+  )
+})

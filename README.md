@@ -148,7 +148,8 @@ Stylelint enforces:
 - variant names that stay outside the protocol vocabulary, including ARIA roles;
 - no external layout (`position`, inset, `margin`) on a surface's own rule,
   with a top-layer and anchor-positioning exception;
-- explicit detached configuration for top-level teleported surfaces; and
+- explicit detached configuration for top-level teleported surfaces;
+- colors written as a token reference rather than a raw value; and
 - token references that resolve, and that read the semantic layer rather than
   primitives, where the project declares its token sources.
 
@@ -214,8 +215,14 @@ a class binding whose names are assembled at runtime (`:class="iconName"`), wher
 the code is probably fine but no rule can see the classes it applies. Setting
 `"*"` or the rule itself overrides that default in either direction.
 
+Colors must come from a token: `color: #f0a` and `border: 1px solid rgb(0 0 0 / .1)`
+are `value-token-required` errors, with no `--local-*` escape, because a color is
+never a local decision. `currentColor`, `transparent`, and the system colors are
+not colors in that sense and pass. This needs no configuration — it asks only that
+a token is used, not which one.
+
 Nagi CSS ships no design tokens — which values exist is the design system's call.
-Point it at the files that declare them and it checks the boundary instead:
+Point it at the files that declare them and it checks the rest of the boundary:
 
 ```js
 semantic: {
@@ -233,10 +240,12 @@ semantic: {
 Paths are resolved against `--cwd`. Sources are read as data, never linted. A
 referenced custom property that no source declares is `unknown-token`, an error
 because CSS swallows the typo silently; a primitive referenced from a surface is
-`token-layer`. Both stay inactive until `sources` names a file. Exempt: a property
-the same stylesheet declares — including the `--local-*` one-off escape
-(`tokens.localPrefix`) — and prefixes a library exposes as its public styling
-contract (`tokens.exposedPrefixes`).
+`token-layer`. These two stay inactive until `sources` names a file, since without
+it there is nothing to compare against. Exempt: a property the same stylesheet
+declares — including the `--local-*` one-off escape (`tokens.localPrefix`) — and
+prefixes a library exposes as its public styling contract
+(`tokens.exposedPrefixes`), which also decides fallbacks: `var(--color-text, #333)`
+states a raw color, `var(--pv-datepicker-fg, #333)` documents an exposed default.
 
 ## Scope
 

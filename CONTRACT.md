@@ -1204,6 +1204,30 @@ Do not encode breakpoint behavior into class names such as `-sm`, `-md`, or `-lg
 
 Color, spacing, radius, shadow, and typography should be defined through CSS custom properties.
 
+**Colors MUST come from a token.** A color is never a local decision: it belongs
+to a palette, it changes with a theme, and the same value written in twenty
+surfaces is twenty places to edit. So `color: #f0a`, `border: 1px solid
+rgb(0 0 0 / .1)`, and `linear-gradient(…, white, …)` are violations, and there is
+no `--local-*` escape for them — a one-off length can be an optical correction, but
+a one-off color is a decision made in the wrong file.
+
+```css
+/* Incorrect */
+.card { background: #fff; border: 1px solid rgb(0 0 0 / 0.1) }
+
+/* Correct */
+.card { background: var(--color-surface); border: 1px solid var(--color-border) }
+```
+
+What is not a color: `currentColor`, `transparent`, `inherit`, and the system
+colors (`Canvas`, `GrayText`, `Highlight`) — the last because forced-colors work
+delegates the choice to the platform on purpose. Relative color syntax
+(`oklch(from var(--color-accent) l c calc(h + 20))`) derives from a token instead
+of stating a color, and is allowed.
+
+Unlike the two checks below, this one needs no configuration: it does not ask
+which token is correct, only that one is used.
+
 Nagi CSS ships no tokens. Which values exist, and what they are called, is the
 design system's decision — a naming contract that also dictated a palette would
 be two products in one. What Nagi CSS checks is the **boundary**: that a token a
@@ -1222,8 +1246,10 @@ tokens: {
 ```
 
 Sources are read as data and never linted; only the custom property names they
-declare are collected. Both checks stay inactive until `sources` names at least
-one file, so a project that has no token layer is not asked to invent one.
+declare are collected. These two checks stay inactive until `sources` names at
+least one file — they compare against a set the project defines, and with no set
+there is nothing to compare — so a project that has no token layer is not asked to
+invent one.
 
 | layer | holds | surfaces may reference |
 | --- | --- | --- |
@@ -1247,6 +1273,11 @@ Three references are exempt:
 - a prefix the project exposes as a component's public styling contract
   (`exposedPrefixes`), which a library owns rather than the token layer
 - everything, when `sources` is empty
+
+That second exemption also decides fallbacks. `var(--color-text, #333)` states a
+raw color, so it is a violation; `var(--pv-datepicker-fg, #333)` is not, because an
+exposed contract may legitimately be unset and the fallback is its documented
+default.
 
 ### Utilities
 
@@ -1285,6 +1316,7 @@ Nagi CSS preserves readable styling surfaces rather than collapsing meaning into
 - vague structural names should be avoided when stable UI semantics exist
 - STN are fallback names only, and their tiers obey the floor, consecutive-tier, and reach-`g` relations
 - external layout responsibility must remain outside the surface
+- colors MUST come from a token; a raw color has no `--local-*` escape
 - where the project declares token sources, every referenced custom property MUST
   be declared by one of them and MUST come from the semantic layer, unless it is
   declared in the same stylesheet or exposed by a library

@@ -1,3 +1,5 @@
+import parseValue from "postcss-value-parser"
+
 const ELEMENT_CLASSES = {
   a: "link",
   article: "article",
@@ -130,6 +132,102 @@ export function parseTokenDeclarations(css) {
 
 export function tokenReferences(value) {
   return [...value.matchAll(/var\(\s*(--[\w-]+)/g)].map(([, name]) => name)
+}
+
+// CSS named colors, minus `transparent` and `currentcolor`: a literal name is a
+// literal color, and `rebeccapurple` is no more a design decision than `#639`.
+const NAMED_COLORS = new Set(
+  `aliceblue antiquewhite aqua aquamarine azure beige bisque black blanchedalmond blue
+   blueviolet brown burlywood cadetblue chartreuse chocolate coral cornflowerblue cornsilk
+   crimson cyan darkblue darkcyan darkgoldenrod darkgray darkgreen darkgrey darkkhaki
+   darkmagenta darkolivegreen darkorange darkorchid darkred darksalmon darkseagreen
+   darkslateblue darkslategray darkslategrey darkturquoise darkviolet deeppink deepskyblue
+   dimgray dimgrey dodgerblue firebrick floralwhite forestgreen fuchsia gainsboro ghostwhite
+   gold goldenrod gray green greenyellow grey honeydew hotpink indianred indigo ivory khaki
+   lavender lavenderblush lawngreen lemonchiffon lightblue lightcoral lightcyan
+   lightgoldenrodyellow lightgray lightgreen lightgrey lightpink lightsalmon lightseagreen
+   lightskyblue lightslategray lightslategrey lightsteelblue lightyellow lime limegreen linen
+   magenta maroon mediumaquamarine mediumblue mediumorchid mediumpurple mediumseagreen
+   mediumslateblue mediumspringgreen mediumturquoise mediumvioletred midnightblue mintcream
+   mistyrose moccasin navajowhite navy oldlace olive olivedrab orange orangered orchid
+   palegoldenrod palegreen paleturquoise palevioletred papayawhip peachpuff peru pink plum
+   powderblue purple rebeccapurple red rosybrown royalblue saddlebrown salmon sandybrown
+   seagreen seashell sienna silver skyblue slateblue slategray slategrey snow springgreen
+   steelblue tan teal thistle tomato turquoise violet wheat white whitesmoke yellow
+   yellowgreen`
+    .trim()
+    .split(/\s+/),
+)
+
+// System colors (`Canvas`, `GrayText`, `Highlight`) are absent from that list on
+// purpose, so forced-colors work stays possible: a color the platform picks is not
+// a design decision, and a token there would defeat the point.
+
+// Functions that construct a color from raw components. `color-mix` is absent on
+// purpose: it composes colors it is given, so its arguments are what matter.
+const COLOR_FUNCTIONS = new Set([
+  "color",
+  "hsl",
+  "hsla",
+  "hwb",
+  "lab",
+  "lch",
+  "oklab",
+  "oklch",
+  "rgb",
+  "rgba",
+])
+
+// Properties whose unquoted words are author-chosen names, so a family called
+// `Tan` or `Silver` must not read as a color.
+const NAME_VALUED_PROPS = new Set(["font", "font-family"])
+
+// Raw colors written into a declaration value, so the caller can require a token
+// instead. Parsed rather than pattern-matched: `content: "#fff"`,
+// `url(icon.svg#red)`, and `font-family: Tan` are not colors, and a regex over the
+// raw value cannot tell.
+export function rawColorLiterals(value, { property = "", exposedPrefixes = [] } = {}) {
+  const found = []
+  const named = !NAME_VALUED_PROPS.has(property.toLowerCase())
+
+  const walk = (list) => {
+    for (const node of list) {
+      if (node.type === "string") continue
+      if (node.type === "function") {
+        const name = node.value.toLowerCase()
+        if (name === "url") continue
+        if (name === "var") {
+          // A fallback belongs to whoever owns the token. For a prefix the project
+          // exposes as a public contract, the component may legitimately be unset,
+          // and the fallback is the contract's documented default.
+          const [token] = node.nodes
+          if (token && matchesClassPrefix(token.value, exposedPrefixes)) continue
+          walk(node.nodes.slice(1))
+          continue
+        }
+        // A color function whose components all come from elsewhere — relative
+        // color syntax, `oklch(from var(--color-accent) l c h)` — decides nothing.
+        if (COLOR_FUNCTIONS.has(name)) {
+          const literal = node.nodes.some(
+            (child) => child.type !== "function" && /\d/.test(child.value),
+          )
+          if (literal) {
+            found.push(parseValue.stringify(node))
+            continue
+          }
+        }
+        walk(node.nodes)
+        continue
+      }
+      if (node.type !== "word") continue
+      const value = node.value.toLowerCase()
+      if (value.startsWith("#") && /^#[\da-f]{3,8}$/.test(value)) found.push(node.value)
+      else if (named && NAMED_COLORS.has(value)) found.push(node.value)
+    }
+  }
+
+  walk(parseValue(value).nodes)
+  return found
 }
 
 function unique(values) {

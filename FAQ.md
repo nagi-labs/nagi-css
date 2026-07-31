@@ -157,16 +157,22 @@ and spacing steps exist, and what they are called, depends on the design system 
 and a project already using Open Props, Radix Colors, or its own scale should not
 have to abandon it to get class-name checking.
 
-What Nagi CSS does check is the boundary, once the project points at the files
-that declare its tokens: that a referenced custom property is actually declared
-somewhere, and that it comes from the semantic layer rather than the raw palette.
+What it does check is the boundary. Colors are the unconditional part: `#f0a` in a
+surface is an error whatever the token set looks like, because a color is never a
+local decision — it belongs to a palette, it moves with a theme, and the same hex
+in twenty surfaces is twenty places to edit. That check needs no configuration,
+since it asks only that a token is used, not which one.
+
+The rest needs the project to point at the files that declare its tokens: that a
+referenced custom property is actually declared somewhere, and that it comes from
+the semantic layer rather than the raw palette.
 The first is worth an error because CSS fails silently — `var(--color-surfce)`
 leaves the property unset with nothing to notice, in a diff that looks fine. The
 second is what keeps a theme change inside the token files instead of scattered
 across surfaces.
 
-Both checks stay off until `tokens.sources` names a file, so nothing is imposed
-on a project without a token layer.
+Those two stay off until `tokens.sources` names a file, so nothing is imposed on a
+project without a token layer.
 
 ## Why invent a new vocabulary instead of reusing an existing one?
 
