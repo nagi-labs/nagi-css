@@ -1226,6 +1226,47 @@ Example:
 }
 ```
 
+### A container name is derived, like every other identifier
+
+An unnamed container is the preferred form: it resolves against the nearest
+ancestor, so nothing has to be named at all. When a name *is* needed, it is an
+identifier, and the contract derives identifiers rather than letting them be
+chosen. The name is the surface, qualified by the element that declares it:
+
+| declared on | name |
+|---|---|
+| the surface's own rule | the surface root — `app-invoice-card` |
+| an owned element's rule | surface root + that element's base identity — `app-invoice-card-media` |
+
+```css
+.app-invoice-card {
+  container: app-invoice-card / inline-size;
+
+  > .media {
+    container-name: app-invoice-card-media;
+    container-type: inline-size;
+
+    @container app-invoice-card-media (inline-size >= 20rem) {
+      > .icon {}
+    }
+  }
+}
+```
+
+The element's base identity is already the canonical name for that node, so this
+adds no new vocabulary — it reuses the name the contract had already derived.
+Reported as `container-name-derived`, with the expected name in the message.
+
+### A container query stays inside the file that declares the container
+
+`@container app-page-main (…)` written in a child component couples that child to
+a name it does not own: the parent could rename or remove the container and
+nothing would report it. That is the same reach-across the contract already
+rejects for selectors, so a named query may only reference a container declared in
+the same file (`container-query-scope`). An unnamed query is always allowed —
+matching the nearest ancestor container is a relationship, not a dependency on a
+name.
+
 ### Reserve viewport media queries for layout-level changes
 
 Global `@media` rules should primarily handle page-level layout decisions rather than local component behavior.
@@ -1402,6 +1443,9 @@ Nagi CSS preserves readable styling surfaces rather than collapsing meaning into
 
 - prefer native or UI-semantic names over structural fallback names
 - prefer container queries over viewport rules for local behavior
+- prefer an unnamed container; where a container is named, the name MUST be derived
+  from the surface and the element declaring it, and a named query MUST reference a
+  container declared in the same file
 - prefer public styling contracts over DOM chasing
 - keep surface structure readable from markup alone
 - use CSS custom properties for tokens and theming

@@ -49,6 +49,8 @@ const ruleIds = [
   "anatomy-allowed",
   "bare-element-selector",
   "boundary-nesting",
+  "container-name-derived",
+  "container-query-scope",
   "dead-rule",
   "length-token-required",
   "owned-dom-direct-child",
@@ -602,28 +604,72 @@ function analyzeStyles(root, inputConfig, fallbackFile) {
     )
   }
 
+  // Declarations belonging to this rule, including ones wrapped in a nested
+  // at-rule, but not those of a nested rule — that is a different element.
+  function eachOwnDecl(container, visit) {
+    container.each?.((node) => {
+      if (node.type === "decl") visit(node)
+      else if (node.type === "atrule") eachOwnDecl(node, visit)
+    })
+  }
+
   function checkSurfaceLayout(rule, token) {
     if (!token) return
     const ownsPlacement = topLayerSurfaces.has(token) || ownDeclsAnchored(rule)
-    const walkOwnDecls = (container) => {
-      container.each?.((node) => {
-        if (node.type === "decl") {
-          if (ownsPlacement) {
-            checkStackingToken(node)
-          } else if (isExternalLayoutProp(node.prop)) {
-            report(
-              node,
-              "surface-external-layout",
-              `Surface ".${token}" must not own external layout; "${node.prop}" belongs to the parent layout.`,
-              node.prop,
-            )
-          }
-        } else if (node.type === "atrule") {
-          walkOwnDecls(node)
-        }
-      })
+    eachOwnDecl(rule, (node) => {
+      if (ownsPlacement) {
+        checkStackingToken(node)
+      } else if (isExternalLayoutProp(node.prop)) {
+        report(
+          node,
+          "surface-external-layout",
+          `Surface ".${token}" must not own external layout; "${node.prop}" belongs to the parent layout.`,
+          node.prop,
+        )
+      }
+    })
+  }
+
+  // A container name is an identifier, so the contract derives it like every other
+  // one: from the surface and the element that declares it. The element's own base
+  // identity is already the canonical name for that node, so the container name is
+  // that name qualified by the surface it lives in.
+  function containerNames(decl) {
+    const prop = decl.prop.toLowerCase()
+    if (prop !== "container" && prop !== "container-name") return []
+    const names = prop === "container" ? decl.value.split("/")[0] : decl.value
+    return names
+      .trim()
+      .split(/\s+/)
+      .filter((name) => name && name !== "none" && !name.startsWith("var("))
+  }
+
+  function checkContainerName(rule, chain) {
+    // An unresolvable chain cannot say which element declares the container, and a
+    // child component's root is not this file's to name.
+    if (chain === null) return
+    const identities = chain.at(-1)?.classes ?? []
+    if (identities.length === 0 || identities.some(isOwnedComponentRoot)) return
+
+    const expected = new Set()
+    for (const surfaceRoot of surfaceRoots) {
+      for (const identity of identities) {
+        expected.add(identity === surfaceRoot ? surfaceRoot : `${surfaceRoot}-${identity}`)
+      }
     }
-    walkOwnDecls(rule)
+    if (expected.size === 0) return
+
+    eachOwnDecl(rule, (decl) => {
+      for (const name of containerNames(decl)) {
+        if (expected.has(name)) continue
+        report(
+          decl,
+          "container-name-derived",
+          `Container name "${name}" is not derived from the element that declares it; use "${[...expected].sort()[0]}".`,
+          name,
+        )
+      }
+    })
   }
 
   function surfaceSubjectToken(compounds) {
@@ -714,6 +760,7 @@ function analyzeStyles(root, inputConfig, fallbackFile) {
       }
     }
     checkSurfaceLayout(rule, surfaceSubject)
+    checkContainerName(rule, ruleChain)
     walkNested(rule, alternativesEndInBoundary(alternatives), surfaceSubject, ruleChain)
   }
 
@@ -763,6 +810,7 @@ function analyzeStyles(root, inputConfig, fallbackFile) {
       }
     }
     checkSurfaceLayout(rule, surfaceSubject)
+    checkContainerName(rule, ruleChain)
     walkNested(
       rule,
       alternativesEndInBoundary(alternatives, parentEndsInBoundary, true),
@@ -789,6 +837,26 @@ function analyzeStyles(root, inputConfig, fallbackFile) {
   }
 
   walkRoot(root)
+
+  // A `@container` query may only name a container this file declares. Querying
+  // another component's container couples this surface to a name it does not own,
+  // which is the same reach-in the contract rejects for selectors; an unnamed query
+  // resolves against the nearest ancestor and is always fine.
+  const declaredContainers = new Set()
+  root.walkDecls((decl) => {
+    for (const name of containerNames(decl)) declaredContainers.add(name)
+  })
+  root.walkAtRules("container", (atRule) => {
+    const [name] = atRule.params.trim().split(/[\s(]/)
+    if (!name || name.startsWith("(") || declaredContainers.has(name)) return
+    report(
+      atRule,
+      "container-query-scope",
+      `Container query names "${name}", which this file does not declare; query a container declared here, or leave the query unnamed to match the nearest ancestor.`,
+      name,
+    )
+  })
+
   // Token references are a property of the declaration, not of the selector, so
   // they are checked across the whole stylesheet rather than per surface. Custom
   // property declarations are included: `--local-accent: var(--palette-red-500)`

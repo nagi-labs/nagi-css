@@ -373,3 +373,27 @@ test("Stylelint returns a surface's stacking order to the parent, or to a token"
     JSON.stringify(raw.results[0].warnings),
   )
 })
+
+test("Stylelint derives container names and keeps queries inside the file", async () => {
+  const valid = await lintStylelint(path.join(root, "fixtures/style/ContainerSurface.vue"), {})
+  const invalid = await lintStylelint(
+    path.join(root, "fixtures/style/ContainerViolations.vue"),
+    {},
+  )
+
+  assert.equal(valid.errored, false, JSON.stringify(valid.results[0].warnings))
+
+  assert.deepEqual(
+    invalid.results[0].warnings.map(({ line, rule, text }) => [
+      line,
+      rule,
+      text.match(/"([^"]+)"/)[1],
+    ]),
+    [
+      [9, "nagi-css/container-name-derived", "card"],
+      [12, "nagi-css/container-name-derived", "media-box"],
+      [14, "nagi-css/container-query-scope", "app-page-main"],
+    ],
+    JSON.stringify(invalid.results[0].warnings),
+  )
+})

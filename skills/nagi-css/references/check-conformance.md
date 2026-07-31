@@ -69,6 +69,9 @@ the judgments the linter cannot make.
     included: a surface's order among its siblings is the parent's decision, and a
     surface that legitimately owns its stacking order takes the level from a token.
     Layering a surface's own children against each other is unrestricted.
+  - Containers are unnamed where possible. A named container is the surface root, or
+    the surface root plus the declaring element's base identity, and a named
+    `@container` query references a container declared in the same file.
   - Colors come from a token. A raw color is a finding wherever it appears — in a
     fallback, a gradient, or a `--local-*` declaration — since colors have no local
     escape. `currentColor`, `transparent`, and system colors are not colors here.

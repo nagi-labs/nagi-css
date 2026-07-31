@@ -89,6 +89,16 @@ ambiguous. The canonical contract records why `pane`, `area`, `space`, and
 SVG and MathML internals are excluded. `:deep()` marks non-owned DOM and is not
 checked as owned anatomy.
 
+## Container Queries
+
+Prefer an unnamed container (it resolves against the nearest ancestor). A named
+container is derived like any identifier: the surface root on the surface's own
+rule, and surface root + the element's base identity on an owned element
+(`app-invoice-card-media`) — reported as `container-name-derived`. A named
+`@container` query may only reference a container declared in the same file
+(`container-query-scope`); querying a parent's container name couples this surface
+to a name it does not own. Unnamed queries are always allowed.
+
 ## Stacking Order
 
 `z-index` on a surface's own rule is external layout: its order among its siblings

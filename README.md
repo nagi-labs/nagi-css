@@ -153,6 +153,8 @@ Stylelint enforces:
   rule, with a top-layer and anchor-positioning exception — where that exception
   applies, the stacking level itself must come from a token;
 - explicit detached configuration for top-level teleported surfaces;
+- container names derived from the surface and the element declaring them, and
+  named `@container` queries kept to containers the same file declares;
 - colors written as a token reference rather than a raw value;
 - lengths on scale properties (spacing, radius, border width, type size,
   elevation) written as a token or as a named `--local-*` one-off; and
