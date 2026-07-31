@@ -15,6 +15,7 @@
 | **実装済み**（このブランチ） | #18 #23 — fixed variant 機構の廃止と表の2層化。#12 もこれで解消<br>#19 — per-rule `severity`（`error` / `warn` / `off`、`*` フォールバック、未知名は設定エラー）<br>#9 — `dead-rule` / `selector-mirrors-template`（テンプレートの owned ツリーとセレクタ鎖の照合）<br>#16 — autofix を6ルールに拡大<br>#17 — 自作コンポーネント境界（`owned-component-identity` / `owned-surface-reach-in`）。パススルー方式は廃止<br>#20 — `variant-must-be-static`＋変体禁止語彙を base identity に限定<br>#8 — 2リンタの出力を1本に統合<br>#13 — 注釈付きドキュメント例を CI で検査（11パターン＋README）<br>#14 #15 — `tiers` 拡張の文書化、docs サイトの語彙修正<br>派生 — 見た目由来タグ（`<b>` `<i>` `<u>` `<s>`）の自己マップ廃止、`unverifiable-dynamic-class`（検証不能の通知、既定 warning） |
 | **文書反映済み**（このブランチ） | 素の CSS のみ対応・単体 `.css` 対象外の方針（CONTRACT.md / README / FAQ / configuration.md） |
 | **実装済み**（このブランチ、#10） | 第1段 `unknown-token` / `token-layer`（トークンは出荷せず、境界だけを検査）、第2段 `value-token-required`（色）、第3段 `length-token-required`（スケール系プロパティの長さ、`--local-*` の命名で逃げられる） |
+| **実装済み**（このブランチ、契約の穴） | 契約が扱っていなかった4領域を追加 — `z-index`（external layout ＋ `stacking-token-required`）、`container-name-derived` / `container-query-scope`、`dead-keyframes`、`cascade-layer-in-surface` |
 | **未着手** | なし |
 
 #11 は #20 と #3 の実装で3件すべて解消（`-search` はルール修正、`-success` は state リストから削除、`dialog role=dialog` は #3）。加えて `-footer` の例は #13 が検出したので修正済み。
@@ -742,6 +743,50 @@ severity: {
 
 ---
 
+## 契約が扱っていなかった領域（追加実装）
+
+レビュー項目とは別に、**契約が一度も言及していない領域**を検索で洗い出して埋めた。
+いずれも新語彙を作らず、既存の3つの型に振り分けている。
+
+| 型 | 既存の実例 | 追加したもの |
+|---|---|---|
+| 導出される識別子 | サーフェス根、子コンポーネント根 | `container-name-derived`、`@keyframes` の接頭辞 |
+| 値のトークン境界 | `value-token-required` / `length-token-required` | `stacking-token-required` |
+| 逃げ道を消す | ユーティリティ禁止、素の要素セレクタ禁止 | `cascade-layer-in-surface` |
+| 所有境界 | `owned-surface-reach-in` | `container-query-scope` |
+
+- **`z-index`** — 新概念は不要で、**external layout そのもの**だった。兄弟に対する重なり順は
+  親の決定なので `position` / `margin` と同じ集合に入れた。`z-index: 9999` の競り上がりは
+  常に「コンポーネントの外の何かに勝つため」に起きるので、プロパティを親に返すと戦場自体が消える。
+  一方**サーフェス内部の子同士の重なり**は局所的な構造判断（値は 1 や 2、スケールが存在しない）なので無制約。
+  座標系を自分で持つサーフェス（top-layer / anchor 配置）だけは重なり順を所有するので、
+  そこは**値をトークンに要求**する（`stacking-token-required`）— モーダルとトーストの前後は
+  システム全体の決定で、これが `--z-modal` 系トークンの本来の用途
+- **`container-name`** — 識別子なので導出できる。サーフェス自身のルールならサーフェス根、
+  所有要素のルールならサーフェス根＋その要素の base identity（`app-invoice-card-media`）。
+  要素の base identity は既にその節点の正規名なので、新しい語彙は増えない。
+  無名コンテナ（最近傍に解決）が推奨形なのは変わらず、名前を書いたときだけルールが働く。
+  期待値をメッセージに出す
+- **`container-query-scope`** — 命名規則ではなく**所有の話**。子コンポーネントの
+  `@container app-page-main (…)` は自分が所有しない名前への依存で、親がリネームしても誰も報告しない。
+  セレクタで既に拒否している reach-across と同型なので、名前付きクエリは同一ファイルで
+  宣言されたコンテナのみ。無名クエリは無制約（最近傍との関係であって、名前への依存ではない）
+- **`dead-keyframes`** — 参照されていない `@keyframes`。**訂正**: 議論中に「scoped でも
+  keyframes 名はグローバルに漏れる」と2回書いたが、これは**誤り**だった。コンパイラで確認したところ
+  Vue は宣言と参照の両方を書き換える。したがって根拠は衝突安全性ではなく死骸検出で、
+  むしろ scoped だからこそ「参照が無い＝到達不能」と断定できる。
+  アニメーション名が `var()` 由来のときは何も死んでいると言えないので黙る
+- **`cascade-layer-in-surface`** — `@layer` はカスケード順を後から調整する道具で、
+  契約の構造ルール（単一 base identity、`>` 連鎖、素の要素セレクタ禁止、ユーティリティ禁止）は
+  そもそも順序を調整する必要が生じないよう特異度を平坦に保つためにある。
+  サーフェス内の `@layer` は「ここは勝たせる」を趣味で決める逃げ道の再導入。
+  正当な用途2つは別の場所にある — グローバルな順序（reset/base/theme）は
+  グローバルスタイルシート（「単体 `.css` は対象外」の領域）、
+  消費者の上書きは公開カスタムプロパティ
+- **`prefers-reduced-motion` は意図的に検査しない** — 「正しい縮退版」が一意に決まらないので
+  canonical form が存在せず、書けるのは「言及があるか」の presence 検査だけ。
+  導出できない権限を契約が主張しないため、文書に「検査しない」と明記した
+
 ## 残り
 
 **23項目すべて着手済み**。当初「派生として未着手」に置いた2件も実装した —
@@ -751,6 +796,10 @@ severity: {
 今後の論点として残しているもの:
 
 - 時間（モーション）のトークン化。`transition: 0.2s` もデザイン決定ではあるが、
-  第3段の範囲に入れていない
-- `length-token-required` の実アプリでの影響。このリポジトリでは測れないので、
-  最初の実プロジェクト適用時に `severity` の初期値を決める材料として測る
+  値のトークン化の第3段には入れていない
+- `length-token-required` と今回の4領域の**実アプリでの影響**。このリポジトリでは測れないので、
+  nagi-ui に通して `severity` の初期値を決める材料として測る
+- `CHANGELOG.md` が無い。このブランチだけで既存コードの合否が変わる変更を多数入れているので、
+  契約を配布するパッケージとしては移行の記録が必要
+- リポジトリのトップに**1ページの入口**が無い（CONTRACT.md は1500行超）。
+  `naming-flow.md` が実質その役割だが `skills/` の下にあって見えない
