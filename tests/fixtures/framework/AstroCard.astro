@@ -1,0 +1,19 @@
+---
+interface Props {
+  expanded?: boolean
+}
+
+const { expanded = false }: Props = Astro.props
+---
+
+<section class="test-astro-card" data-expanded={expanded}>
+  <h2 class="title">Astro</h2>
+  <button class="button" aria-expanded={expanded}>Toggle</button>
+</section>
+
+<style>
+  .test-astro-card {
+    > .title {}
+    > .button {}
+  }
+</style>

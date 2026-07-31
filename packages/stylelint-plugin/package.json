@@ -1,7 +1,7 @@
 {
   "name": "@nagi-labs/stylelint-plugin-nagi-css",
   "version": "0.1.0",
-  "description": "Stylelint plugin for the Nagi CSS contract: selector structure, ownership edges, and UI-library boundaries.",
+  "description": "Optional Stylelint compatibility plugin for Nagi CSS selector and value rules.",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -13,6 +13,8 @@
     "stylelint",
     "stylelint-plugin",
     "css",
+    "astro",
+    "svelte",
     "vue",
     "semantic-css",
     "nagi"
@@ -30,8 +32,7 @@
   },
   "dependencies": {
     "@nagi-labs/nagi-css-core": "workspace:*",
-    "postcss-html": "^1.8.0",
-    "postcss-selector-parser": "^7.1.0"
+    "postcss-html": "^1.8.0"
   },
   "peerDependencies": {
     "stylelint": ">=16"

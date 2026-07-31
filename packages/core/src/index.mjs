@@ -540,7 +540,7 @@ export function kebabCase(value) {
 export function deriveSurfaceRootName(filename) {
   const normalized = filename.replaceAll("\\", "/")
   const parts = normalized.split("/")
-  const basename = parts.at(-1)?.replace(/\.vue$/, "") ?? ""
+  const basename = parts.at(-1)?.replace(/\.(?:astro|svelte|vue)$/i, "") ?? ""
   if (parts.includes("components")) return kebabCase(basename)
   if (!parts.includes("pages")) return kebabCase(basename)
 
@@ -566,7 +566,21 @@ export function deriveAllowedSurfaceRootNames(filename, prefixes = []) {
 
 export { DEFAULT_CONFIG, ELEMENT_CLASSES, RENDERED_ELEMENTS, TOKEN_LAYERS }
 export {
+  analyzeTemplate,
   analyzeVueTemplate,
   matchSelectorChain,
   unreadableStyleBlocks,
 } from "./template-analysis.mjs"
+export {
+  astroParser,
+  frameworkForFilename,
+  svelteParser,
+  typescriptParser,
+} from "./template-adapters.mjs"
+export {
+  analyzeComponentStyles,
+  analyzeStyleRoot,
+  emptyTemplateContext,
+  STYLE_RULE_DESCRIPTIONS,
+  STYLE_RULE_IDS,
+} from "./style-analysis.mjs"

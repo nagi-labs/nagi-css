@@ -35,7 +35,7 @@ Use this when creating new markup and CSS under the Nagi CSS contract.
    - Use `data-*` only as an explicit styling contract when native or ARIA state is not appropriate.
 
 6. Verify with the linter.
-   - Run `nagi-css check` with the project's external configuration and fix diagnostics at their owning markup or selector.
+   - Run the project's normal ESLint command and fix diagnostics at their owning markup or selector.
 
 ## Example
 

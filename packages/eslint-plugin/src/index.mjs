@@ -1,11 +1,16 @@
 import vueParser from "vue-eslint-parser"
-import typescriptParser from "@typescript-eslint/parser"
 
 import {
-  analyzeVueTemplate,
+  analyzeComponentStyles,
+  analyzeTemplate,
+  astroParser,
   defineNagiConfig,
   resolveSeverity,
+  svelteParser,
+  STYLE_RULE_DESCRIPTIONS,
+  typescriptParser,
   validateNagiConfig,
+  validateSeverity,
 } from "@nagi-labs/nagi-css-core"
 
 const analysisCache = new WeakMap()
@@ -23,6 +28,7 @@ const FIXABLE_RULES = new Set([
 ])
 
 const ruleDescriptions = {
+  ...STYLE_RULE_DESCRIPTIONS,
   "anatomy-allowed": "Allow only contract anatomy, role, element, component, and STN names",
   "component-class-required": "Require configured static component classes when styled",
   "dynamic-class-requires-static-anchor":
@@ -34,7 +40,7 @@ const ruleDescriptions = {
   "single-base-identity": "Allow exactly one base identity class per element",
   "state-not-class": "Represent runtime state with native, ARIA, or data attributes",
   "surface-root-name":
-    "Derive component and page surface names from the configured prefix and Vue file",
+    "Derive component and page surface names from the configured prefix and component file",
   "stn-floor": "Start each STN chain at unit or a coarser tier",
   "stn-order": "Keep adjacent STN tiers consecutive",
   "stn-reach-g": "Make surfaces above unit reach the g tier",
@@ -58,12 +64,36 @@ function cachedAnalysis(context, config) {
   }
   const key = JSON.stringify(config)
   if (!analyses.has(key)) {
-    analyses.set(
-      key,
-      analyzeVueTemplate(sourceCode.text, context.filename, config),
-    )
+    const template = analyzeTemplate(sourceCode.text, context.filename, config)
+    analyses.set(key, {
+      ...template,
+      violations: [
+        ...template.violations,
+        ...analyzeComponentStyles(
+          sourceCode.text,
+          context.filename,
+          config,
+          template,
+        ),
+      ],
+    })
   }
   return analyses.get(key)
+}
+
+function violationLoc(sourceCode, violation) {
+  if (violation.range) {
+    return {
+      start: sourceCode.getLocFromIndex(violation.range[0]),
+      end: sourceCode.getLocFromIndex(violation.range[1]),
+    }
+  }
+  return {
+    start: {
+      line: violation.line,
+      column: Math.max(0, violation.column - 1),
+    },
+  }
 }
 
 function createAnalysisRule(ruleId) {
@@ -83,12 +113,7 @@ function createAnalysisRule(ruleId) {
           for (const violation of analysis.violations) {
             if (violation.ruleId !== ruleId) continue
             context.report({
-              loc: {
-                start: {
-                  line: violation.line,
-                  column: Math.max(0, violation.column - 1),
-                },
-              },
+              loc: violationLoc(context.sourceCode, violation),
               messageId: "violation",
               data: { message: violation.message },
               fix: violation.fix
@@ -126,33 +151,86 @@ rules["valid-config"] = {
 }
 
 const plugin = {
-  meta: { name: "@nagi-labs/eslint-plugin-nagi-css", version: "0.0.0" },
+  meta: { name: "@nagi-labs/eslint-plugin-nagi-css", version: "0.1.0" },
   rules,
 }
 
-export function createNagiEslintConfig(config, files = ["**/*.vue"], severity = {}) {
+const frameworkParsers = {
+  astro: { extension: ".astro", parser: astroParser },
+  svelte: { extension: ".svelte", parser: svelteParser },
+  vue: { extension: ".vue", parser: vueParser },
+}
+
+function enabledRules(config, severity) {
   const semantic = defineNagiConfig(config)
+  const severityErrors = validateSeverity(severity, Object.keys(rules))
+  if (severityErrors.length > 0) {
+    throw new Error(`Invalid Nagi CSS severity: ${severityErrors.join("; ")}`)
+  }
   const levelFor = resolveSeverity(severity)
-  const enabledRules = Object.fromEntries(
+  return Object.fromEntries(
     Object.keys(rules)
       .map((ruleId) => [ruleId, levelFor(ruleId)])
       .filter(([, level]) => level !== "off")
       .map(([ruleId, level]) => [`nagi-css/${ruleId}`, [level, semantic]]),
   )
+}
+
+// The normal integration deliberately owns neither the parser nor framework
+// globals. Vue, Nuxt, Svelte, and Astro official presets remain the source of
+// truth for those settings; Nagi CSS only adds its files, plugin, and rules.
+export function createNagiEslintConfig(
+  config,
+  {
+    files = ["**/*.{astro,svelte,vue}"],
+    ignores,
+    severity = {},
+  } = {},
+) {
   return {
+    name: "nagi-css/recommended",
     files,
+    ...(ignores ? { ignores } : {}),
+    plugins: { "nagi-css": plugin },
+    rules: enabledRules(config, severity),
+  }
+}
+
+function standaloneEslintConfig(config, files, severity, framework) {
+  const adapter = frameworkParsers[framework]
+  if (!adapter) throw new Error(`Unsupported template framework: ${framework}`)
+  return {
+    ...createNagiEslintConfig(config, { files, severity }),
+    name: `nagi-css/standalone/${framework}`,
     languageOptions: {
-      parser: vueParser,
+      parser: adapter.parser,
       parserOptions: {
         ecmaVersion: "latest",
-        extraFileExtensions: [".vue"],
+        extraFileExtensions: [adapter.extension],
         parser: typescriptParser,
         sourceType: "module",
       },
     },
-    plugins: { "nagi-css": plugin },
-    rules: enabledRules,
   }
+}
+
+// Used by the standalone CLI and by plugin tests. Application configs should use
+// `configs.recommended()` so the framework's official parser remains in charge.
+export function createNagiStandaloneEslintConfigs(
+  config,
+  { files = {}, severity = {} } = {},
+) {
+  return [
+    standaloneEslintConfig(config, files.vue ?? ["**/*.vue"], severity, "vue"),
+    standaloneEslintConfig(config, files.svelte ?? ["**/*.svelte"], severity, "svelte"),
+    standaloneEslintConfig(config, files.astro ?? ["**/*.astro"], severity, "astro"),
+  ]
+}
+
+plugin.configs = {
+  recommended(config, options) {
+    return [createNagiEslintConfig(config, options)]
+  },
 }
 
 export { rules }

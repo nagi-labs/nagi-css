@@ -1,6 +1,5 @@
 import path from "node:path"
 
-import { parse } from "@vue/compiler-sfc"
 import postcss from "postcss"
 import selectorParser from "postcss-selector-parser"
 
@@ -12,6 +11,7 @@ import {
   mappingBase,
   matchesClassPrefix,
 } from "./index.mjs"
+import { parseTemplateDocument } from "./template-adapters.mjs"
 
 const STATE_PREFIX_RE = /^(?:is-|has-)/
 const ELEMENT = 1
@@ -220,6 +220,7 @@ function isReadableClassExpression(node) {
 }
 
 function extractClassInfo(node) {
+  if (node.nagiClassInfo) return node.nagiClassInfo
   const info = {
     dynamic: false,
     dynamicTokens: [],
@@ -275,6 +276,7 @@ function collectStyledClasses(styles) {
 
 function buildClassFix(node, info, requiredClass) {
   if (info.staticProp) return rewriteClassFix(info, [...info.staticTokens, requiredClass])
+  if (node.nagiHasClassAttribute) return undefined
   const offset = node.loc.start.offset + 1 + node.tag.length
   return { range: [offset, offset], text: ` class="${requiredClass}"` }
 }
@@ -338,14 +340,14 @@ function checkState(token, node, sets, violations) {
   return true
 }
 
-export function analyzeVueTemplate(source, filename, inputConfig = {}) {
+export function analyzeTemplate(source, filename, inputConfig = {}) {
   const config = defineNagiConfig(inputConfig)
   const sets = buildNagiSets(config)
   const violations = []
   const surfaceRoots = new Set()
   const roleNames = new Set()
   const topLayerSurfaces = new Set()
-  const { descriptor } = parse(source, { filename })
+  const { descriptor, framework } = parseTemplateDocument(source, filename)
   const styleBlocks = unreadableStyleBlocks(descriptor.styles)
   // Stylelint never runs on a file whose style blocks all failed to parse, so this
   // has to be reported from the template side or it would pass as conforming.
@@ -389,6 +391,7 @@ export function analyzeVueTemplate(source, filename, inputConfig = {}) {
     config.surfaceRootPrefixes.map((prefix) => `${prefix}${kebabCase(tag)}`)
   const isOwnedComponent = (node) =>
     node.tagType === COMPONENT &&
+    !node.nagiOpaqueComponent &&
     !Object.hasOwn(config.componentClasses, node.tag) &&
     !isTransparentWrapper(node)
   const childSurfaceRoots = new Set()
@@ -468,7 +471,7 @@ export function analyzeVueTemplate(source, filename, inputConfig = {}) {
           violations,
           node,
           "surface-root-name",
-          `Surface root must be named ${expected} from the configured prefix and Vue file name.`,
+          `Surface root must be named ${expected} from the configured prefix and ${framework} file name.`,
           fix,
         )
       }
@@ -690,7 +693,7 @@ export function analyzeVueTemplate(source, filename, inputConfig = {}) {
         ...new Set([...info.staticTokens.filter((token) => !isVariant(token)), ...derivedRoots]),
       ],
       dynamic: info.dynamic,
-      opaque: node.tagType === COMPONENT || node.tag === "slot",
+      opaque: node.tagType === COMPONENT || node.tag === "slot" || node.nagiOpaqueComponent,
       tag: node.tag,
     }
     siblings.push(record)
@@ -733,7 +736,15 @@ export function analyzeVueTemplate(source, filename, inputConfig = {}) {
           : nearestStnIndex
       const visitChildren = (children, childDepth) => {
         for (const child of children ?? []) {
-          if (isTransparentWrapper(child)) visitChildren(child.children, childDepth)
+          if (child?.nagiOpaque) {
+            record.children.push({
+              children: [],
+              classes: [],
+              dynamic: true,
+              opaque: true,
+              tag: "",
+            })
+          } else if (isTransparentWrapper(child)) visitChildren(child.children, childDepth)
           else visit(child, childDepth, childNearest, context, record.children)
         }
       }
@@ -767,10 +778,15 @@ export function analyzeVueTemplate(source, filename, inputConfig = {}) {
     expectedRoots,
     roleNames,
     styleBlocks,
+    styles: descriptor.styles,
     surfaceRoots,
     topLayerSurfaces,
     tree,
     violations,
     sourceFile: path.resolve(filename),
   }
+}
+
+export function analyzeVueTemplate(source, filename, inputConfig = {}) {
+  return analyzeTemplate(source, filename, inputConfig)
 }

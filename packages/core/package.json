@@ -1,7 +1,7 @@
 {
   "name": "@nagi-labs/nagi-css-core",
   "version": "0.1.0",
-  "description": "Shared configuration, vocabulary tables, and template analysis for the Nagi CSS contract.",
+  "description": "Shared configuration, vocabulary tables, and component template/style analysis for Nagi CSS.",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -13,6 +13,9 @@
     "css",
     "css-architecture",
     "semantic-css",
+    "astro",
+    "svelte",
+    "vue",
     "nagi"
   ],
   "type": "module",
@@ -27,9 +30,14 @@
     "node": ">=22.18.0"
   },
   "dependencies": {
+    "@typescript-eslint/parser": "^8.63.0",
     "@vue/compiler-sfc": "^3.5.0",
+    "astro-eslint-parser": "^1.4.0",
     "postcss": "^8.5.0",
     "postcss-selector-parser": "^7.1.0",
-    "postcss-value-parser": "^4.2.0"
+    "postcss-value-parser": "^4.2.0",
+    "svelte": "^5.56.8",
+    "svelte-eslint-parser": "^1.8.0",
+    "typescript": "^5.9.3"
   }
 }

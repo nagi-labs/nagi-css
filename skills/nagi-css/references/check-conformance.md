@@ -2,7 +2,7 @@
 
 Use this checklist when reviewing markup/CSS against the Nagi CSS contract.
 
-Run `nagi-css check` with the project's external configuration first — the
+Run the project's normal ESLint command first — the
 linter decides the mechanical rules. This checklist covers review framing and
 the judgments the linter cannot make.
 

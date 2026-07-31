@@ -10,7 +10,7 @@
   does not exist (`selector-mirrors-template`) is reported.
 - Use classes for owned styling targets; do not target bare owned elements.
 - Keep runtime state in native, ARIA, or `data-*` attributes.
-- Derive a surface name exactly from its configured namespace prefix and Vue component or routed page file.
+- Derive a surface name exactly from its configured namespace prefix and component or routed page file.
 - Use only configured anatomy, element, component, STN, slot, or matching role names below a surface.
 - Keep `-variant` classes alphabetical.
 - Keep `-variant` stems outside the **base-identity** vocabulary (element, component, anatomy, STN, slot, banned, and rendered element names). Variants modify an anchor; they never name what an element is. If a variant wants one of those (`-title`, `-header`, `-footer`), use the matching element/class or attribute instead.
@@ -20,7 +20,7 @@
 ## UI Libraries
 
 - Treat configured UI component roots as opaque boundaries.
-- List only third-party/UI-library components in `componentClasses`; owned Vue components derive their own surfaces from `surfaceRootPrefixes` and filenames.
+- List only third-party/UI-library components in `componentClasses`; owned components derive their own surfaces from `surfaceRootPrefixes` and filenames.
 - **Pass no class to an owned child component.** Its root already carries the surface
   root derived from its own file, so style it by that name: `<UserAvatar />` in the
   markup, `> .app-user-avatar` in the CSS. A base class on the tag is
@@ -62,7 +62,7 @@ array keys are linted like static class tokens.
 ## Fixed Classes
 
 With `when-styled`, a mapped element requires its fixed static class when any
-class on that node is referenced by an SFC selector; a mapped component requires
+class on that node is referenced by a component-file selector; a mapped component requires
 its class when that configured name is referenced. With `always`, every mapped
 node requires it. Dynamic bindings cannot satisfy this requirement. Nagi CSS
 autofixes the class only when the node has no competing owned base class.

@@ -8,12 +8,12 @@ Nagi CSS is a semantic contract and lint toolchain for styling owned markup in
 component-based applications. Class names are *derived* — from the configured
 surface namespace and file name,
 from element and component tables, from a structural ladder — rather than
-chosen, and ESLint and Stylelint verify every derivation: template classes,
-cross-block contracts, selector structure, ownership edges, and UI-library
-boundaries. The CLI accepts configuration from outside the application being
-checked, so a target repository needs no lint setup of its own. The toolchain
-targets Vue single-file components first; the contract itself is
-framework-agnostic.
+chosen, and one ESLint plugin verifies every derivation: template classes,
+cross-block contracts, selector structure, ownership edges, values, and
+UI-library boundaries. It extends each framework's official flat config instead
+of replacing its parser. The toolchain supports Vue single-file components,
+Svelte components, and Astro components through one framework-independent
+semantic analysis.
 
 *Nagi (凪, "NAH-ghee") is Japanese for the calm when the wind dies down — the
 state a codebase reaches when naming entropy stops. (Yes, the linter is a bit
@@ -65,7 +65,7 @@ state in attributes:
 .app-user-card {
   > .icon {}
   > .value {
-    color: red;
+    color: var(--color-text);
   }
 }
 </style>
@@ -113,7 +113,7 @@ owned `>` nesting at a declared slot sub-surface.
 
 ## Checks
 
-ESLint enforces:
+ESLint enforces the complete component contract:
 
 - exact configured-prefix + file-derived surface root names;
 - static anchors for dynamic classes;
@@ -128,12 +128,9 @@ ESLint enforces:
   passed to the tag;
 - the STN floor, consecutive-tier, and reach-`g` rules;
 - component slot configuration;
-- style blocks the toolchain cannot read, rather than skipping them; and
+- style blocks the toolchain cannot read, rather than skipping them;
 - autofixes for every rule whose correct output the contract computes: missing
-  fixed classes, the file-derived surface root name, STN tiers, and variant order.
-
-Stylelint enforces:
-
+  fixed classes, the file-derived surface root name, STN tiers, and variant order;
 - surface-only top-level selectors;
 - class selectors instead of bare owned elements;
 - `>` for owned DOM edges;
@@ -155,36 +152,43 @@ Stylelint enforces:
 - token references that resolve, and that read the semantic layer rather than
   primitives, where the project declares its token sources.
 
+The optional Stylelint compatibility package exposes the selector and value
+subset for existing setups, but it is not required for normal Nagi CSS use.
+
 ## Usage
 
-Run Nagi CSS from this repository without adding lint configuration to the
-target repository:
+Framework-specific setup:
 
-```sh
-node packages/cli/src/cli.mjs check \
-  --config /absolute/path/to/nagi.config.mjs \
-  --cwd /absolute/path/to/application
-```
+- [Vue](docs/getting-started/vue.md)
+- [Nuxt](docs/getting-started/nuxt.md)
+- [Svelte](docs/getting-started/svelte.md)
+- [Astro](docs/getting-started/astro.md)
 
-A minimal configuration:
+The [framework setup index](docs/getting-started/index.md) contains the shared
+installation, adoption, and verification steps.
+
+Add Nagi CSS after the framework's official flat config:
 
 ```js
-export default {
-  eslintFiles: ["src/**/*.vue"],
-  stylelintFiles: ["src/**/*.vue"],
-  semantic: { surfaceRootPrefixes: ["app-"] },
-}
+import nagiCss from "@nagi-labs/eslint-plugin-nagi-css"
+
+export default [
+  // The framework's official config comes first.
+  ...nagiCss.configs.recommended({
+    surfaceRootPrefixes: ["app-"],
+  }),
+]
 ```
 
-`semantic.surfaceRootPrefixes` is required and must contain at least one
-lowercase kebab prefix ending in `-`. The `semantic` object also configures
+`surfaceRootPrefixes` is required and must contain at least one lowercase kebab
+prefix ending in `-`. The same object also configures
 component classes, slot surfaces, library boundary prefixes, emit policy, and vocabulary — see
 [skills/nagi-css/references/configuration.md](skills/nagi-css/references/configuration.md).
 For opaque UI components, `componentClasses: ["DataTable"]` derives
 `pv-data-table`; explicit mappings remain available for exceptions. Do not list
-application-owned Vue components in that table.
+application-owned components in that table.
 
-`--fix` writes the answer for every rule the contract computes: a missing fixed
+`eslint --fix` writes the answer for every rule the contract computes: a missing fixed
 class, the surface root name derived from the file, an STN tier that follows from
 its chain, and variant order. Anatomy choices, state migration, ownership edges,
 and anything else needing a decision are reported and left alone.
@@ -194,16 +198,18 @@ the fallback, so an existing codebase can adopt the contract without turning the
 first run into thousands of failures:
 
 ```js
-export default {
-  eslintFiles: ["src/**/*.vue"],
-  stylelintFiles: ["src/**/*.vue"],
-  severity: {
-    "*": "warn",              // report everything, fail on nothing yet
-    "surface-root-name": "error",  // except the names to fix first
-    "variant-order": "off",   // a rule the project has decided against
+...nagiCss.configs.recommended(
+  {
+    surfaceRootPrefixes: ["app-"],
   },
-  semantic: { surfaceRootPrefixes: ["app-"] },
-}
+  {
+    severity: {
+      "*": "warn",                  // report everything, fail on nothing yet
+      "surface-root-name": "error", // except the names to fix first
+      "variant-order": "off",       // a rule the project has decided against
+    },
+  },
+)
 ```
 
 Warnings are reported but do not fail the run; `off` removes the rule. An
@@ -236,7 +242,7 @@ Nagi CSS ships no design tokens — which values exist is the design system's ca
 Point it at the files that declare them and it checks the rest of the boundary:
 
 ```js
-semantic: {
+...nagiCss.configs.recommended({
   surfaceRootPrefixes: ["app-"],
   tokens: {
     sources: [
@@ -245,10 +251,12 @@ semantic: {
     ],
     exposedPrefixes: ["--pv-datepicker-"],
   },
-}
+})
 ```
 
-Paths are resolved against `--cwd`. Sources are read as data, never linted. A
+Paths are resolved against the ESLint process's project directory. The optional
+standalone CLI resolves them against `--cwd`. Sources are read as data, never
+linted. A
 referenced custom property that no source declares is `unknown-token`, an error
 because CSS swallows the typo silently; a primitive referenced from a surface is
 `token-layer`. These two stay inactive until `sources` names a file, since without
@@ -260,8 +268,10 @@ states a raw color, `var(--pv-datepicker-fg, #333)` documents an exposed default
 
 ## Scope
 
-The toolchain checks **Vue single-file components**: the template together with
-the component's own `<style>` blocks, written in **plain CSS**.
+The toolchain checks **Vue, Svelte, and Astro component files**: the template
+together with the component's own `<style>` blocks, written in **plain CSS**.
+Vue `:class`, Svelte class directives, and Astro `class:list` feed the same
+dynamic-class rules.
 
 Two things are deliberately out of scope:
 
@@ -281,7 +291,7 @@ checks means the styles were actually read.
 ## Agent skill
 
 `skills/nagi-css` packages the contract as an agent workflow: what to derive,
-in what order, and how to verify the result with the CLI. An agent applies
+in what order, and how to verify the result with ESLint. An agent applies
 the skill; the linter proves the output conforms. This closed loop — generate
 against a deterministic contract, then machine-check it — is the intended way
 to keep AI-written CSS consistent at scale.
@@ -289,15 +299,15 @@ to keep AI-written CSS consistent at scale.
 ## Repository layout
 
 - `packages/core` - shared configuration and validation
-- `packages/eslint-plugin` - template and cross-block rules
-- `packages/stylelint-plugin` - selector and stylesheet rules
-- `packages/cli` - external-config runner for ESLint and Stylelint
+- `packages/eslint-plugin` - the standard template and component-style integration
+- `packages/stylelint-plugin` - optional compatibility for selector and value rules
+- `packages/cli` - optional external-config ESLint runner
 - `skills/nagi-css` - agent workflow for applying the contract
 
 Local target profiles and runner scripts belong under `.sandbox/`. That
 directory is ignored and must not contain code intended for publication.
 
-Run the package tests with `pnpm test`.
+Run the package tests with `vp run test`.
 
 ## License
 

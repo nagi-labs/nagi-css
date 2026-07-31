@@ -39,7 +39,7 @@ Naming and structure inside owned DOM must be reproducible by rule, not by taste
 ## Core contract at a glance
 
 1. Give every styled surface a static identity class derived exactly from its
-   configured namespace prefix and Vue file.
+   configured namespace prefix and component file.
 2. Give each styled element exactly one base identity from the first matching
    naming-table step; express additional ARIA semantics with attributes.
 3. Keep non-surface class names in the configured element, component, anatomy,
@@ -67,7 +67,14 @@ This contract is delivered as three layers with distinct audiences:
 
 - **CONTRACT.md (this document)** — the canonical source: concepts *and* method, with rationale. Long by design; read once to understand *why*. [FAQ.md](FAQ.md) answers common objections.
 - **Skill (`skills/nagi-css`)** — the short mechanical procedure and the lookup tables, loaded during work. It is a faithful projection of this document; when they disagree, this document wins.
-- **Linter (`packages/*`)** — the executable form: an ESLint plugin for template and cross-block rules, a Stylelint plugin for selector rules, and a CLI that runs both from an external configuration. It ships the built-in Element Class Table and enforces the rules; the project config declares the Library Component Class Table and may override any built-in element mapping.
+- **Linter (`packages/*`)** — the executable form: one ESLint plugin checks the
+  template, component-owned style blocks, and their cross-block relationship.
+  It composes with the framework's official flat config without owning its
+  parser. An optional Stylelint compatibility package exposes the selector and
+  value subset, and an optional CLI runs the ESLint integration from an external
+  configuration. The linter ships the built-in Element Class Table; project
+  configuration declares the Library Component Class Table and may override any
+  built-in element mapping.
 
 ---
 
@@ -282,11 +289,12 @@ Each styling surface must have one class that identifies the surface.
 **The surface root name is derived from configuration and the file, not chosen
 (deterministic):**
 
-- a **component** (`…/components/Foo.vue`) → the file basename in kebab-case (`invoice-payment-section.vue` → `.invoice-payment-section`).
-- a **page** (`…/pages/…`) → `<name>-page`, where `<name>` is the file basename, or — when the basename is `index` or a dynamic `[param]` — the nearest meaningful ancestor directory (`procedure/error.vue` → `.error-page`, `procedure/[key]/index.vue` → `.procedure-page`).
+- a **component** (`…/components/Foo.{vue,svelte,astro}`) → the file basename in kebab-case (`invoice-payment-section.svelte` → `.invoice-payment-section`).
+- a **page** (`…/pages/…`) → `<name>-page`, where `<name>` is the file basename, or — when the basename is `index` or a dynamic `[param]` — the nearest meaningful ancestor directory (`procedure/error.astro` → `.error-page`, `procedure/[key]/index.vue` → `.procedure-page`).
 
 `surfaceRootPrefixes` is required and must contain at least one namespace. With
-`surfaceRootPrefixes: ["n-"]`, `Button.vue` must use `.n-button`: bare `.button`
+`surfaceRootPrefixes: ["n-"]`, `Button.vue`, `Button.svelte`, or `Button.astro`
+must use `.n-button`: bare `.button`
 and unrelated `.n-control` both fail. Multiple prefixes are alternative exact
 derivations, not a general `startsWith` exemption.
 
@@ -581,7 +589,7 @@ There is no blanket exemption for document-only element names. `body` belongs to
 
 ### Library Component Class Table (configured components)
 
-A UI library component root that you place in your own markup takes a fixed class from the project's configured table (declared in the linter config, enforced by the linter). A project table should list only opaque third-party/UI-library components the project actually uses. Application-owned Vue components are not listed: each owns the surface root derived from its configured namespace prefix and filename.
+A UI library component root that you place in your own markup takes a fixed class from the project's configured table (declared in the linter config, enforced by the linter). A project table should list only opaque third-party/UI-library components the project actually uses. Application-owned components are not listed: each owns the surface root derived from its configured namespace prefix and filename.
 
 When a configured library component does not provide an explicit class value, its class is deterministic: the default `pv-` prefix plus the component name in kebab-case (`DataTable` → `pv-data-table`). `componentClassPrefix` changes the prefix, and an explicit `componentClasses` object value overrides the derived name.
 
