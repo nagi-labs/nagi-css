@@ -8,7 +8,7 @@
 <style scoped>
 .test-owned-boundary {
   > .test-user-avatar {
-    margin-inline-end: 0.75rem;
+    margin-inline-end: var(--space-3);
   }
 
   > .test-user-avatar:hover {

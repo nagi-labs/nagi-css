@@ -343,3 +343,21 @@ test("Stylelint requires a token for colors, with no configured source needed", 
     JSON.stringify(result.results[0].warnings),
   )
 })
+
+test("Stylelint requires a token for lengths on scale properties only", async () => {
+  const result = await lintStylelint(path.join(root, "fixtures/tokens/RawLengths.vue"), {
+    ...testSurface,
+  })
+
+  assert.deepEqual(
+    result.results[0].warnings
+      .filter(({ rule }) => rule === "nagi-css/length-token-required")
+      .map(({ line, text }) => [line, text.match(/"([^"]+)"/)[1]]),
+    [
+      [13, "0.5rem"],
+      [14, "1px"],
+      [20, "1.125rem"],
+    ],
+    JSON.stringify(result.results[0].warnings),
+  )
+})

@@ -14,12 +14,12 @@
 <style scoped>
 .test-sibling-list {
   > .item + .item {
-    border-block-start: 1px solid;
+    border-block-start: var(--border-hairline) solid;
   }
 
   > .item {
     > .value ~ .value {
-      margin-inline-start: 0.25rem;
+      margin-inline-start: var(--space-1);
     }
   }
 }

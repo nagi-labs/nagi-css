@@ -157,11 +157,18 @@ and spacing steps exist, and what they are called, depends on the design system 
 and a project already using Open Props, Radix Colors, or its own scale should not
 have to abandon it to get class-name checking.
 
-What it does check is the boundary. Colors are the unconditional part: `#f0a` in a
-surface is an error whatever the token set looks like, because a color is never a
-local decision — it belongs to a palette, it moves with a theme, and the same hex
-in twenty surfaces is twenty places to edit. That check needs no configuration,
-since it asks only that a token is used, not which one.
+What it does check is the boundary, and two parts of that need no configuration at
+all, because they ask only that a token is used rather than which one.
+
+Colors are the strict part: `#f0a` in a surface is an error whatever the token set
+looks like, because a color is never a local decision — it belongs to a palette, it
+moves with a theme, and the same hex in twenty surfaces is twenty places to edit.
+
+Lengths are checked only where a design system actually publishes a scale —
+spacing, radius, border width, type size, elevation. Here a one-off is legitimate,
+so the rule asks for a name instead of a token: `--local-optical-nudge: -1px` keeps
+the value and adds the reason. A surface's own width is not on that list, since no
+design system ships a scale of content widths.
 
 The rest needs the project to point at the files that declare its tokens: that a
 referenced custom property is actually declared somewhere, and that it comes from

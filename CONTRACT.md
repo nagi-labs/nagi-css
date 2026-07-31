@@ -1225,8 +1225,43 @@ delegates the choice to the platform on purpose. Relative color syntax
 (`oklch(from var(--color-accent) l c calc(h + 20))`) derives from a token instead
 of stating a color, and is allowed.
 
-Unlike the two checks below, this one needs no configuration: it does not ask
-which token is correct, only that one is used.
+**Lengths on scale properties MUST come from a token, or be named.** Spacing,
+radius, border width, type size, and elevation are scales a design system
+publishes, so a magnitude written inline is a scale decision made in one surface:
+
+```css
+/* Incorrect */
+.card { padding: 12px; gap: 0.5rem; border: 1px solid var(--color-border) }
+
+/* Correct */
+.card { padding: var(--space-3); gap: var(--space-2); border: var(--border-hairline) solid var(--color-border) }
+```
+
+Here a one-off is legitimate — an optical correction has no place on a scale — so
+there is an escape, and it is a **name**:
+
+```css
+.card {
+  --local-optical-nudge: -1px;
+
+  translate: 0 var(--local-optical-nudge);
+}
+```
+
+The value is unchanged; what changed is that the exception now says why it exists,
+and `--local-` is greppable across the codebase. This is the same move STN makes
+for `wrapper`: not forbidding the case, but requiring it to be named.
+
+What is **not** a scale property: this surface's own size and position
+(`inline-size`, `max-block-size`, `top`, `inset`). One surface being `32rem` wide
+is a layout decision belonging to that surface, and no design system ships a scale
+of content widths. Nor are ratios and relative units (`50%`, `1fr`, `40vh`,
+`line-height: 1.5`), zero, angles, or durations.
+
+Neither color nor length checking asks which token is correct, only that one is
+used, so both work without configuration. They are separate rules
+(`value-token-required`, `length-token-required`) so a project can adopt colors
+first — the recommended order, since colors have no legitimate one-off.
 
 Nagi CSS ships no tokens. Which values exist, and what they are called, is the
 design system's decision — a naming contract that also dictated a palette would
@@ -1317,6 +1352,8 @@ Nagi CSS preserves readable styling surfaces rather than collapsing meaning into
 - STN are fallback names only, and their tiers obey the floor, consecutive-tier, and reach-`g` relations
 - external layout responsibility must remain outside the surface
 - colors MUST come from a token; a raw color has no `--local-*` escape
+- lengths on scale properties (spacing, radius, border width, type size, elevation)
+  MUST come from a token or be declared as a named `--local-*` value
 - where the project declares token sources, every referenced custom property MUST
   be declared by one of them and MUST come from the semantic layer, unless it is
   declared in the same stylesheet or exposed by a library

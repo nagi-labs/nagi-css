@@ -186,47 +186,101 @@ const NAME_VALUED_PROPS = new Set(["font", "font-family"])
 // instead. Parsed rather than pattern-matched: `content: "#fff"`,
 // `url(icon.svg#red)`, and `font-family: Tan` are not colors, and a regex over the
 // raw value cannot tell.
-export function rawColorLiterals(value, { property = "", exposedPrefixes = [] } = {}) {
-  const found = []
-  const named = !NAME_VALUED_PROPS.has(property.toLowerCase())
-
+// Words and functions a declaration value states itself. `url()` contents and
+// quoted strings are skipped, and a fallback is followed only for a token the
+// project does not expose: for an exposed prefix the component may legitimately be
+// unset, so the fallback is that contract's documented default rather than a value
+// this surface chose. `visit` returns false to claim a function whole and stop the
+// walk from descending into its arguments.
+function eachValueNode(value, exposedPrefixes, visit) {
   const walk = (list) => {
     for (const node of list) {
-      if (node.type === "string") continue
       if (node.type === "function") {
         const name = node.value.toLowerCase()
         if (name === "url") continue
         if (name === "var") {
-          // A fallback belongs to whoever owns the token. For a prefix the project
-          // exposes as a public contract, the component may legitimately be unset,
-          // and the fallback is the contract's documented default.
           const [token] = node.nodes
           if (token && matchesClassPrefix(token.value, exposedPrefixes)) continue
           walk(node.nodes.slice(1))
           continue
         }
-        // A color function whose components all come from elsewhere — relative
-        // color syntax, `oklch(from var(--color-accent) l c h)` — decides nothing.
-        if (COLOR_FUNCTIONS.has(name)) {
-          const literal = node.nodes.some(
-            (child) => child.type !== "function" && /\d/.test(child.value),
-          )
-          if (literal) {
-            found.push(parseValue.stringify(node))
-            continue
-          }
-        }
-        walk(node.nodes)
+        if (visit(node) !== false) walk(node.nodes)
         continue
       }
-      if (node.type !== "word") continue
-      const value = node.value.toLowerCase()
-      if (value.startsWith("#") && /^#[\da-f]{3,8}$/.test(value)) found.push(node.value)
-      else if (named && NAMED_COLORS.has(value)) found.push(node.value)
+      if (node.type === "word") visit(node)
     }
   }
-
   walk(parseValue(value).nodes)
+}
+
+export function rawColorLiterals(value, { property = "", exposedPrefixes = [] } = {}) {
+  const found = []
+  const named = !NAME_VALUED_PROPS.has(property.toLowerCase())
+
+  eachValueNode(value, exposedPrefixes, (node) => {
+    if (node.type === "function") {
+      // A color function whose components all come from elsewhere — relative color
+      // syntax, `oklch(from var(--color-accent) l c h)` — decides nothing.
+      if (!COLOR_FUNCTIONS.has(node.value.toLowerCase())) return true
+      const literal = node.nodes.some(
+        (child) => child.type !== "function" && /\d/.test(child.value),
+      )
+      if (!literal) return true
+      found.push(parseValue.stringify(node))
+      return false
+    }
+    const word = node.value.toLowerCase()
+    if (word.startsWith("#") && /^#[\da-f]{3,8}$/.test(word)) found.push(node.value)
+    else if (named && NAMED_COLORS.has(word)) found.push(node.value)
+    return true
+  })
+
+  return found
+}
+
+// Units that state a magnitude the design system owns. Relative units are absent:
+// `%`, `fr`, and the viewport units size a thing against its context rather than
+// asserting how big it should be, and an angle or a duration is not a length.
+const ABSOLUTE_UNITS = new Set([
+  "cap", "ch", "cm", "em", "ex", "ic", "in", "lh", "mm", "pc", "pt", "px", "q", "rem",
+  "rex", "ric", "rlh",
+])
+
+// Properties whose lengths are decisions a design system publishes as a scale:
+// spacing, radius, border width, type size, and elevation. Sizes and positions
+// (`inline-size`, `max-block-size`, `top`) are absent on purpose — one surface
+// being 32rem wide is a layout decision belonging to that surface, not a scale.
+const SCALE_PROPS = new Set([
+  "border", "border-radius", "border-width", "box-shadow", "column-gap", "font-size",
+  "gap", "letter-spacing", "line-height", "margin", "outline-offset", "outline-width",
+  "padding", "row-gap", "text-underline-offset",
+])
+
+const SCALE_PREFIXES = ["border-", "margin-", "padding-"]
+
+export function isScaleProperty(property) {
+  const name = property.toLowerCase()
+  if (SCALE_PROPS.has(name)) return true
+  // `border-inline-start-width` and `border-end-end-radius` qualify; `border-style`
+  // and `border-color` carry no length, so they cost nothing either way.
+  return SCALE_PREFIXES.some((prefix) => name.startsWith(prefix))
+}
+
+// Raw lengths written into a scale property, so the caller can require a token.
+export function rawLengthLiterals(value, { property = "", exposedPrefixes = [] } = {}) {
+  if (!isScaleProperty(property)) return []
+  const found = []
+
+  eachValueNode(value, exposedPrefixes, (node) => {
+    if (node.type === "function") return true
+    const parsed = parseValue.unit(node.value)
+    if (!parsed || !ABSOLUTE_UNITS.has(parsed.unit.toLowerCase())) return true
+    // Zero is the same length in every system, so naming it adds nothing.
+    if (Number.parseFloat(parsed.number) === 0) return true
+    found.push(node.value)
+    return true
+  })
+
   return found
 }
 

@@ -98,6 +98,12 @@ Colors must come from a token, with no configuration and no `--local-*` escape:
 `currentColor`, `transparent`, the system colors (`Canvas`, `GrayText`), and
 relative color syntax over a token are not.
 
+Lengths must come from a token on scale properties — spacing, radius, border width,
+type size, elevation — where a one-off may instead be declared as a named
+`--local-*` value in the same rule. A surface's own size and position
+(`max-inline-size`, `top`), ratios and relative units (`50%`, `1fr`, `40vh`,
+`line-height: 1.5`), zero, angles, and durations are not scale values.
+
 Where the project declares `tokens.sources`, a surface may reference only tokens
 those files declare, and only from the `semantic` layer — a `primitive`
 (`--palette-red-500`) read from a surface is a violation, because a theme change

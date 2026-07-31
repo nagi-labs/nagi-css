@@ -13,6 +13,7 @@ import {
   matchesClassPrefix,
   parseTokenDeclarations,
   rawColorLiterals,
+  rawLengthLiterals,
   resolveSeverity,
   tokenReferences,
   validateNagiConfig,
@@ -49,6 +50,7 @@ const ruleIds = [
   "bare-element-selector",
   "boundary-nesting",
   "dead-rule",
+  "length-token-required",
   "owned-dom-direct-child",
   "owned-surface-reach-in",
   "selector-mirrors-template",
@@ -556,14 +558,23 @@ function analyzeStyles(root, inputConfig, fallbackFile) {
   // `--local-*` escape — a one-off length can be an optical correction, but a
   // one-off color is a decision made in the wrong file.
   function checkValueTokens(decl) {
-    for (const literal of rawColorLiterals(decl.value, {
-      property: decl.prop,
-      exposedPrefixes: config.tokens?.exposedPrefixes,
-    })) {
+    const options = { property: decl.prop, exposedPrefixes: config.tokens?.exposedPrefixes }
+    for (const literal of rawColorLiterals(decl.value, options)) {
       report(
         decl,
         "value-token-required",
         `"${literal}" is a raw color; reference a token instead, so the color is a decision the design system owns.`,
+        literal,
+      )
+    }
+    // The named escape: a `--local-*` declaration is where a genuine one-off
+    // magnitude lives, so the exception carries a reason and can be searched for.
+    if (decl.prop.startsWith(config.tokens.localPrefix)) return
+    for (const literal of rawLengthLiterals(decl.value, options)) {
+      report(
+        decl,
+        "length-token-required",
+        `"${literal}" is a raw length on a scale property; reference a token, or declare it as a named "${config.tokens.localPrefix}*" value if it is genuinely a one-off.`,
         literal,
       )
     }

@@ -109,11 +109,14 @@ Use `libraryBoundaryPrefixes` for opaque component root classes and
 ending in `-` matches by `startsWith`; another prefix matches itself and its
 hyphenated family.
 
-`value-token-required` needs no configuration: a raw color
-(`#f0a`, `rgb(0 0 0 / .1)`, a named color in a gradient) is an error anywhere in a
-surface, including inside a `--local-*` declaration and a `var()` fallback. Colors
-have no local escape. Turn it off with `severity` if a codebase is not ready for
-it, rather than expecting it to be inactive by default.
+`value-token-required` and `length-token-required` need no configuration. A raw
+color (`#f0a`, `rgb(0 0 0 / .1)`, a named color in a gradient) is an error anywhere
+in a surface, including inside a `--local-*` declaration and a `var()` fallback:
+colors have no local escape. A raw length is an error on scale properties only —
+spacing, radius, border width, type size, elevation — and there the escape is a
+named `--local-*` declaration, which `localPrefix` renames. Turn either off with
+`severity` if a codebase is not ready for it, rather than expecting it to be
+inactive by default; colors first is the easier order.
 
 `tokens` declares where design tokens come from. Nagi CSS ships none: which
 values exist is the design system's decision, so the remaining two checks only ask

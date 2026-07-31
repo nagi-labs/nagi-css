@@ -9,6 +9,7 @@ import {
   matchSelectorChain,
   parseTokenDeclarations,
   rawColorLiterals,
+  rawLengthLiterals,
   resolveSeverity,
   tokenReferences,
   validateNagiConfig,
@@ -964,4 +965,31 @@ test("tells a raw color from a token, a keyword, and an author-chosen name", () 
   assert.deepEqual(raw("url(icon.svg#red)", "background"), [])
   assert.deepEqual(raw("Tan, serif", "font-family"), [])
   assert.deepEqual(raw("13px 0", "padding"), [])
+})
+
+test("requires a token for a length only where the design system owns a scale", () => {
+  const raw = (property, value) =>
+    rawLengthLiterals(value, { property, exposedPrefixes: ["--pv-"] })
+
+  assert.deepEqual(raw("padding", "13px"), ["13px"])
+  assert.deepEqual(raw("gap", "0.5rem"), ["0.5rem"])
+  assert.deepEqual(raw("border", "1px solid var(--color-border)"), ["1px"])
+  assert.deepEqual(raw("padding", "calc(100% - 12px)"), ["12px"])
+  assert.deepEqual(raw("padding", "var(--space-3, 12px)"), ["12px"])
+
+  // a scale the design system does not own: this surface's own size and position
+  assert.deepEqual(raw("max-inline-size", "32rem"), [])
+  assert.deepEqual(raw("top", "12px"), [])
+
+  // not a magnitude the system publishes: zero, a ratio, a relative unit, a token
+  assert.deepEqual(raw("padding", "0"), [])
+  assert.deepEqual(raw("line-height", "1.5"), [])
+  assert.deepEqual(raw("border-radius", "50%"), [])
+  assert.deepEqual(raw("padding", "var(--space-3) 0"), [])
+  assert.deepEqual(raw("margin-inline", "calc(var(--space-3) * -1)"), [])
+  assert.deepEqual(raw("border-width", "var(--pv-thing-width, 2px)"), [])
+
+  // neither an angle nor a duration is a length
+  assert.deepEqual(raw("rotate", "45deg"), [])
+  assert.deepEqual(raw("transition", "0.2s ease"), [])
 })

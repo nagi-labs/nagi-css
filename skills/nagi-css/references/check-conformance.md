@@ -69,6 +69,10 @@ the judgments the linter cannot make.
   - Colors come from a token. A raw color is a finding wherever it appears — in a
     fallback, a gradient, or a `--local-*` declaration — since colors have no local
     escape. `currentColor`, `transparent`, and system colors are not colors here.
+  - Lengths on scale properties (spacing, radius, border width, type size,
+    elevation) come from a token, or from a named `--local-*` declaration when the
+    value is genuinely a one-off. A surface's own size or position is not a scale
+    value, and neither is a ratio, a relative unit, zero, an angle, or a duration.
   - Where the project declares `tokens.sources`, every referenced custom property
     resolves to a declared token and comes from the semantic layer. A primitive
     (`--palette-red-500`) read from a surface is a finding; a `--local-*` one-off

@@ -149,7 +149,9 @@ Stylelint enforces:
 - no external layout (`position`, inset, `margin`) on a surface's own rule,
   with a top-layer and anchor-positioning exception;
 - explicit detached configuration for top-level teleported surfaces;
-- colors written as a token reference rather than a raw value; and
+- colors written as a token reference rather than a raw value;
+- lengths on scale properties (spacing, radius, border width, type size,
+  elevation) written as a token or as a named `--local-*` one-off; and
 - token references that resolve, and that read the semantic layer rather than
   primitives, where the project declares its token sources.
 
@@ -218,8 +220,17 @@ the code is probably fine but no rule can see the classes it applies. Setting
 Colors must come from a token: `color: #f0a` and `border: 1px solid rgb(0 0 0 / .1)`
 are `value-token-required` errors, with no `--local-*` escape, because a color is
 never a local decision. `currentColor`, `transparent`, and the system colors are
-not colors in that sense and pass. This needs no configuration — it asks only that
-a token is used, not which one.
+not colors in that sense and pass.
+
+Lengths on the properties a design system publishes as a scale — spacing, radius,
+border width, type size, elevation — are `length-token-required`. A genuine one-off
+is allowed but must be named, `--local-optical-nudge: -1px`, so the exception says
+why it exists and can be grepped. A surface's own size and position
+(`max-inline-size: 32rem`, `top: 12px`), ratios, relative units, zero, angles, and
+durations are not scale values and pass.
+
+Neither check needs configuration — both ask only that a token is used, not which
+one. They are separate rules so colors can be adopted first.
 
 Nagi CSS ships no design tokens — which values exist is the design system's call.
 Point it at the files that declare them and it checks the rest of the boundary:
