@@ -4,6 +4,10 @@
 component-owned CSS. Class names are derived from markup and project
 configuration, so humans and AI agents converge on the same answer.
 
+[Website](https://nagi-labs.github.io/nagi-css/) ·
+[Documentation](docs/getting-started/index.md) ·
+[Contract](CONTRACT.md)
+
 It keeps styling in plain CSS: no runtime, build step, utility classes, or new
 syntax. One ESLint plugin checks the component template and its `<style>` blocks
 together across Vue, Nuxt, Svelte, and Astro.

@@ -8,7 +8,7 @@
     "url": "git+https://github.com/nagi-labs/nagi-css.git",
     "directory": "packages/cli"
   },
-  "homepage": "https://github.com/nagi-labs/nagi-css#readme",
+  "homepage": "https://nagi-labs.github.io/nagi-css/",
   "keywords": [
     "css",
     "css-architecture",
