@@ -5,15 +5,21 @@ has exactly one correct answer, so humans and AI agents converge on the same
 output.**
 
 Nagi CSS is a semantic contract and lint toolchain for styling owned markup in
-component-based applications. Class names are *derived* — from the configured
+component-based applications. Styling stays in CSS: no runtime, no build step,
+no new syntax. Class names are *derived* — from the configured
 surface namespace and file name,
 from element and component tables, from a structural ladder — rather than
 chosen, and one ESLint plugin verifies every derivation: template classes,
 cross-block contracts, selector structure, ownership edges, values, and
-UI-library boundaries. It extends each framework's official flat config instead
-of replacing its parser. The toolchain supports Vue single-file components,
-Svelte components, and Astro components through one framework-independent
-semantic analysis.
+UI-library boundaries.
+
+It extends each framework's official flat config instead of replacing its
+parser, and supports Vue single-file components, Svelte components, and Astro
+components through one framework-independent semantic analysis. Those are the
+frameworks that kept a component-scoped style block — the ones where CSS is
+still CSS. The list is a consequence of the contract rather than a roadmap: the
+unit it checks is a template together with its own stylesheet, which exists only
+where styling was not moved into JavaScript.
 
 *Nagi (凪, "NAH-ghee") is Japanese for the calm when the wind dies down — the
 state a codebase reaches when naming entropy stops. (Yes, the linter is a bit

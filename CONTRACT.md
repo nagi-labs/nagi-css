@@ -19,10 +19,11 @@ same output.
 
 It is **not** a universal rule for the entire rendered tree. Instead, it defines strict rules for styling **owned DOM inside a styling surface**, and lighter contract-based rules for everything outside that boundary.
 
-The contract is built on six principles. The last one, Deterministic, is the
-load-bearing wall: the first five describe qualities many conventions aspire
-to, and determinism is what turns them from aspirations into checkable
-claims.
+The contract is built on six principles. Two of them carry the weight:
+**Standard-first** decides what the contract is made of — plain CSS and the
+platform's own model, not a parallel system in JavaScript — and **Deterministic**
+is what turns the rest from qualities many conventions aspire to into claims a
+machine can check.
 
 ### Semantic
 
@@ -42,7 +43,19 @@ Runtime state should be expressed through native states, ARIA attributes, and `d
 
 ### Standard-first
 
-The contract should work with standard HTML and CSS, while remaining compatible with modern features such as CSS nesting, container queries, CSS custom properties, Shadow DOM, and framework components.
+Styling is expressed in CSS, not in JavaScript. The contract adds no runtime, no
+build step, and no new syntax. What it constrains is plain CSS with native
+nesting, custom properties, and container queries, and it uses the platform's own
+model for state — native states, ARIA, and `data-*` — rather than a parallel one
+built out of class names. It reaches for the newest parts of the platform
+(container queries, the top layer, anchor positioning, Shadow DOM and `::part()`)
+instead of working around them.
+
+This is not a preference for older tooling. Semantic CSS has always been
+maintainable in principle and unenforceable in practice, and what was missing was
+never a new language — it was a definition of *correct* that a machine could
+check. Supplying that definition is what lets the platform's own model stay in
+place instead of being replaced.
 
 ### Deterministic
 
