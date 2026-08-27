@@ -22,7 +22,6 @@
   --font-display: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-code: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
-  --font-kanji: "Shippori Mincho", serif;
 
   --page: 64rem;
   --measure: 46rem;
@@ -77,22 +76,6 @@ body {
     gap: calc(var(--space) * 1.25);
     padding-block: calc(var(--space) * 2);
 
-    > .media {
-      &.-glyph {
-        position: absolute;
-        inset-block-start: 50%;
-        inset-inline-end: 0;
-        translate: 0 -50%;
-        font-family: var(--font-kanji);
-        font-size: 13rem;
-        line-height: 1;
-        color: var(--color-accent);
-        opacity: 0.14;
-        user-select: none;
-        pointer-events: none;
-      }
-    }
-
     > .title {
       margin: 0;
       font-family: var(--font-display);
@@ -135,6 +118,7 @@ body {
         padding: 0;
         list-style: none;
         display: flex;
+        flex-wrap: wrap;
         gap: calc(var(--space) * 1.75);
 
         > .item {
@@ -174,6 +158,11 @@ body {
         background: var(--color-well);
         padding: 0.1em 0.4em;
         border-radius: 0.3em;
+      }
+
+      > .link {
+        color: var(--color-accent);
+        text-underline-offset: 0.2em;
       }
     }
 
@@ -409,15 +398,6 @@ body {
 
 @media (max-width: 56rem) {
   .home-page {
-    > .header {
-      > .media {
-        &.-glyph {
-          font-size: 7rem;
-          opacity: 0.1;
-        }
-      }
-    }
-
     > .section {
       &.-naming {
         > .unit {

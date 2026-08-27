@@ -5,18 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nagi CSS — CSS, after the wind</title>
 <meta name="description" content="Nagi CSS is a lint-enforced semantic CSS contract. Every class name has exactly one correct answer — CSS, after the wind.">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>凪</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=JetBrains+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho&text=凪&display=swap">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <main class="home-page">
 
   <header class="header">
-    <div class="media -glyph" aria-hidden="true">凪</div>
     <h1 class="title">Nagi CSS</h1>
     <p class="text -tagline">CSS, after the wind.</p>
     <p class="text -lead">
@@ -24,12 +21,13 @@
       correct answer.
     </p>
     <p class="text -meaning">
-      <em>Nagi</em> (凪, “NAH-ghee”) is Japanese for the calm when the wind dies
+      <em>Nagi</em> (“NAH-ghee”) is Japanese for the calm when the wind dies
       down — the state a codebase reaches when naming entropy stops.
       <small class="note">(Yes, the linter is a bit naggy. That’s the point.)</small>
     </p>
     <nav class="nav">
       <ul class="list">
+        <li class="item"><a class="link" href="#usage">Get started</a></li>
         <li class="item"><a class="link" href="https://github.com/nagi-labs/nagi-css">GitHub</a></li>
         <li class="item"><a class="link" href="https://github.com/nagi-labs/nagi-css/blob/main/CONTRACT.md">Contract</a></li>
         <li class="item"><a class="link" href="https://github.com/nagi-labs/nagi-css/blob/main/FAQ.md">FAQ</a></li>
@@ -160,12 +158,13 @@
     </ul>
   </section>
 
-  <section class="section -usage">
+  <section class="section -usage" id="usage">
     <h2 class="title">Usage</h2>
     <p class="text">
-      Add Nagi CSS after the framework's official ESLint flat config. The
-      framework keeps ownership of its parser and generated settings.
+      Install the ESLint plugin, then add it after the framework's official flat
+      config. The framework keeps ownership of its parser and generated settings.
     </p>
+    <pre class="pre"><code>vp add -D @nagi-labs/eslint-plugin-nagi-css</code></pre>
     <pre class="pre"><code>import nagiCss from "@nagi-labs/eslint-plugin-nagi-css"
 
 export default [
@@ -178,6 +177,13 @@ export default [
       One ESLint run validates templates, selectors, CSS nesting, ownership, and
       values. Stylelint and <code class="code">nagi.config.mjs</code> are not
       required for normal Vue, Nuxt, Svelte, or Astro setup.
+    </p>
+    <p class="text">
+      Choose a guide for
+      <a class="link" href="https://github.com/nagi-labs/nagi-css/blob/main/docs/getting-started/vue.md">Vue</a>,
+      <a class="link" href="https://github.com/nagi-labs/nagi-css/blob/main/docs/getting-started/nuxt.md">Nuxt</a>,
+      <a class="link" href="https://github.com/nagi-labs/nagi-css/blob/main/docs/getting-started/svelte.md">Svelte</a>, or
+      <a class="link" href="https://github.com/nagi-labs/nagi-css/blob/main/docs/getting-started/astro.md">Astro</a>.
     </p>
   </section>
 
@@ -194,7 +200,7 @@ export default [
 
   <footer class="footer">
     <p class="text">
-      MIT licensed.
+      MIT licensed, by nagi-labs contributors.
       <a class="link" href="https://github.com/nagi-labs/nagi-css">Source on GitHub</a>.
     </p>
     <p class="text -colophon">
