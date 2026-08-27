@@ -54,6 +54,44 @@ Tailwind's genuine intrinsic win is local appearance comprehension — "how
 does this look" answered inline. If that is what you optimize for, Tailwind
 is a fine choice. Nagi CSS bets on the other axis.
 
+## Why not zero-runtime CSS-in-JS (StyleX, Panda, vanilla-extract)?
+
+These compile styles from JavaScript objects to static CSS, and they buy real
+things: deterministic composition (later wins, decided by the compiler rather
+than by source order), typed tokens, and atomic output. The case made for them
+lately is that AI agents accumulate conflicting and duplicated classes, and a
+compiler with types stops that.
+
+That case is right about two of the three symptoms. Agents produce **conflicts**,
+**duplicates**, and **meaningless names** — and a compiler settles the first two
+while having nothing to say about the third. In StyleX the name is a local object
+key, arbitrary by design: `styles.container`, `styles.wrapper2`, and `styles.a`
+all compile. That third symptom is the one this contract exists for, and the two
+approaches are solving different halves rather than competing.
+
+Where they differ in kind:
+
+- **Cost of adoption.** These tools are a migration: components are rewritten,
+  and a published measurement of one such port found roughly twice the
+  style-related lines of code. Nagi CSS changes no code. It is a lint
+  configuration over the CSS already written, and `severity` stages it one rule
+  at a time.
+- **What each constrains.** A compiler makes composition safe but leaves the
+  values open — write `padding: 13px` in an object and nothing objects. This
+  contract constrains the values (colors and scale lengths must come from tokens)
+  and the names, and leaves composition to the cascade, which the structural
+  rules keep flat.
+- **What it does not do.** These tools transform; a linter only checks. Atomic
+  output, build-time dead-code elimination, and call-site type guarantees are
+  outside what Nagi CSS attempts. It is not trying to make the CSS payload
+  smaller — it is trying to keep hand-written CSS maintainable.
+
+The deeper split is Standard-first. These tools move styling into JavaScript to
+gain guarantees the platform does not offer. This contract takes the position
+that the missing piece was never a new language, but a definition of *correct*
+that a machine could check — so the platform's own model stays in place, and the
+guarantees come from the checker.
+
 ## Isn't this just BEM with extra steps?
 
 BEM is a naming *convention*: it tells you how to format a name you already
