@@ -61,7 +61,7 @@ analyzed as a dynamic class and must accompany a static owned anchor.
 vp exec eslint .
 ```
 
-No Stylelint config or `nagi.config.mjs` is required. `<style>` must remain
+A separate Nagi configuration file is not required. `<style>` must remain
 plain CSS; `lang="scss"` and external style sources are reported.
 
 SvelteKit route files such as `+page.svelte` and `+layout.svelte` do not yet

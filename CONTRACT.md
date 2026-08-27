@@ -130,8 +130,7 @@ This contract is delivered as three layers with distinct audiences:
 - **Linter (`packages/*`)** — the executable form: one ESLint plugin checks the
   template, component-owned style blocks, and their cross-block relationship.
   It composes with the framework's official flat config without owning its
-  parser. An optional Stylelint compatibility package exposes the selector and
-  value subset, and an optional CLI runs the ESLint integration from an external
+  parser. An optional CLI runs the ESLint integration from an external
   configuration. The linter ships the built-in Element Class Table; project
   configuration declares the Library Component Class Table and may override any
   built-in element mapping.

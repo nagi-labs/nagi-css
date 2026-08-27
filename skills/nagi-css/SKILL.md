@@ -28,9 +28,7 @@ vp exec eslint .
 Use `--fix` only after reviewing the target scope. It applies unambiguous
 missing fixed-class fixes and leaves semantic choices untouched.
 
-Use the project's existing framework ESLint config. Do not add a second
-Stylelint setup for Nagi CSS; the Stylelint plugin is a compatibility layer for
-projects that already need it.
+Use the project's existing framework ESLint config.
 
 Treat autofix output as limited to missing fixed classes with no competing base
 name. Surface naming, anatomy choices, state migration, and ownership boundaries

@@ -78,8 +78,8 @@ Files below a `pages` directory receive a `-page` identity.
 vp exec eslint .
 ```
 
-Nagi CSS now participates in the same ESLint run as Nuxt. No second Stylelint
-run or `nagi.config.mjs` is required.
+Nagi CSS now participates in the same ESLint run as Nuxt. A separate Nagi
+configuration file is not required.
 
 Keep application-owned component tags aligned with their file names:
 

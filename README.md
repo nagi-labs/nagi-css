@@ -82,7 +82,7 @@ Given the component and configuration, Nagi CSS derives one canonical form:
 ```
 
 Nagi CSS extends the framework's official ESLint config instead of replacing
-its parser, globals, or generated settings. Stylelint and `nagi.config.mjs` are
+its parser, globals, or generated settings. A separate configuration file is
 not required for normal application setup.
 
 ## Documentation
@@ -97,11 +97,10 @@ not required for normal application setup.
 
 - `@nagi-labs/eslint-plugin-nagi-css` — standard template and component-style integration
 - `@nagi-labs/nagi-css-core` — shared configuration and semantic analysis
-- `@nagi-labs/stylelint-plugin-nagi-css` — optional Stylelint compatibility layer
 - `@nagi-labs/nagi-css` — optional standalone runner for external configurations
 
-The ESLint plugin is the normal entry point. The standalone runner and
-Stylelint package support advanced or existing workflows.
+The ESLint plugin is the normal entry point. The standalone runner supports
+external configurations and projects that use another primary linter.
 
 ## Scope
 

@@ -22,13 +22,10 @@
   "devDependencies": {
     "@nagi-labs/eslint-plugin-nagi-css": "workspace:*",
     "@nagi-labs/nagi-css-core": "workspace:*",
-    "@nagi-labs/stylelint-plugin-nagi-css": "workspace:*",
     "@vue/compiler-sfc": "^3.5.0",
     "eslint": "^10.0.0",
     "postcss": "^8.5.0",
-    "postcss-html": "^1.8.0",
     "postcss-selector-parser": "^7.1.0",
-    "stylelint": "^16.0.0",
     "vue-eslint-parser": "^10.0.0"
   }
 }

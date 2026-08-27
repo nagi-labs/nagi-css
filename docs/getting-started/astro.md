@@ -62,7 +62,7 @@ a static `class` attribute and express conditional state with native, ARIA, or
 vp exec eslint "src/**/*.{js,mjs,ts,astro}"
 ```
 
-No Stylelint config or `nagi.config.mjs` is required. Application-owned
+A separate Nagi configuration file is not required. Application-owned
 components derive their own surfaces; reserve `componentClasses` for opaque
 third-party or UI-library components.
 

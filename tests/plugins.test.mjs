@@ -5,13 +5,11 @@ import test from "node:test"
 import { fileURLToPath } from "node:url"
 
 import { ESLint } from "eslint"
-import stylelint from "stylelint"
 
 import nagiCss, {
   createNagiStandaloneEslintConfigs,
 } from "@nagi-labs/eslint-plugin-nagi-css"
 import { typescriptParser } from "@nagi-labs/nagi-css-core"
-import { createNagiStylelintConfig } from "@nagi-labs/stylelint-plugin-nagi-css"
 import vueParser from "vue-eslint-parser"
 
 const root = path.dirname(fileURLToPath(import.meta.url))
@@ -31,7 +29,7 @@ const semantic = {
   libraryInternalPrefixes: ["third-party-"],
 }
 
-async function lintEslint(file, config = {}) {
+async function lintEslint(file, config = {}, code) {
   const eslint = new ESLint({
     cwd: root,
     overrideConfigFile: true,
@@ -40,7 +38,9 @@ async function lintEslint(file, config = {}) {
       ...config,
     }),
   })
-  return (await eslint.lintText(await fs.readFile(file, "utf8"), { filePath: file }))[0]
+  return (await eslint.lintText(code ?? await fs.readFile(file, "utf8"), {
+    filePath: file,
+  }))[0]
 }
 
 async function lintFrameworkEslint(file, config = {}) {
@@ -55,12 +55,18 @@ async function lintFrameworkEslint(file, config = {}) {
   return (await eslint.lintText(await fs.readFile(file, "utf8"), { filePath: file }))[0]
 }
 
-async function lintStylelint(file, config = semantic) {
-  return stylelint.lint({
-    code: await fs.readFile(file, "utf8"),
-    codeFilename: file,
-    config: createNagiStylelintConfig({ ...testSurface, ...config }),
-  })
+async function lintStyles(file, config = semantic, code) {
+  const result = await lintEslint(file, config, code)
+  return {
+    errored: result.errorCount > 0,
+    results: [{
+      warnings: result.messages.map(({ line, message, ruleId }) => ({
+        line,
+        rule: ruleId,
+        text: message,
+      })),
+    }],
+  }
 }
 
 test("ESLint accepts additive dynamic classes and reports template violations", async () => {
@@ -114,11 +120,11 @@ test("recommended config rejects unknown severity keys during config loading", (
   )
 })
 
-test("ESLint and Stylelint share an exact configured surface prefix", async () => {
+test("template and style rules share an exact configured surface prefix", async () => {
   const file = path.join(root, "fixtures/prefixed/Toggle.vue")
   const config = { surfaceRootPrefixes: ["n-"] }
   const eslint = await lintEslint(file, config)
-  const styles = await lintStylelint(file, config)
+  const styles = await lintStyles(file, config)
 
   assert.equal(eslint.errorCount, 0)
   assert.equal(styles.errored, false, JSON.stringify(styles.results[0].warnings))
@@ -143,11 +149,11 @@ test("ESLint autofixes an unambiguous required static class", async () => {
   assert.equal(result.messages.length, 0)
 })
 
-test("ESLint and Stylelint accept Svelte and Astro component templates", async () => {
+test("ESLint accepts Svelte and Astro component templates and styles", async () => {
   for (const name of ["SvelteCard.svelte", "AstroCard.astro"]) {
     const file = path.join(root, "fixtures/framework", name)
     const eslint = await lintFrameworkEslint(file)
-    const styles = await lintStylelint(file, {})
+    const styles = await lintStyles(file, {})
 
     assert.equal(eslint.errorCount, 0, `${name}: ${JSON.stringify(eslint.messages)}`)
     assert.equal(
@@ -158,15 +164,11 @@ test("ESLint and Stylelint accept Svelte and Astro component templates", async (
   }
 })
 
-test("Stylelint mirrors selectors against Svelte and Astro templates", async () => {
+test("ESLint mirrors selectors against Svelte and Astro templates", async () => {
   for (const name of ["SvelteCard.svelte", "AstroCard.astro"]) {
     const file = path.join(root, "fixtures/framework", name)
     const code = (await fs.readFile(file, "utf8")).replace("> .button {}", "> .missing {}")
-    const result = await stylelint.lint({
-      code,
-      codeFilename: file,
-      config: createNagiStylelintConfig(testSurface),
-    })
+    const result = await lintStyles(file, testSurface, code)
     assert.ok(
       result.results[0].warnings.some(({ rule }) => rule === "nagi-css/dead-rule"),
       name,
@@ -308,17 +310,14 @@ test("ESLint does not add a duplicate class attribute beside an opaque binding",
   }
 })
 
-test("Stylelint accepts nested UI boundaries and deep library internals", async () => {
-  const result = await lintStylelint(styleFile)
+test("ESLint accepts nested UI boundaries and deep library internals", async () => {
+  const result = await lintStyles(styleFile)
   assert.equal(result.errored, false, JSON.stringify(result.results[0].warnings))
 })
 
-test("Stylelint treats an automatically derived pv class as a boundary", async () => {
-  const result = await stylelint.lint({
-    code: `<template><section class="test-table-host"><DataTable class="pv-data-table" /></section></template>\n<style scoped>.test-table-host { > .pv-data-table { > .value {} } }</style>`,
-    codeFilename: path.join(root, "fixtures/TableHost.vue"),
-    config: createNagiStylelintConfig({ ...testSurface, componentClasses: ["DataTable"] }),
-  })
+test("ESLint treats an automatically derived pv class as a boundary", async () => {
+  const file = path.join(root, "fixtures/TableHost.vue")
+  const result = await lintStyles(file, { ...testSurface, componentClasses: ["DataTable"] }, `<template><section class="test-table-host"><DataTable class="pv-data-table" /></section></template>\n<style scoped>.test-table-host { > .pv-data-table { > .value {} } }</style>`)
 
   assert.equal(
     result.results[0].warnings.some(({ rule }) => rule === "nagi-css/owned-dom-direct-child"),
@@ -326,18 +325,19 @@ test("Stylelint treats an automatically derived pv class as a boundary", async (
   )
 })
 
-test("Stylelint recognizes body while template analysis enforces its owner", async () => {
-  const result = await stylelint.lint({
-    code: `<template><section class="test-invalid-body"><div class="body" /></section></template>\n<style scoped>.test-invalid-body { > .body { color: inherit; } }</style>`,
-    codeFilename: path.join(root, "fixtures/InvalidBody.vue"),
-    config: createNagiStylelintConfig(testSurface),
-  })
+test("ESLint reserves body for the matching element", async () => {
+  const file = path.join(root, "fixtures/InvalidBody.vue")
+  const result = await lintStyles(file, testSurface, `<template><section class="test-invalid-body"><div class="body" /></section></template>\n<style scoped>.test-invalid-body { > .body { color: inherit; } }</style>`)
 
-  assert.equal(result.errored, false, JSON.stringify(result.results[0].warnings))
+  assert.ok(
+    result.results[0].warnings.some(
+      ({ rule }) => rule === "nagi-css/reserved-element-name",
+    ),
+  )
 })
 
-test("Stylelint accepts table-first identity with ARIA attribute semantics", async () => {
-  const result = await lintStylelint(
+test("ESLint accepts table-first identity with ARIA attribute semantics", async () => {
+  const result = await lintStyles(
     path.join(root, "fixtures/roles/SeparatorList.vue"),
     {},
   )
@@ -345,8 +345,8 @@ test("Stylelint accepts table-first identity with ARIA attribute semantics", asy
   assert.equal(result.errored, false, JSON.stringify(result.results[0].warnings))
 })
 
-test("Stylelint reports every selector contract family", async () => {
-  const result = await lintStylelint(invalidStyleFile)
+test("ESLint reports every selector contract family", async () => {
+  const result = await lintStyles(invalidStyleFile)
   const rules = new Set(result.results[0].warnings.map(({ rule }) => rule))
 
   assert.deepEqual(
@@ -383,7 +383,7 @@ test("ESLint reports every selector and value contract family", async () => {
 })
 
 test("detached slot surfaces may anchor a top-level selector", async () => {
-  const result = await lintStylelint(invalidStyleFile, {
+  const result = await lintStyles(invalidStyleFile, {
     ...semantic,
     detachedSlotSurfaces: ["ui-table-column-body"],
   })
@@ -393,8 +393,8 @@ test("detached slot surfaces may anchor a top-level selector", async () => {
   assert.equal(slotWarnings.length, 0)
 })
 
-test("Stylelint keeps external layout off surfaces except top-layer or anchored ones", async () => {
-  const bad = await lintStylelint(path.join(root, "fixtures/layout/BadCard.vue"), {})
+test("ESLint keeps external layout off surfaces except top-layer or anchored ones", async () => {
+  const bad = await lintStyles(path.join(root, "fixtures/layout/BadCard.vue"), {})
   const layoutWarnings = bad.results[0].warnings.filter(
     ({ rule }) => rule === "nagi-css/surface-external-layout",
   )
@@ -403,20 +403,18 @@ test("Stylelint keeps external layout off surfaces except top-layer or anchored 
     ["margin", "position", "z-index", "top", "margin-inline"],
   )
 
-  const dialog = await lintStylelint(path.join(root, "fixtures/layout/ConfirmModal.vue"), {})
+  const dialog = await lintStyles(path.join(root, "fixtures/layout/ConfirmModal.vue"), {})
   assert.equal(dialog.results[0].warnings.length, 0)
 
-  const anchored = await lintStylelint(path.join(root, "fixtures/layout/HintPopover.vue"), {})
+  const anchored = await lintStyles(path.join(root, "fixtures/layout/HintPopover.vue"), {})
   assert.equal(anchored.results[0].warnings.length, 0)
 })
 
-test("Stylelint rejects selector variants that shadow vocabulary names", async () => {
-  const result = await stylelint.lint({
-    code: `<template><section class="test-shadow-surface"><p class="text -lead">x</p></section></template>
-<style scoped>.test-shadow-surface { > .text.-title {} > .text.-lead {} }</style>`,
-    codeFilename: path.join(root, "fixtures/ShadowSurface.vue"),
-    config: createNagiStylelintConfig(testSurface),
-  })
+test("ESLint rejects selector variants that shadow vocabulary names", async () => {
+  const file = path.join(root, "fixtures/ShadowSurface.vue")
+  const result = await lintStyles(file, testSurface,
+    `<template><section class="test-shadow-surface"><p class="text -lead">x</p></section></template>
+<style scoped>.test-shadow-surface { > .text.-title {} > .text.-lead {} }</style>`)
   const shadowWarnings = result.results[0].warnings.filter(
     ({ rule }) => rule === "nagi-css/variant-shadows-vocabulary",
   )
@@ -457,12 +455,11 @@ test("ESLint rejects multiple base identities", async () => {
   )
 })
 
-test("Stylelint rejects multiple base identities in one compound", async () => {
-  const result = await stylelint.lint({
-    code: `<style scoped>.test-compound-surface { > .item.unit {} }</style>`,
-    codeFilename: path.join(root, "fixtures/CompoundSurface.vue"),
-    config: createNagiStylelintConfig(testSurface),
-  })
+test("ESLint rejects multiple base identities in one compound", async () => {
+  const file = path.join(root, "fixtures/CompoundSurface.vue")
+  const result = await lintStyles(file, testSurface,
+    `<template><section class="test-compound-surface"><li class="item unit" /></section></template>
+<style scoped>.test-compound-surface { > .item.unit {} }</style>`)
 
   assert.ok(
     result.results[0].warnings.some(
@@ -471,12 +468,11 @@ test("Stylelint rejects multiple base identities in one compound", async () => {
   )
 })
 
-test("Stylelint rejects the legacy zone STN name", async () => {
-  const result = await stylelint.lint({
-    code: `<style scoped>.test-legacy-zone-surface { > .zone {} }</style>`,
-    codeFilename: path.join(root, "fixtures/LegacyZoneSurface.vue"),
-    config: createNagiStylelintConfig(testSurface),
-  })
+test("ESLint rejects the legacy zone STN name", async () => {
+  const file = path.join(root, "fixtures/LegacyZoneSurface.vue")
+  const result = await lintStyles(file, testSurface,
+    `<template><section class="test-legacy-zone-surface"><div class="zone" /></section></template>
+<style scoped>.test-legacy-zone-surface { > .zone {} }</style>`)
 
   assert.ok(
     result.results[0].warnings.some(
@@ -485,8 +481,8 @@ test("Stylelint rejects the legacy zone STN name", async () => {
   )
 })
 
-test("Stylelint allows sibling combinators inside owned DOM", async () => {
-  const result = await lintStylelint(path.join(root, "fixtures/style/SiblingList.vue"))
+test("ESLint allows sibling combinators inside owned DOM", async () => {
+  const result = await lintStyles(path.join(root, "fixtures/style/SiblingList.vue"))
 
   assert.equal(result.errored, false, JSON.stringify(result.results[0].warnings))
 })
@@ -504,13 +500,9 @@ test("ESLint reports style blocks the toolchain cannot read", async () => {
     )
   }
 
-  // Stylelint cannot cover this: it never invokes rules on a file whose style
-  // blocks all failed to parse.
-  const styles = await lintStylelint(path.join(root, "fixtures/style/ScssBlock.vue"))
-  assert.equal(styles.results[0].warnings.length, 0)
 })
 
-test("ESLint reports invalid plain CSS without a Stylelint run", async () => {
+test("ESLint reports invalid plain CSS", async () => {
   const eslint = new ESLint({
     cwd: root,
     overrideConfigFile: true,
@@ -530,9 +522,9 @@ test("ESLint reports invalid plain CSS without a Stylelint run", async () => {
   )
 })
 
-test("Stylelint allows styling an owned component root but not its inside", async () => {
-  const allowed = await lintStylelint(path.join(root, "fixtures/style/OwnedBoundary.vue"))
-  const reachIn = await lintStylelint(
+test("ESLint allows styling an owned component root but not its inside", async () => {
+  const allowed = await lintStyles(path.join(root, "fixtures/style/OwnedBoundary.vue"))
+  const reachIn = await lintStyles(
     path.join(root, "fixtures/style/OwnedBoundaryReachIn.vue"),
   )
 
@@ -548,7 +540,7 @@ test("Stylelint allows styling an owned component root but not its inside", asyn
   assert.equal(rules.includes("nagi-css/owned-dom-direct-child"), false)
 })
 
-test("Stylelint checks token references against the configured sources", async () => {
+test("ESLint checks token references against the configured sources", async () => {
   const tokens = {
     exposedPrefixes: ["--date-picker-"],
     sources: [
@@ -556,11 +548,11 @@ test("Stylelint checks token references against the configured sources", async (
       { file: path.join(root, "fixtures/tokens/tokens.css"), layer: "semantic" },
     ],
   }
-  const surface = await lintStylelint(path.join(root, "fixtures/tokens/TokenSurface.vue"), {
+  const surface = await lintStyles(path.join(root, "fixtures/tokens/TokenSurface.vue"), {
     ...testSurface,
     tokens,
   })
-  const violations = await lintStylelint(path.join(root, "fixtures/tokens/TokenViolations.vue"), {
+  const violations = await lintStyles(path.join(root, "fixtures/tokens/TokenViolations.vue"), {
     ...testSurface,
     tokens,
   })
@@ -606,16 +598,16 @@ test("ESLint shares component-local token declarations across style blocks", asy
   assert.equal(result.errorCount, 0, JSON.stringify(result.messages))
 })
 
-test("Stylelint leaves token references alone until a source is configured", async () => {
-  const result = await lintStylelint(path.join(root, "fixtures/tokens/TokenViolations.vue"), {
+test("ESLint leaves token references alone until a source is configured", async () => {
+  const result = await lintStyles(path.join(root, "fixtures/tokens/TokenViolations.vue"), {
     ...testSurface,
   })
 
   assert.equal(result.errored, false, JSON.stringify(result.results[0].warnings))
 })
 
-test("Stylelint requires a token for colors, with no configured source needed", async () => {
-  const result = await lintStylelint(path.join(root, "fixtures/tokens/RawColors.vue"), {
+test("ESLint requires a token for colors, with no configured source needed", async () => {
+  const result = await lintStyles(path.join(root, "fixtures/tokens/RawColors.vue"), {
     ...testSurface,
   })
 
@@ -633,8 +625,8 @@ test("Stylelint requires a token for colors, with no configured source needed", 
   )
 })
 
-test("Stylelint requires a token for lengths on scale properties only", async () => {
-  const result = await lintStylelint(path.join(root, "fixtures/tokens/RawLengths.vue"), {
+test("ESLint requires a token for lengths on scale properties only", async () => {
+  const result = await lintStyles(path.join(root, "fixtures/tokens/RawLengths.vue"), {
     ...testSurface,
   })
 
@@ -651,8 +643,8 @@ test("Stylelint requires a token for lengths on scale properties only", async ()
   )
 })
 
-test("Stylelint returns a surface's stacking order to the parent, or to a token", async () => {
-  const raw = await lintStylelint(path.join(root, "fixtures/layout/RawStacking.vue"), {})
+test("ESLint returns a surface's stacking order to the parent, or to a token", async () => {
+  const raw = await lintStyles(path.join(root, "fixtures/layout/RawStacking.vue"), {})
 
   // A top-layer surface owns its own stacking order, so the value is checked
   // rather than rejected; layering its own children stays a local decision.
@@ -663,9 +655,9 @@ test("Stylelint returns a surface's stacking order to the parent, or to a token"
   )
 })
 
-test("Stylelint derives container names and keeps queries inside the file", async () => {
-  const valid = await lintStylelint(path.join(root, "fixtures/style/ContainerSurface.vue"), {})
-  const invalid = await lintStylelint(
+test("ESLint derives container names and keeps queries inside the file", async () => {
+  const valid = await lintStyles(path.join(root, "fixtures/style/ContainerSurface.vue"), {})
+  const invalid = await lintStyles(
     path.join(root, "fixtures/style/ContainerViolations.vue"),
     {},
   )
@@ -687,8 +679,8 @@ test("Stylelint derives container names and keeps queries inside the file", asyn
   )
 })
 
-test("Stylelint reports unused keyframes and cascade layers inside a surface", async () => {
-  const result = await lintStylelint(path.join(root, "fixtures/style/MotionSurface.vue"), {})
+test("ESLint reports unused keyframes and cascade layers inside a surface", async () => {
+  const result = await lintStyles(path.join(root, "fixtures/style/MotionSurface.vue"), {})
 
   assert.deepEqual(
     result.results[0].warnings
@@ -697,8 +689,8 @@ test("Stylelint reports unused keyframes and cascade layers inside a surface", a
       )
       .map(({ line, rule }) => [line, rule]),
     [
-      [16, "nagi-css/cascade-layer-in-surface"],
       [12, "nagi-css/dead-keyframes"],
+      [16, "nagi-css/cascade-layer-in-surface"],
     ],
     JSON.stringify(result.results[0].warnings),
   )
@@ -739,8 +731,8 @@ test("the new value and motion rules reach Svelte and Astro through the same ana
 
 test("a diagnostic names the token family, and says so when no layer is declared", async () => {
   const file = path.join(root, "fixtures/tokens/RawLengths.vue")
-  const withoutLayer = await lintStylelint(file, { ...testSurface })
-  const withLayer = await lintStylelint(file, {
+  const withoutLayer = await lintStyles(file, { ...testSurface })
+  const withLayer = await lintStyles(file, {
     ...testSurface,
     tokens: {
       sources: [{ file: path.join(root, "fixtures/tokens/tokens.css"), layer: "semantic" }],

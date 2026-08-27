@@ -77,7 +77,7 @@ runtime state belongs in an attribute.
 vp exec eslint .
 ```
 
-Use `vp exec eslint . --fix` for safe derived fixes. No Stylelint config or
-`nagi.config.mjs` is required.
+Use `vp exec eslint . --fix` for safe derived fixes. A separate Nagi
+configuration file is not required.
 
 Continue with the [shared configuration reference](https://github.com/nagi-labs/nagi-css/blob/main/skills/nagi-css/references/configuration.md).

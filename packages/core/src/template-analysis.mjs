@@ -267,7 +267,7 @@ function collectStyledClasses(styles) {
           selectors.walkClasses((node) => classes.add(node.value))
         }).processSync(rule.selector)
       } catch {
-        // Stylelint reports malformed selectors; template requirements remain best-effort.
+        // The CSS parser reports malformed selectors; template requirements remain best-effort.
       }
     })
   }
@@ -349,7 +349,7 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
   const topLayerSurfaces = new Set()
   const { descriptor, framework } = parseTemplateDocument(source, filename)
   const styleBlocks = unreadableStyleBlocks(descriptor.styles)
-  // Stylelint never runs on a file whose style blocks all failed to parse, so this
+  // A style rule never runs on a block that failed to parse, so this
   // has to be reported from the template side or it would pass as conforming.
   for (const block of styleBlocks) {
     violations.push({

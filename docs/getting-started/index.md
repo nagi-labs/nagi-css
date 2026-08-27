@@ -2,7 +2,7 @@
 
 Nagi CSS is an ESLint plugin for Vue, Nuxt, Svelte, and Astro. It checks both
 the component template and its plain-CSS `<style>` blocks, so the normal setup
-does not need Stylelint or `nagi.config.mjs`.
+does not need a separate Nagi configuration file.
 
 Choose a guide:
 
@@ -141,7 +141,7 @@ have been resolved; a permanent warning-only setup no longer acts as a contract.
 The `nagi-css` CLI remains available for checking another repository from the
 outside. That advanced workflow uses an external `nagi.config.mjs`; it is not
 part of normal framework setup. The CLI also runs the complete rule set through
-ESLint and does not require Stylelint.
+ESLint.
 
 ## Common requirements
 

@@ -13,7 +13,6 @@
     "eslint",
     "eslint-plugin",
     "css",
-    "stylelint-alternative",
     "astro",
     "svelte",
     "vue",
