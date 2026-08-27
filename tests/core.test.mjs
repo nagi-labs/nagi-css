@@ -36,6 +36,10 @@ test("derives UI library classes with the default pv prefix", () => {
   })
 })
 
+test("keeps initialisms as one kebab-case word in derived surface names", () => {
+  assert.equal(deriveSurfaceRootName("/src/components/OTPField.vue"), "otp-field")
+})
+
 test("requires an automatically derived UI library class", () => {
   const missing = analyzeVueTemplate(
     `<template><section class="table-host"><DataTable /></section></template><style>.table-host { > .pv-data-table {} }</style>`,
