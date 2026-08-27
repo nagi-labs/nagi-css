@@ -7,6 +7,8 @@ import { fileURLToPath } from "node:url"
 import {
   analyzeComponentStyles,
   analyzeTemplate,
+  defineNagiConfig,
+  parseTokenDeclarations,
   resolveSeverity,
 } from "@nagi-labs/nagi-css-core"
 
@@ -93,4 +95,24 @@ test("every annotated documentation example passes the linter", async () => {
 
   assert.deepEqual(failures, [])
   assert.ok(checked > 0, "no annotated examples were found")
+})
+
+// The starter block is the only place a value ships, and only as a placeholder.
+// If it drifts from the table, a project that pastes it gets unknown-token on a
+// name the contract told it to use.
+test("the getting-started token file declares exactly the names the table promises", async () => {
+  const guide = await fs.readFile(
+    path.join(repository, "docs/getting-started/index.md"),
+    "utf8",
+  )
+  const block = guide.match(/into `src\/tokens\/semantic\.css`[\s\S]*?```css\n([\s\S]*?)```/)
+
+  assert.ok(block, "getting-started no longer contains the starter token file")
+
+  const declared = parseTokenDeclarations(block[1])
+  const promised = Object.values(defineNagiConfig({ surfaceRootPrefixes: ["app-"] }).tokens.semantic)
+    .flat()
+    .sort()
+
+  assert.deepEqual([...declared].sort(), promised)
 })

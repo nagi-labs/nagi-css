@@ -26,7 +26,9 @@ state a codebase reaches when naming entropy stops. (Yes, the linter is a bit
 naggy. That's the point.)*
 
 [CONTRACT.md](CONTRACT.md) defines the contract; [FAQ.md](FAQ.md) explains why
-the design holds and answers common objections.
+the design holds and answers common objections. [AGENTS.md](AGENTS.md) is the
+portable rule sheet to drop into a repository where an agent writes the
+components — Claude Code loads [skills/nagi-css](skills/nagi-css) instead.
 
 ## Before / after
 
