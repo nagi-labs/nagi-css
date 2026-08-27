@@ -126,7 +126,13 @@ structural choice and is unrestricted.
 
 ## Design Tokens
 
-Nagi CSS ships no tokens; the design system owns which values exist.
+Nagi CSS ships token **names** and no values. Reach for these by default:
+`--color-surface` `--color-text` `--color-text-muted` `--color-border`
+`--color-accent` `--color-accent-text` `--color-danger` `--color-danger-text`;
+`--space-1`…`--space-8`; `--radius-1`…`--radius-3`; `--border-width-1`/`-2`;
+`--font-size-1`…`--font-size-6`; `--shadow-1`…`--shadow-3`;
+`--z-dropdown` `--z-sticky` `--z-modal` `--z-toast`. A project may rename a family
+through `tokens.semantic`; check the project config before assuming.
 
 Colors must come from a token, with no configuration and no `--local-*` escape:
 `#f0a`, `rgb(0 0 0 / .1)`, and a named color inside a gradient are violations.

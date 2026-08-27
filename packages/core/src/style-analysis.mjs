@@ -12,6 +12,7 @@ import {
   parseTokenDeclarations,
   rawColorLiterals,
   rawLengthLiterals,
+  tokenFamilyFor,
   tokenReferences,
 } from "./index.mjs"
 
@@ -576,24 +577,34 @@ export function analyzeStyleRoot(root, inputConfig, templateContext = emptyTempl
   // which token is right, only that one is used. There is deliberately no
   // `--local-*` escape — a one-off length can be an optical correction, but a
   // one-off color is a decision made in the wrong file.
+  // With no source configured there is no token layer to point at, so "use a
+  // token" is advice the reader cannot act on. Say what is actually missing.
+  const noTokenLayer =
+    (config.tokens?.sources ?? []).length === 0
+      ? " This project declares no token layer: add one and point `tokens.sources` at it, or turn this rule off in `severity`."
+      : ""
+
   function checkValueTokens(decl) {
     const options = { property: decl.prop, exposedPrefixes: config.tokens?.exposedPrefixes }
     for (const literal of rawColorLiterals(decl.value, options)) {
       report(
         decl,
         "value-token-required",
-        `"${literal}" is a raw color; reference a token instead, so the color is a decision the design system owns.`,
+        `"${literal}" is a raw color; reference a color token (--color-*) instead, so the color is a decision the design system owns.${noTokenLayer}`,
         literal,
       )
     }
     // The named escape: a `--local-*` declaration is where a genuine one-off
     // magnitude lives, so the exception carries a reason and can be searched for.
     if (decl.prop.startsWith(config.tokens.localPrefix)) return
+    const family = tokenFamilyFor(decl.prop)
     for (const literal of rawLengthLiterals(decl.value, options)) {
       report(
         decl,
         "length-token-required",
-        `"${literal}" is a raw length on a scale property; reference a token, or declare it as a named "${config.tokens.localPrefix}*" value if it is genuinely a one-off.`,
+        `"${literal}" is a raw ${family?.label ?? "length"} value; reference a token${
+          family ? ` (${family.example})` : ""
+        }, or declare it as a named "${config.tokens.localPrefix}*" value if it is genuinely a one-off.${noTokenLayer}`,
         literal,
       )
     }
@@ -620,7 +631,7 @@ export function analyzeStyleRoot(root, inputConfig, templateContext = emptyTempl
     report(
       decl,
       "stacking-token-required",
-      `"${value}" is a raw stacking level on a surface that owns its own stacking order; reference a token so the order between overlays is decided in one place.`,
+      `"${value}" is a raw stacking level on a surface that owns its own stacking order; reference a stacking token (--z-*) so the order between overlays is decided in one place.${noTokenLayer}`,
       value,
     )
   }

@@ -736,3 +736,29 @@ test("the new value and motion rules reach Svelte and Astro through the same ana
     )
   }
 })
+
+test("a diagnostic names the token family, and says so when no layer is declared", async () => {
+  const file = path.join(root, "fixtures/tokens/RawLengths.vue")
+  const withoutLayer = await lintStylelint(file, { ...testSurface })
+  const withLayer = await lintStylelint(file, {
+    ...testSurface,
+    tokens: {
+      sources: [{ file: path.join(root, "fixtures/tokens/tokens.css"), layer: "semantic" }],
+    },
+  })
+
+  const texts = (result) =>
+    result.results[0].warnings
+      .filter(({ rule }) => rule === "nagi-css/length-token-required")
+      .map(({ text }) => text)
+
+  // the family the property draws from, not just "use a token"
+  assert.ok(texts(withoutLayer).some((text) => text.includes("raw spacing value")))
+  assert.ok(texts(withoutLayer).some((text) => text.includes("(--space-*)")))
+  assert.ok(texts(withoutLayer).some((text) => text.includes("(--border-width-*)")))
+  assert.ok(texts(withoutLayer).some((text) => text.includes("raw type scale value")))
+
+  // advice you cannot act on is named as such, and withdrawn once a layer exists
+  assert.ok(texts(withoutLayer).every((text) => text.includes("declares no token layer")))
+  assert.ok(texts(withLayer).every((text) => !text.includes("declares no token layer")))
+})

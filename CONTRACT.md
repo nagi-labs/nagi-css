@@ -1462,9 +1462,30 @@ used, so both work without configuration. They are separate rules
 (`value-token-required`, `length-token-required`) so a project can adopt colors
 first — the recommended order, since colors have no legitimate one-off.
 
-Nagi CSS ships no tokens. Which values exist, and what they are called, is the
-design system's decision — a naming contract that also dictated a palette would
-be two products in one. What Nagi CSS checks is the **boundary**: that a token a
+Nagi CSS ships **names and no values**. Which colors and magnitudes exist is the
+design system's decision — a naming contract that also dictated a palette would be
+two products in one. But the names are the same kind of thing as an element class,
+and the contract treats them the same way: fixed by default so an author or an
+agent knows what to reach for, overridable where a project's roles differ.
+
+| family | names | why this shape |
+|---|---|---|
+| color | `--color-surface` `--color-text` `--color-text-muted` `--color-border` `--color-accent` `--color-accent-text` `--color-danger` `--color-danger-text` | roles — no ordering makes `--color-3` mean anything |
+| spacing | `--space-1` … `--space-8` | numeric — `sm`/`md`/`lg` runs out and invites `xxl` |
+| radius | `--radius-1` … `--radius-3` | numeric |
+| border width | `--border-width-1` `--border-width-2` | numeric |
+| type | `--font-size-1` … `--font-size-6` | numeric |
+| elevation | `--shadow-1` … `--shadow-3` | numeric |
+| stacking | `--z-dropdown` `--z-sticky` `--z-modal` `--z-toast` | roles, for the same reason colors are |
+
+Rename a family through `tokens.semantic` the way `elementClasses` is overridden.
+The table is not separately enforced — a project's own declared names are accepted
+by `unknown-token` — because token roles are more contested than HTML tags. What
+it buys is a default vocabulary: diagnostics can name the token that was wanted
+(`reference a token (--space-*)`), and an agent reaches for `--space-3` without
+first having to learn this project's dialect.
+
+Beyond the names, what Nagi CSS checks is the **boundary**: that a token a
 surface references actually exists, and that it comes from the layer surfaces are
 meant to read.
 

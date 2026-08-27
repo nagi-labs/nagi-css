@@ -12,6 +12,7 @@ import {
   rawColorLiterals,
   rawLengthLiterals,
   resolveSeverity,
+  tokenFamilyFor,
   tokenReferences,
   validateNagiConfig,
 } from "@nagi-labs/nagi-css-core"
@@ -1035,4 +1036,40 @@ test("dynamic HTML keeps selector-tree conclusions unknown", () => {
       filename.endsWith(".svelte") ? result.tree[0] : result.tree[0].children[0]
     assert.equal(target.children.some((child) => child.opaque), true, filename)
   }
+})
+
+test("ships default token names by family, and nothing else about them", () => {
+  const { tokens } = defineNagiConfig({ surfaceRootPrefixes: ["app-"] })
+
+  assert.deepEqual(tokens.semantic.space, [
+    "--space-1", "--space-2", "--space-3", "--space-4",
+    "--space-5", "--space-6", "--space-7", "--space-8",
+  ])
+  assert.ok(tokens.semantic.color.includes("--color-surface"))
+  assert.ok(tokens.semantic.stacking.includes("--z-modal"))
+  // names only: no value is shipped for any of them
+  assert.ok(Object.values(tokens.semantic).flat().every((name) => name.startsWith("--")))
+
+  // a project renames a family the way it overrides elementClasses
+  const renamed = defineNagiConfig({
+    surfaceRootPrefixes: ["app-"],
+    tokens: { semantic: { color: ["--fg-default", "--bg-default"] } },
+  })
+  assert.deepEqual(renamed.tokens.semantic.color, ["--fg-default", "--bg-default"])
+})
+
+test("names the token family a scale property draws from", () => {
+  assert.deepEqual(tokenFamilyFor("padding-block"), { example: "--space-*", label: "spacing" })
+  assert.deepEqual(tokenFamilyFor("gap"), { example: "--space-*", label: "spacing" })
+  assert.deepEqual(tokenFamilyFor("border-end-end-radius"), {
+    example: "--radius-*",
+    label: "radius",
+  })
+  assert.deepEqual(tokenFamilyFor("box-shadow"), { example: "--shadow-*", label: "elevation" })
+  assert.deepEqual(tokenFamilyFor("font-size"), { example: "--font-size-*", label: "type scale" })
+  assert.deepEqual(tokenFamilyFor("border-inline-start-width"), {
+    example: "--border-width-*",
+    label: "border width",
+  })
+  assert.equal(tokenFamilyFor("color"), null)
 })

@@ -130,6 +130,11 @@ named `--local-*` declaration, which `localPrefix` renames. Turn either off with
 `severity` if a codebase is not ready for it, rather than expecting it to be
 inactive by default; colors first is the easier order.
 
+`tokens.semantic` holds the default token names by family (color, space, radius,
+strokeWidth, type, shadow, stacking). Names only — no values. Override a family
+where the project's roles are named differently; the table is not separately
+enforced, it supplies the vocabulary diagnostics suggest and agents reach for.
+
 `tokens` declares where design tokens come from. Nagi CSS ships none: which
 values exist is the design system's decision, so the remaining two checks only ask
 that a referenced token resolves and reads the right layer.

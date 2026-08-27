@@ -84,6 +84,37 @@ for (const tag of RENDERED_ELEMENTS) {
   }
 }
 
+// The token names the contract expects a semantic layer to provide. This is the
+// same move the Element Class Table makes: the *names* are fixed so an author —
+// or an agent — knows what to reach for, and the *values* stay the design
+// system's. Nagi CSS still ships no values, and a project that names its roles
+// differently overrides this the way it overrides `elementClasses`.
+//
+// Scales are numeric because a scale has no natural words: `sm`/`md`/`lg` runs
+// out and invites `xxl`. Colors and stacking levels are roles because that is
+// what distinguishes them — there is no ordering that makes `--color-3` mean
+// anything.
+const SEMANTIC_TOKENS = Object.freeze({
+  color: [
+    "--color-surface", "--color-text", "--color-text-muted", "--color-border",
+    "--color-accent", "--color-accent-text", "--color-danger", "--color-danger-text",
+  ],
+  radius: ["--radius-1", "--radius-2", "--radius-3"],
+  shadow: ["--shadow-1", "--shadow-2", "--shadow-3"],
+  space: [
+    "--space-1", "--space-2", "--space-3", "--space-4",
+    "--space-5", "--space-6", "--space-7", "--space-8",
+  ],
+  stacking: ["--z-dropdown", "--z-sticky", "--z-modal", "--z-toast"],
+  strokeWidth: ["--border-width-1", "--border-width-2"],
+  type: [
+    "--font-size-1", "--font-size-2", "--font-size-3",
+    "--font-size-4", "--font-size-5", "--font-size-6",
+  ],
+})
+
+// Which family a property draws from, so a diagnostic can name the token the
+// author should have reached for instead of only saying "use a token".
 const DEFAULT_CONFIG = Object.freeze({
   anatomyClasses: ["actions", "field", "icon", "media", "value"],
   bannedClasses: [
@@ -114,6 +145,9 @@ const DEFAULT_CONFIG = Object.freeze({
   tokens: {
     exposedPrefixes: [],
     localPrefix: "--local-",
+    // The names a semantic layer is expected to provide. Names only — every value
+    // stays the project's. Override a family to use different role names.
+    semantic: SEMANTIC_TOKENS,
     sources: [],
   },
 })
@@ -264,6 +298,24 @@ export function isScaleProperty(property) {
   // `border-inline-start-width` and `border-end-end-radius` qualify; `border-style`
   // and `border-color` carry no length, so they cost nothing either way.
   return SCALE_PREFIXES.some((prefix) => name.startsWith(prefix))
+}
+
+const TOKEN_FAMILY_RULES = [
+  [/radius/, "radius", "--radius-*"],
+  [/^box-shadow$/, "elevation", "--shadow-*"],
+  [/width$/, "border width", "--border-width-*"],
+  [/^outline-offset$|^text-underline-offset$/, "border width", "--border-width-*"],
+  [/^border$/, "border width", "--border-width-*"],
+  [/^font-size$|^line-height$|^letter-spacing$/, "type scale", "--font-size-*"],
+  [/^(?:column-|row-)?gap$|^padding|^margin/, "spacing", "--space-*"],
+]
+
+export function tokenFamilyFor(property) {
+  const name = property.toLowerCase()
+  for (const [pattern, label, example] of TOKEN_FAMILY_RULES) {
+    if (pattern.test(name)) return { example, label }
+  }
+  return null
 }
 
 // Raw lengths written into a scale property, so the caller can require a token.
