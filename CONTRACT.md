@@ -12,9 +12,9 @@ and this document assumes that world instead of re-solving it. What a
 boundary does not provide is a canonical form for its inside: there, names
 are still chosen by taste, selectors can silently outlive the template they
 described, and nothing is checkable because nothing defines *correct*. Nagi
-CSS supplies that definition. Given the markup, the correct class for each
-node is unique and derived, which is what makes conformance
-machine-verifiable and lets any two authors — human or AI — converge on the
+CSS supplies that definition. Given the markup and the project's
+configuration, the correct class for each node is unique and derived, which is
+what makes conformance machine-verifiable and lets any two authors — human or AI — converge on the
 same output.
 
 It is **not** a universal rule for the entire rendered tree. Instead, it defines strict rules for styling **owned DOM inside a styling surface**, and lighter contract-based rules for everything outside that boundary.
@@ -59,7 +59,40 @@ place instead of being replaced.
 
 ### Deterministic
 
-Naming and structure inside owned DOM must be reproducible by rule, not by taste. Given the same markup, two authors — or an AI agent — should arrive at the same class names. The contract achieves this by collapsing naming into fixed lookup tables and confining judgment to a single residual case (`div`/`span` that no table covers). Determinism is what makes the rules machine-verifiable.
+Naming and structure inside owned DOM must be reproducible by rule, not by taste. Given the same markup **and the same configuration**, two authors — or an AI agent — arrive at the same class names. The contract achieves this by collapsing naming into fixed lookup tables, so that the judgment which remains is about structure rather than about names. Determinism is what makes the rules machine-verifiable. Its exact scope is set out in [Limits of determinism](#limits-of-determinism).
+
+---
+
+## Limits of determinism
+
+The claim this contract makes is precise, and worth stating with its boundaries
+rather than letting a reader find them: **given a tree and a configuration, the
+correct class for each node is unique.** Both qualifiers are real.
+
+Judgment enters in six places, none of which the linter can settle:
+
+| where | what is not decided by rule |
+|---|---|
+| the shape of the tree | how many elements exist at all. The contract names a tree; it does not choose one |
+| component boundaries | where one surface ends and a child surface begins |
+| the residual `div`/`span` | anatomy or STN — `field` or `unit`. The crisp definitions narrow this; they do not remove it |
+| variant stems | the domain words a project uses, constrained only by what a variant may *not* be |
+| configuration | `surfaceRootPrefixes`, `elementClasses` overrides, `anatomyClasses`, `tiers`, `emitPolicy` all move the target |
+| `emitPolicy: when-styled` | whether a class is required depends on the adjacent stylesheet, so the answer comes from the pair |
+
+Two consequences follow, and both are worth saying out loud.
+
+**"Nagi CSS conformant" is relative to a configuration.** Two projects with
+different `tiers` or different `elementClasses` overrides are conformant to
+different contracts. That is deliberate — a shared configuration is reviewable
+and lands in a diff — but it means the phrase names a process, not a fixed
+dialect.
+
+**What survives is still the part that matters.** Every item above is a decision
+about *structure* or *policy*, made once and visible in review. None of them is a
+decision about what to call a node whose place in the tree is already settled.
+That is the decision that occurs hundreds of times a day, that no convention has
+ever made reproducible, and that this contract removes.
 
 ---
 
@@ -282,6 +315,24 @@ regardless of the word: `:class="{ '-collapsed': !open }"` becomes
 `:data-collapsed="!open"`, selected as `[data-collapsed="true"]`. This is what
 makes the state rule enforceable — the linter does not have to decide which words
 mean state, only that state is what changes.
+
+#### The variant stem is convention, not derivation
+
+Everything above says what a variant may **not** be. Nothing says what it *is*,
+and that is deliberate: a variant encodes a design distinction the contract has no
+way to know. `-compact`, `-lead`, `-infra` are the project's words.
+
+So this is the one part of the vocabulary that is not derived, and therefore the
+place where naming entropy still collects. The trade is worth naming plainly: the
+base identity is derived because it answers "what is this node", which has a
+correct answer given the tree; a variant answers "which design distinction is
+this", which does not. Deriving it would mean inventing distinctions, and a
+contract that guessed here would be wrong more often than a person.
+
+What keeps it bounded is that variants are a small, closed set per surface,
+alphabetical, static, and visible in one place — so review can see the whole set
+at once. That is a weaker control than derivation, and it is the honest limit of
+what this contract mechanizes about names.
 
 ---
 
@@ -515,7 +566,7 @@ Avoid putting Domain Semantics into internal style element names:
 
 ## Naming Strategy
 
-The naming procedure is **deterministic and table-first**. Apply the steps in order and stop at the first that matches; judgment is permitted only at the final step (`div`/`span` that no table covers).
+The naming procedure is **deterministic and table-first**. Apply the steps in order and stop at the first that matches; within the procedure, judgment is permitted only at the final step (`div`/`span` that no table covers). What the procedure itself takes as given — the tree, the configuration — is covered in [Limits of determinism](#limits-of-determinism).
 
 ```
 Is the element a styling surface root?      → name by surface identity (HTML Class Rules §1)
@@ -528,7 +579,16 @@ Domain meaning is never mixed into a style element name; it lives in the surface
 
 ### Element Class Table (HTML elements, excluding `div`/`span`)
 
-An HTML element other than `div`/`span`, appearing as an **internal style element**, takes a fixed class. The rule is total: **every rendered element self-maps by default — its class is its own tag name** (`<dialog>` → `dialog`, `<form>` → `form`, `<summary>` → `summary`) — and this table lists only the overrides. No element is ever left without a legal class. This removes naming judgment for semantic HTML and confines decisions to `div`/`span`. *When* the class must be present is governed by the linter's `emitPolicy`: **`when-styled`** (default) requires it only where the class is actually referenced in the component's `<style>` (an unstyled subtree carries none), while **`always`** requires it on every matching element for maximum uniformity. Either way the *name* is fixed by rule. Multiple same-tag elements share the base class and are differentiated by variants.
+An HTML element other than `div`/`span`, appearing as an **internal style element**, takes a fixed class. The rule is total: **every rendered element self-maps by default — its class is its own tag name** (`<dialog>` → `dialog`, `<form>` → `form`, `<summary>` → `summary`) — and this table lists only the overrides. No element is ever left without a legal class. This removes naming judgment for semantic HTML and confines decisions to `div`/`span`. *When* the class must be present is governed by the linter's `emitPolicy`: **`when-styled`** (default) requires it only where the class is actually referenced in the component's `<style>` (an unstyled subtree carries none), while **`always`** requires it on every matching element for maximum uniformity. Either way the *name* is fixed by rule.
+
+The default has a property worth stating: under `when-styled` the required set of
+classes is a function of the markup **and** the stylesheet, not of the markup
+alone. Adding one CSS rule can make conforming markup non-conforming, and the fix
+is in a different file from the change that caused it. That is the price of not
+littering unstyled subtrees with classes nothing uses. `always` removes it — the
+answer then depends only on the markup — at the cost of classes that exist before
+anything needs them. Pick `always` where uniformity matters more than noise, such
+as a design-system package whose markup is read more often than it is styled. Multiple same-tag elements share the base class and are differentiated by variants.
 
 **When is an override justified?** Exactly one criterion:
 
@@ -808,15 +868,16 @@ an ARIA role name here and this element does not declare that role.)
 
 > Determinism note: the tier is still fully determined by the tree (no "size" / "start anywhere" judgment) — it is anchored at the leaf (`g`) with a `unit` floor instead of at the root. That keeps it machine-checkable, and makes the coarse tiers a rare "this is deep" signal rather than the default outermost name. (Anchoring `tier = depth-from-root` instead would make `block` appear in shallow trees that never reach `g`.)
 
-#### Depth is capped — component splitting is the one non-deterministic step
+#### Depth is capped — splitting is the judgment the ladder rests on
 
-Everything else in this contract is mechanical: given the markup, the surface
-root name, the element/component/anatomy/role tables, and the depth→tier
-mapping each yield exactly one answer. The **single** place the contract relies
-on human judgment is **where to draw component (styling-surface) boundaries** —
-when to stop nesting inside one surface and extract a child component with its
-own surface root. The contract *requires* appropriate splitting; it does not,
-and cannot, fully mechanize it.
+The ladder itself is mechanical: given the markup, the surface root name, the
+element/component/anatomy/role tables, and the depth→tier mapping each yield
+exactly one answer. What the ladder cannot decide for you is **where to draw
+component (styling-surface) boundaries** — when to stop nesting inside one
+surface and extract a child component with its own surface root. The contract
+*requires* appropriate splitting; it does not, and cannot, fully mechanize it.
+This is one of the places listed in [Limits of determinism](#limits-of-determinism),
+and the one that bears directly on depth.
 
 - **STN depth is capped at 7 by design.** The seven tiers are finite headroom,
   not a vocabulary. Reaching the deepest tiers means a surface is carrying a lot

@@ -110,6 +110,12 @@ actually rendered outside the parent surface tree.
 mapped native element and component must carry its fixed class whether or not
 the current component file styles it.
 
+Under the default, whether a class is required depends on the adjacent style
+block, so adding a CSS rule can make previously conforming markup non-conforming
+— the report lands in the template, in response to a change in the stylesheet.
+`always` makes the requirement a function of the markup alone, at the cost of
+classes that nothing styles yet.
+
 Use `libraryBoundaryPrefixes` for opaque component root classes and
 `libraryInternalPrefixes` for classes wholly owned by a dependency. A prefix
 ending in `-` matches by `startsWith`; another prefix matches itself and its

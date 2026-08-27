@@ -32,7 +32,8 @@ Tailwind is optimized for *writing*: appearance is local to the element and
 unconstrained. Nagi CSS is optimized for *reading, reviewing, and
 maintaining*: names carry meaning and structure is verifiable.
 
-The decisive difference is **canonical form**. Under Nagi CSS, the correct
+The decisive difference is **canonical form**. Under Nagi CSS, given a tree and a
+configuration, the correct
 class for a node is *unique* — derived from the configured prefix and file name, the element and
 component tables, anatomy, or the STN ladder. A linter can therefore enforce
 it, and any two authors (human or AI) converge on the same output. Tailwind
@@ -104,13 +105,13 @@ surfaces, and attribute-based state.
 
 ## The STN vocabulary (`stratum`/`region`/`block`/`unit`/`seg`/`fr`/`g`) looks over-engineered.
 
-STN is the piece that closes the contract end to end. The naming flow —
-surface root → element table → component table → role → anatomy — leaves
-exactly one hole where taste re-enters: a `div` or `span` that no semantic
-name fits. Left open, that hole becomes `wrapper`/`inner`/`box`/`container`
-— arbitrary and non-reproducible. STN closes it with a name derived
-mechanically from depth, so *every* element gets a rule-derived name and the
-determinism holds edge to edge.
+STN is the piece that closes the naming flow. Surface root → element table →
+component table → role → anatomy leaves one hole where taste re-enters: a `div`
+or `span` that no semantic name fits. Left open, that hole becomes
+`wrapper`/`inner`/`box`/`container` — arbitrary and non-reproducible. STN closes
+it with a name derived mechanically from depth, so *every* element in a given
+tree gets a rule-derived name. (What the flow takes as given — the tree itself,
+the configuration — is set out in the contract's Limits of determinism.)
 
 Used correctly, STN recedes: maximize semantic HTML and most surfaces need
 only a few shallow tiers (mostly `unit`). A surface full of coarse STN names

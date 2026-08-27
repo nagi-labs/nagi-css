@@ -694,23 +694,34 @@ severity: {
    （scoped CSS の旧 Q&A はこれに吸収）。あわせて6原則のうち Deterministic が
    荷重部材であることを Introduction に明記した。
 
-1. **決定論の射程**: canonical form は「与えられたツリーに相対的」。div をいくつ挟むかは著者の選択で、その選択は決定論の外にある。
-   加えて anatomy と STN の切り分け（`field` か `unit` か）は crisp definition 頼りで判断が残る。
-   FAQ はコンポーネント分割のみを非決定論と認めているが、実際にはもう少し広い。
-2. **variant が自由記述**: 実コードで命名エントロピーが溜まる最大の場所（ドメイン語）が禁止リスト以外で無制約。
-   導出されるのは base identity（そもそも揉めにくい名前）の側。BEM との差分は modifier 側には及んでいない。
-3. **ファイル名結合**: surface root をファイル名から導出し、かつ親が子の外側レイアウトを持つため、
-   **子ファイルのリネームが親のスタイルを黙って壊す**。
-   また `components/user/Card.vue` と `components/billing/Card.vue` が両方 `app-card` に導出され、
-   識別子の一意性は保証されない（scoped CSS への暗黙の依存）。
-4. **`when-styled` 既定**: クラスの有無が隣の `<style>` の内容に依存するため、正解が「マークアップ＋スタイルシートの対」から決まる。
-   CSS に1行足すと適合していたテンプレートが非適合になる。`always` にすれば消える。
-5. **検証可能性の前提が Required に無い**: 契約の価値は検証可能性から来ており、それは
-   「クラス集合を静的に列挙できるテンプレート」に依存する。CSS nesting と同じ強さで前提として明記すべき。
-   「contract itself is framework-agnostic」は規則については正しいが、価値の源泉は移植されない。
-6. **`tiers` が設定可能**なので「Nagi CSS 準拠」はプロジェクト間で同じ意味を持たない。
-   これは #14 の逃げ道として肯定的に扱ってよいが、**canonical form は設定に相対的**であることを明記すべき
-   （`surfaceRootPrefixes` `anatomyClasses` `elementClasses` `emitPolicy` も同様なので、`tiers` だけの問題ではない）。
+1. **決定論の射程** — **文書修正済み**。CONTRACT.md に「Limits of determinism」節を新設し、
+   判断が残る6箇所（ツリーの形／コンポーネント境界／残余 `div`・`span`／variant 語幹／設定／`when-styled`）を表で列挙。
+   主張を「**ツリーと設定を与えれば**各ノードの正しいクラスは一意」に精密化した。
+   併せて文書内の**自己矛盾**を解消 — 「唯一の非決定論的ステップ」が
+   L49/L505（残余 `div`/`span`）と L798（コンポーネント分割）の2箇所に別々に書かれていた。
+   前者は「命名手順の中では」と限定、後者は「ラッパーが決められないこと」に書き換え、
+   FAQ の「determinism holds edge to edge」「ちょうど1つの穴」も同様に修正。
+2. **variant が自由記述** — **文書修正済み**（仕様として明記）。
+   Style Variants に「The variant stem is convention, not derivation」を追加。
+   variant は契約が知りえない設計上の区別を符号化するので**導出しないのが正しい**
+   （導出すれば区別を発明することになる）と書き、
+   「ここが命名エントロピーの残る場所で、制御はレビュー」＝**機械化の正直な限界**として提示した。
+3. **ファイル名結合** — **半分解消**（#17 の副産物）。子ファイルをリネームすると親テンプレートのタグ名も変わり、
+   導出される子サーフェス根が変わるので、親の `> .app-user-avatar` は `anatomy-allowed` で落ちる。
+   もう「黙って壊れる」ではない。残るのは `components/user/Card.vue` と `components/billing/Card.vue` が
+   両方 `app-card` に導出される衝突で、これは scoped CSS への暗黙の依存として残る。
+4. **`when-styled` 既定** — **文書修正済み**。Element Class Table の節と configuration.md に、
+   既定では必要クラス集合が「マークアップ＋スタイルシート」の関数であること、
+   **CSS を1行足すと適合していたテンプレートが非適合になる**こと（しかも報告は別ファイルに出る）、
+   `always` にすればマークアップ単独で決まるがまだ使われないクラスが付くこと、
+   どちらを選ぶべきかを明記した。
+5. **検証可能性の前提が Required に無い** — **解消済み**。
+   Required に `Statically analyzable style syntax`（「検証可能性がこの契約の対価なので、
+   解析可能性は選好ではなく要件」）が入り、「contract itself is framework-agnostic」の記述も消えている。
+6. **`tiers` が設定可能** — **文書修正済み**。「Limits of determinism」に
+   **「Nagi CSS 準拠」は設定に相対的**（`tiers` だけでなく `surfaceRootPrefixes` `elementClasses`
+   `anatomyClasses` `emitPolicy` も同様）と明記。共有設定は diff に残りレビューされるので意図的な設計だが、
+   この語は固定された方言ではなくプロセスを指す、と書いた。
 
 ### 撤回した指摘
 
