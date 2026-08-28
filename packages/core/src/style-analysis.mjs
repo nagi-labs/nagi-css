@@ -46,6 +46,7 @@ export const STYLE_RULE_IDS = [
   "anatomy-allowed",
   "bare-element-selector",
   "boundary-nesting",
+  "boundary-slot-surface-required",
   "cascade-layer-in-surface",
   "container-name-derived",
   "container-query-scope",
@@ -53,6 +54,7 @@ export const STYLE_RULE_IDS = [
   "dead-rule",
   "length-token-required",
   "owned-dom-direct-child",
+  "owned-dom-readable-nesting",
   "owned-surface-reach-in",
   "selector-mirrors-template",
   "single-base-identity",
@@ -72,6 +74,8 @@ export const STYLE_RULE_DESCRIPTIONS = {
     "Allow only contract anatomy, role, element, component, and STN names in selectors",
   "bare-element-selector": "Require class selectors for styled elements inside owned DOM",
   "boundary-nesting": "Keep slot surfaces nested below their UI-library boundary",
+  "boundary-slot-surface-required":
+    "Resume owned selectors below a UI-library boundary only at a declared slot surface",
   "cascade-layer-in-surface": "Keep cascade layers out of a surface, where specificity is flat by construction",
   "container-name-derived": "Derive a container name from the surface and the element declaring it",
   "container-query-scope": "Query only containers the component itself declares",
@@ -79,6 +83,7 @@ export const STYLE_RULE_DESCRIPTIONS = {
   "dead-rule": "Reject selectors whose classes are absent from the component template",
   "length-token-required": "Require tokens for lengths owned by a design-system scale",
   "owned-dom-direct-child": "Mirror owned parent-child DOM edges with direct-child selectors",
+  "owned-dom-readable-nesting": "Express each owned parent-child depth as a nested CSS rule",
   "owned-surface-reach-in": "Keep selectors out of an owned child component's internal DOM",
   "selector-mirrors-template": "Require selector chains to match the component template",
   "single-base-identity": "Allow exactly one base identity class per selector compound",
@@ -201,6 +206,11 @@ function isLibraryInternal(token, config) {
 
 function hasLibraryBoundary(nodes, sets, config) {
   return classNodesDeep(nodes).some((node) => isLibraryBoundary(node.value, sets, config))
+}
+
+function libraryBoundaryToken(nodes, sets, config) {
+  return classNodesDeep(nodes).find((node) => isLibraryBoundary(node.value, sets, config))
+    ?.value
 }
 
 function hasNonOwnedBoundary(nodes, sets, config) {
@@ -523,6 +533,28 @@ export function analyzeStyleRoot(root, inputConfig, templateContext = emptyTempl
     }
   }
 
+  function checkBoundaryContinuation(rule, boundary, next) {
+    if (!boundary || !next || hasDeepPseudo(next)) return
+    const allowed = sets.componentSlotsByBoundary.get(boundary) ?? new Set()
+    const anchor = classNodesDeep(next).find((node) => allowed.has(node.value))
+    if (anchor) return
+    report(
+      rule,
+      "boundary-slot-surface-required",
+      `Selector "${rule.selector}" continues below UI boundary ".${boundary}" without one of that component's declared slot surfaces. Style the boundary root itself, use a declared slot surface for owned content, or use :deep() for an explicit non-owned adjustment.`,
+    )
+  }
+
+  function checkFlatBoundaryContinuations(rule, compounds) {
+    for (let index = 0; index < compounds.length - 1; index += 1) {
+      checkBoundaryContinuation(
+        rule,
+        libraryBoundaryToken(compounds[index], sets, config),
+        compounds[index + 1],
+      )
+    }
+  }
+
   function ownDeclsAnchored(container) {
     let anchored = false
     container.each?.((node) => {
@@ -717,6 +749,21 @@ export function analyzeStyleRoot(root, inputConfig, templateContext = emptyTempl
     )
   }
 
+  function alternativesBoundaryToken(alternatives, parentBoundaryToken = null, nested = false) {
+    const boundaries = alternatives.map((nodes) => {
+      const resolved = nested ? resolveNesting(nodes) : { mode: "root", rest: nodes }
+      const { compounds } = splitCompounds(resolved.rest)
+      const boundary = libraryBoundaryToken(compounds.at(-1) ?? [], sets, config)
+      if (resolved.mode === "merge" && compounds.length === 1) {
+        return boundary ?? parentBoundaryToken
+      }
+      return boundary ?? null
+    })
+    return boundaries.length > 0 && boundaries.every((value) => value === boundaries[0])
+      ? boundaries[0]
+      : null
+  }
+
   function processTopLevel(rule) {
     let alternatives
     try {
@@ -729,6 +776,13 @@ export function analyzeStyleRoot(root, inputConfig, templateContext = emptyTempl
     for (const nodes of alternatives) {
       const { combinators, compounds } = splitCompounds(nodes)
       if (compounds.length === 0) continue
+      if (compounds.length > 1) {
+        report(
+          rule,
+          "owned-dom-readable-nesting",
+          `Selector "${rule.selector}" flattens structure below its surface root; nest each owned depth in its own CSS rule.`,
+        )
+      }
       surfaceSubject ??= surfaceSubjectToken(compounds)
       const chain = extendChain([], compounds, combinators, ">")
       ruleChain ??= chain
@@ -776,6 +830,7 @@ export function analyzeStyleRoot(root, inputConfig, templateContext = emptyTempl
         }
       }
       checkFlattenedBoundary(rule, compounds)
+      checkFlatBoundaryContinuations(rule, compounds)
       for (let index = 1; index < compounds.length; index += 1) {
         checkEdge(rule, combinators[index - 1], compounds[index - 1], compounds[index])
         checkBareElements(rule, compounds[index])
@@ -784,15 +839,33 @@ export function analyzeStyleRoot(root, inputConfig, templateContext = emptyTempl
     }
     checkSurfaceLayout(rule, surfaceSubject)
     checkContainerName(rule, ruleChain)
-    walkNested(rule, alternativesEndInBoundary(alternatives), surfaceSubject, ruleChain)
+    walkNested(
+      rule,
+      alternativesEndInBoundary(alternatives),
+      surfaceSubject,
+      ruleChain,
+      alternativesBoundaryToken(alternatives),
+    )
   }
 
-  function processNested(rule, parentEndsInBoundary, parentSurfaceToken = null, parentChain = null) {
+  function processNested(
+    rule,
+    parentEndsInBoundary,
+    parentSurfaceToken = null,
+    parentChain = null,
+    parentBoundaryToken = null,
+  ) {
     let alternatives
     try {
       alternatives = selectorAlternatives(rule.selector)
     } catch {
-      walkNested(rule, parentEndsInBoundary)
+      walkNested(
+        rule,
+        parentEndsInBoundary,
+        parentSurfaceToken,
+        parentChain,
+        parentBoundaryToken,
+      )
       return
     }
     let surfaceSubject = null
@@ -801,6 +874,13 @@ export function analyzeStyleRoot(root, inputConfig, templateContext = emptyTempl
       const { combinator, mode, rest } = resolveNesting(nodes)
       const { combinators, compounds } = splitCompounds(rest)
       if (compounds.length === 0) continue
+      if (combinators.includes(">")) {
+        report(
+          rule,
+          "owned-dom-readable-nesting",
+          `Selector "${rule.selector}" flattens more than one owned depth; nest each ">" step in its own CSS rule.`,
+        )
+      }
       const chain = extendChain(
         parentChain,
         compounds,
@@ -811,6 +891,10 @@ export function analyzeStyleRoot(root, inputConfig, templateContext = emptyTempl
       checkMirror(rule, chain)
       checkReachIn(rule, chain)
       checkFlattenedBoundary(rule, compounds)
+      if (mode !== "merge") {
+        checkBoundaryContinuation(rule, parentBoundaryToken, compounds[0])
+      }
+      checkFlatBoundaryContinuations(rule, compounds)
       if (mode === "merge") {
         if (compounds.length === 1) surfaceSubject ??= parentSurfaceToken
         checkAnatomy(rule, compounds[0])
@@ -839,15 +923,34 @@ export function analyzeStyleRoot(root, inputConfig, templateContext = emptyTempl
       alternativesEndInBoundary(alternatives, parentEndsInBoundary, true),
       surfaceSubject,
       ruleChain,
+      alternativesBoundaryToken(alternatives, parentBoundaryToken, true),
     )
   }
 
-  function walkNested(container, parentEndsInBoundary, parentSurfaceToken = null, parentChain = null) {
+  function walkNested(
+    container,
+    parentEndsInBoundary,
+    parentSurfaceToken = null,
+    parentChain = null,
+    parentBoundaryToken = null,
+  ) {
     container.each?.((node) => {
       if (node.type === "rule") {
-        processNested(node, parentEndsInBoundary, parentSurfaceToken, parentChain)
+        processNested(
+          node,
+          parentEndsInBoundary,
+          parentSurfaceToken,
+          parentChain,
+          parentBoundaryToken,
+        )
       } else if (node.type === "atrule") {
-        walkNested(node, parentEndsInBoundary, parentSurfaceToken, parentChain)
+        walkNested(
+          node,
+          parentEndsInBoundary,
+          parentSurfaceToken,
+          parentChain,
+          parentBoundaryToken,
+        )
       }
     })
   }

@@ -458,6 +458,7 @@ export function buildNagiSets(input) {
     Object.values(config.elementClasses).map((value) => mappingBase(value)),
   )
   const componentValues = new Set(Object.values(config.componentClasses))
+  const componentSlotsByBoundary = new Map()
   const anatomy = new Set(config.anatomyClasses)
   const stn = new Set(config.tiers)
   const elementNameReverse = new Map()
@@ -473,10 +474,18 @@ export function buildNagiSets(input) {
 
   const surfaces = slotSurfaces(config)
 
+  for (const [component, boundary] of Object.entries(config.componentClasses)) {
+    componentSlotsByBoundary.set(
+      boundary,
+      new Set(Object.values(config.componentSlots?.[component] ?? {})),
+    )
+  }
+
   return {
     anatomy,
     banned: new Set(config.bannedClasses),
     componentValues,
+    componentSlotsByBoundary,
     detachedSlotSurfaces: new Set(config.detachedSlotSurfaces),
     elementNameReverse,
     elementValues,

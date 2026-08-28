@@ -14,6 +14,7 @@
 .test-invalid-boundary-surface .value {}
 .test-invalid-boundary-surface > button {}
 .test-invalid-boundary-surface > .ui-data-table .ui-table-column-body {}
+.test-invalid-boundary-surface > .ui-data-table .value {}
 .test-invalid-boundary-surface > .ui-data-table > .ui-table-column-body {}
 .ui-table-column-body {}
 .value {}

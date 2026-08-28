@@ -1053,8 +1053,15 @@ A parent/child relationship that **cannot** be expressed with `>` is, by definit
 For UI library boundary classes, the edge rule is mechanical:
 
 - owned surface/element → UI library boundary class: use `>`.
-- UI library boundary class → anything exposed beyond the library boundary: use a descendant step, never `>`.
+- UI library boundary class → a slot sub-surface declared for that component: use a descendant step, never `>`.
 - once the selector reaches an owned slot/sub-surface again, resume `>`.
+
+A boundary selector may stop at the component root to control its external
+placement. If it continues, its first anchor must be one of that exact
+component's declared slot surfaces. Another public component class or a
+library-internal class does not substitute for that owned surface. Use
+`:deep()` when deliberately adjusting non-owned internals through an explicit
+library contract.
 
 Example:
 

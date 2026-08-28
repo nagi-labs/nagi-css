@@ -60,6 +60,7 @@ the judgments the linter cannot make.
   - Owned elements are styled through classes, not native element selectors.
   - `>` connects every owned parent→child step (MUST). A step that cannot use `>` is a non-owned boundary, not a descendant selector.
   - UI library boundary classes are edge-checked: owned → boundary class (`pv-*` by default) uses `>`, boundary class → declared slot sub-surface uses a descendant step, and owned DOM after that resumes `>`.
+  - If a selector continues beyond a UI boundary, its first anchor is a slot surface declared for that exact component; another boundary or an internal library class does not reopen owned DOM.
   - Descendant combinators are used only to anchor a nested surface across a library/slot/shadow boundary, not for ordinary style-element traversal.
   - No bare style-element selectors at CSS top level inside owned DOM.
   - Full descendant paths are not flattened when readable nesting can express the same owned structure.

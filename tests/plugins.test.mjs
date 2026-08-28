@@ -24,7 +24,10 @@ const semantic = {
   ...testSurface,
   componentClasses: { Column: "ui-column", DataTable: "ui-data-table" },
   componentSlotPrefixes: { Column: "ui-table-column" },
-  componentSlots: { Column: { body: "ui-table-column-body" } },
+  componentSlots: {
+    Column: { body: "ui-table-column-body" },
+    DataTable: { body: "ui-data-table-body", company: "ui-data-table-cell-company" },
+  },
   libraryBoundaryPrefixes: ["ui-"],
   libraryInternalPrefixes: ["third-party-"],
 }
@@ -315,6 +318,61 @@ test("ESLint accepts nested UI boundaries and deep library internals", async () 
   assert.equal(result.errored, false, JSON.stringify(result.results[0].warnings))
 })
 
+test("ESLint requires a declared slot surface before selectors resume below a UI boundary", async () => {
+  const file = path.join(root, "fixtures/TableSlotHost.vue")
+  const template = `<template><section class="test-table-slot-host"><DataTable class="ui-data-table"><template #company><div class="ui-data-table-cell-company"><a class="link">Acme</a></div></template></DataTable></section></template>`
+  const invalid = await lintStyles(
+    file,
+    semantic,
+    `${template}<style scoped>.test-table-slot-host { > .ui-data-table { .link {} } }</style>`,
+  )
+  const valid = await lintStyles(
+    file,
+    semantic,
+    `${template}<style scoped>.test-table-slot-host { > .ui-data-table { .ui-data-table-cell-company { > .link {} } } }</style>`,
+  )
+
+  assert.ok(
+    invalid.results[0].warnings.some(
+      ({ rule }) => rule === "nagi-css/boundary-slot-surface-required",
+    ),
+    JSON.stringify(invalid.results[0].warnings),
+  )
+  assert.equal(valid.errored, false, JSON.stringify(valid.results[0].warnings))
+
+  const boundaryRoot = await lintStyles(
+    file,
+    semantic,
+    `${template}<style scoped>.test-table-slot-host { > .ui-data-table { margin-inline: auto; } }</style>`,
+  )
+  assert.equal(boundaryRoot.errored, false, JSON.stringify(boundaryRoot.results[0].warnings))
+})
+
+test("ESLint does not treat another public boundary or library internal class as a slot surface", async () => {
+  const file = path.join(root, "fixtures/BoundaryReachIn.vue")
+  const template = `<template><section class="test-boundary-reach-in"><DataTable class="ui-data-table" /></section></template>`
+  for (const selector of [".ui-column", ".third-party-node"]) {
+    const result = await lintStyles(
+      file,
+      semantic,
+      `${template}<style scoped>.test-boundary-reach-in { > .ui-data-table { ${selector} {} } }</style>`,
+    )
+    assert.ok(
+      result.results[0].warnings.some(
+        ({ rule }) => rule === "nagi-css/boundary-slot-surface-required",
+      ),
+      `${selector}: ${JSON.stringify(result.results[0].warnings)}`,
+    )
+  }
+
+  const deep = await lintStyles(
+    file,
+    semantic,
+    `${template}<style scoped>.test-boundary-reach-in { > .ui-data-table { :deep(.third-party-node) {} } }</style>`,
+  )
+  assert.equal(deep.errored, false, JSON.stringify(deep.results[0].warnings))
+})
+
 test("ESLint treats an automatically derived pv class as a boundary", async () => {
   const file = path.join(root, "fixtures/TableHost.vue")
   const result = await lintStyles(file, { ...testSurface, componentClasses: ["DataTable"] }, `<template><section class="test-table-host"><DataTable class="pv-data-table" /></section></template>\n<style scoped>.test-table-host { > .pv-data-table { > .value {} } }</style>`)
@@ -355,8 +413,10 @@ test("ESLint reports every selector contract family", async () => {
       "nagi-css/anatomy-allowed",
       "nagi-css/bare-element-selector",
       "nagi-css/boundary-nesting",
+      "nagi-css/boundary-slot-surface-required",
       "nagi-css/dead-rule",
       "nagi-css/owned-dom-direct-child",
+      "nagi-css/owned-dom-readable-nesting",
       "nagi-css/slot-surface-top-level",
       "nagi-css/state-not-class",
       "nagi-css/top-level-surface-only",
@@ -372,8 +432,10 @@ test("ESLint reports every selector and value contract family", async () => {
     "anatomy-allowed",
     "bare-element-selector",
     "boundary-nesting",
+    "boundary-slot-surface-required",
     "dead-rule",
     "owned-dom-direct-child",
+    "owned-dom-readable-nesting",
     "slot-surface-top-level",
     "state-not-class",
     "top-level-surface-only",
@@ -485,6 +547,40 @@ test("ESLint allows sibling combinators inside owned DOM", async () => {
   const result = await lintStyles(path.join(root, "fixtures/style/SiblingList.vue"))
 
   assert.equal(result.errored, false, JSON.stringify(result.results[0].warnings))
+})
+
+test("ESLint requires owned DOM depth to remain visibly nested", async () => {
+  const file = path.join(root, "fixtures/style/ReadableNesting.vue")
+  const template = `<template><section class="test-readable-nesting"><header class="header"><h2 class="title">Title</h2></header></section></template>`
+  const flat = await lintStyles(file, testSurface,
+    `${template}<style scoped>.test-readable-nesting > .header > .title { color: var(--color-text); }</style>`)
+  const partlyFlat = await lintStyles(file, testSurface,
+    `${template}<style scoped>.test-readable-nesting { > .header > .title { color: var(--color-text); } }</style>`)
+  const nested = await lintStyles(file, testSurface,
+    `${template}<style scoped>.test-readable-nesting { > .header { > .title { color: var(--color-text); } } }</style>`)
+
+  for (const result of [flat, partlyFlat]) {
+    assert.ok(
+      result.results[0].warnings.some(
+        ({ rule }) => rule === "nagi-css/owned-dom-readable-nesting",
+      ),
+      JSON.stringify(result.results[0].warnings),
+    )
+  }
+  assert.equal(nested.errored, false, JSON.stringify(nested.results[0].warnings))
+})
+
+test("ESLint reports a dead path when its final class exists elsewhere in the template", async () => {
+  const file = path.join(root, "fixtures/style/RepeatedClassDeadPath.vue")
+  const code = `<template><section class="test-repeated-class-dead-path"><div class="unit"><h2 class="title">Title</h2></div><div class="unit"><span class="value">42</span></div></section></template><style scoped>.test-repeated-class-dead-path { > .unit { > .title { > .value {} } } }</style>`
+  const result = await lintStyles(file, testSurface, code)
+
+  assert.ok(
+    result.results[0].warnings.some(
+      ({ rule }) => rule === "nagi-css/selector-mirrors-template",
+    ),
+    JSON.stringify(result.results[0].warnings),
+  )
 })
 
 test("ESLint reports style blocks the toolchain cannot read", async () => {

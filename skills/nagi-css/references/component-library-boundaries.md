@@ -77,6 +77,12 @@ multiple instances or domain meaning with a variant (`card-content -address`).
 
 In CSS, place the slot surface under the nearest owned parent surface when it remains in the same rendered DOM subtree. Use `>` from owned DOM to the UI library boundary class, use a descendant step from that boundary to the declared slot surface, then resume `>` inside the slot surface.
 
+The boundary root may be styled directly for external layout. A selector that
+continues below it must first reach a slot surface declared for that exact
+component. A different component root or a library-internal class is not an
+owned-content anchor; use `:deep()` only for an intentional non-owned
+adjustment exposed by the library.
+
 ```css
 .procedure-page {
   > .pv-card .card-content {

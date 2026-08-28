@@ -15,8 +15,10 @@
     opacity: 0.8;
   }
 
-  > .unit > .icon {
-    inline-size: 1rem;
+  > .unit {
+    > .icon {
+      inline-size: 1rem;
+    }
   }
 }
 </style>
