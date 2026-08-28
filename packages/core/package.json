@@ -1,6 +1,6 @@
 {
   "name": "@nagi-labs/nagi-css-core",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Shared configuration, vocabulary tables, and component template/style analysis for Nagi CSS.",
   "license": "MIT",
   "repository": {
