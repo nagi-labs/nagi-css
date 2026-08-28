@@ -54,6 +54,7 @@ jobs:
           test -x node_modules/.bin/nagi-css
           vp exec node node_modules/@nagi-labs/nagi-css/src/cli.mjs --help
       - name: Stage core
+        id: stage-core
         working-directory: .release/packages/core
         run: |
           if vp exec npm view "@nagi-labs/nagi-css-core@$(node -p \"require('./package.json').version\")" version >/dev/null 2>&1; then
@@ -65,10 +66,8 @@ jobs:
           set -e
           printf '%s\n' "${stage_output}"
           if [ "${stage_status}" -ne 0 ]; then
-            annotation=${stage_output//'%'/'%25'}
-            annotation=${annotation//$'\n'/'%0A'}
-            annotation=${annotation//$'\r'/'%0D'}
-            echo "::error title=npm stage publish failed::${annotation}"
+            diagnostic=$(printf '%s' "${stage_output}" | base64 -w0 | tr '/+' '_-' | cut -c1-180)
+            echo "diagnostic=${diagnostic}" >> "${GITHUB_OUTPUT}"
             exit "${stage_status}"
           fi
       - name: Stage ESLint plugin
@@ -81,6 +80,6 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: npm-release-diagnostics
+          name: npm-release-${{ steps.stage-core.outputs.diagnostic }}
           path: ~/.npm/_logs/
           retention-days: 1
