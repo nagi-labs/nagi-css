@@ -50,7 +50,7 @@ publisher on each package at npmjs.com:
 - Repository: `nagi-css`
 - Workflow filename: `release.yml`
 - Environment: `npm`
-- Allowed action: `npm publish`
+- Allowed action: `npm stage publish`
 
 Create an `npm` environment in the GitHub repository settings and add required
 reviewers if releases should require approval. No `NPM_TOKEN` secret is needed
@@ -69,5 +69,12 @@ git push origin v0.1.0
 
 Update the root and all package versions together, commit the release, then
 push the matching `v<version>` tag. The `Release packages` workflow tests,
-stages, packs, installs, and publishes the packages through npm OIDC. Trusted
-publishing automatically attaches provenance for this public repository.
+packs, installs, and submits the packages to npm staged publishing through
+OIDC. Trusted publishing automatically attaches provenance for this public
+repository.
+
+When the workflow succeeds, review the staged packages on npmjs.com and approve
+them in dependency order: core, ESLint plugin, then CLI. Approval makes each
+version public. Reject a staged package instead if its contents are not the
+expected release. Do not rerun the workflow while the same version is waiting
+for approval.

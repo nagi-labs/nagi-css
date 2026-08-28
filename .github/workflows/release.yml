@@ -49,12 +49,12 @@ jobs:
           vp exec node -e 'import("@nagi-labs/eslint-plugin-nagi-css")'
           test -x node_modules/.bin/nagi-css
           vp exec node node_modules/@nagi-labs/nagi-css/src/cli.mjs --help
-      - name: Publish core
+      - name: Stage core
         working-directory: .release/packages/core
-        run: vp exec npm view "@nagi-labs/nagi-css-core@$(vp exec node -p \"require('./package.json').version\")" version >/dev/null 2>&1 || vp exec npm publish --access public
-      - name: Publish ESLint plugin
+        run: vp exec npm view "@nagi-labs/nagi-css-core@$(vp exec node -p \"require('./package.json').version\")" version >/dev/null 2>&1 || vp exec npm stage publish
+      - name: Stage ESLint plugin
         working-directory: .release/packages/eslint-plugin
-        run: vp exec npm view "@nagi-labs/eslint-plugin-nagi-css@$(vp exec node -p \"require('./package.json').version\")" version >/dev/null 2>&1 || vp exec npm publish --access public
-      - name: Publish CLI
+        run: vp exec npm view "@nagi-labs/eslint-plugin-nagi-css@$(vp exec node -p \"require('./package.json').version\")" version >/dev/null 2>&1 || vp exec npm stage publish
+      - name: Stage CLI
         working-directory: .release/packages/cli
-        run: vp exec npm view "@nagi-labs/nagi-css@$(vp exec node -p \"require('./package.json').version\")" version >/dev/null 2>&1 || vp exec npm publish --access public
+        run: vp exec npm view "@nagi-labs/nagi-css@$(vp exec node -p \"require('./package.json').version\")" version >/dev/null 2>&1 || vp exec npm stage publish
