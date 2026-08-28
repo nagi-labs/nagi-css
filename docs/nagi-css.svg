@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Nagi CSS logo">
+  <defs>
+    <clipPath id="clip">
+      <circle cx="32" cy="32" r="28"/>
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#clip)">
+    <rect x="4" y="4" width="56" height="56" fill="#F7FAFF"/>
+    <path
+      d="M4 21 C14 19.8, 24 22.8, 32 22 C41 21.2, 50 19.6, 60 21 L60 60 L4 60 Z"
+      fill="#ECF3FF"
+    />
+    <path
+      d="M4 33 C14 31.8, 24 34.8, 32 34 C41 33.2, 50 31.6, 60 33 L60 60 L4 60 Z"
+      fill="#DDE9FB"
+    />
+    <path
+      d="M4 46 C14 44.8, 24 47.5, 32 47 C41 46.5, 50 44.8, 60 46 L60 60 L4 60 Z"
+      fill="#C9DCF7"
+    />
+  </g>
+</svg>

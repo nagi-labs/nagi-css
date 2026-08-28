@@ -76,6 +76,11 @@ body {
     gap: calc(var(--space) * 1.25);
     padding-block: calc(var(--space) * 2);
 
+    > .image {
+      inline-size: 4rem;
+      block-size: 4rem;
+    }
+
     > .title {
       margin: 0;
       font-family: var(--font-display);

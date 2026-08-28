@@ -97,6 +97,17 @@ test("every annotated documentation example passes the linter", async () => {
   assert.ok(checked > 0, "no annotated examples were found")
 })
 
+test("the documentation site uses the Nagi CSS logo as its favicon and header mark", async () => {
+  const [html, logo] = await Promise.all([
+    fs.readFile(path.join(repository, "docs/index.html"), "utf8"),
+    fs.readFile(path.join(repository, "docs/nagi-css.svg"), "utf8"),
+  ])
+
+  assert.match(html, /<link rel="icon" href="nagi-css\.svg" type="image\/svg\+xml">/)
+  assert.match(html, /<img class="image" src="nagi-css\.svg" alt="Nagi CSS">/)
+  assert.match(logo, /<svg[^>]+viewBox="0 0 64 64"/)
+})
+
 // The starter block is the only place a value ships, and only as a placeholder.
 // If it drifts from the table, a project that pastes it gets unknown-token on a
 // name the contract told it to use.
