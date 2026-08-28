@@ -1,0 +1,60 @@
+name: Release packages
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    environment: npm
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Set up Vite Plus
+        uses: voidzero-dev/setup-vp@v1
+        with:
+          node-version: "24"
+          cache: false
+          run-install: true
+      - name: Verify release version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: test "${GITHUB_REF_NAME}" = "v$(vp exec node -p \"require('./package.json').version\")"
+      - name: Test
+        run: vp run test
+      - name: Prepare publishable packages
+        run: vp run release:prepare
+      - name: Pack core
+        working-directory: .release/packages/core
+        run: vp exec npm pack --pack-destination ../../tarballs
+      - name: Pack ESLint plugin
+        working-directory: .release/packages/eslint-plugin
+        run: vp exec npm pack --pack-destination ../../tarballs
+      - name: Pack CLI
+        working-directory: .release/packages/cli
+        run: vp exec npm pack --pack-destination ../../tarballs
+      - name: Install packed packages
+        working-directory: .release/smoke
+        run: vp exec npm install --ignore-scripts --prefix .
+      - name: Smoke test package entrypoints
+        working-directory: .release/smoke
+        run: |
+          vp exec node -e 'import("@nagi-labs/nagi-css-core")'
+          vp exec node -e 'import("@nagi-labs/eslint-plugin-nagi-css")'
+          test -x node_modules/.bin/nagi-css
+          vp exec node node_modules/@nagi-labs/nagi-css/src/cli.mjs --help
+      - name: Publish core
+        working-directory: .release/packages/core
+        run: vp exec npm view "@nagi-labs/nagi-css-core@$(vp exec node -p \"require('./package.json').version\")" version >/dev/null 2>&1 || vp exec npm publish --access public
+      - name: Publish ESLint plugin
+        working-directory: .release/packages/eslint-plugin
+        run: vp exec npm view "@nagi-labs/eslint-plugin-nagi-css@$(vp exec node -p \"require('./package.json').version\")" version >/dev/null 2>&1 || vp exec npm publish --access public
+      - name: Publish CLI
+        working-directory: .release/packages/cli
+        run: vp exec npm view "@nagi-labs/nagi-css@$(vp exec node -p \"require('./package.json').version\")" version >/dev/null 2>&1 || vp exec npm publish --access public

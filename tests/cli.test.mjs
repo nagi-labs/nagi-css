@@ -1,15 +1,27 @@
 import assert from "node:assert/strict"
-import { execFile } from "node:child_process"
 import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import test from "node:test"
-import { promisify } from "node:util"
-import { fileURLToPath } from "node:url"
+import { run as runCli } from "../packages/cli/src/cli.mjs"
 
-const execute = promisify(execFile)
-const repository = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
-const cli = path.join(repository, "packages/cli/src/cli.mjs")
+async function executeCli(args) {
+  let stderr = ""
+  let stdout = ""
+  const code = await runCli(args, {
+    stderr: {
+      write(value) {
+        stderr += value
+      },
+    },
+    stdout: {
+      write(value) {
+        stdout += value
+      },
+    },
+  })
+  return { code, stderr, stdout }
+}
 
 test("CLI applies only safe fixed-class fixes from an external config", async (context) => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "nagi-css-"))
@@ -26,7 +38,8 @@ test("CLI applies only safe fixed-class fixes from an external config", async (c
     `export default { files: ["*.vue"], semantic: { surfaceRootPrefixes: ["test-"] } }`,
   )
 
-  await execute(process.execPath, [cli, "check", "--config", config, "--cwd", directory, "--fix"])
+  const result = await executeCli(["check", "--config", config, "--cwd", directory, "--fix"])
+  assert.equal(result.code, 0, result.stderr)
 
   assert.match(await fs.readFile(component, "utf8"), /<button class="button">/)
 })
@@ -51,7 +64,8 @@ test("CLI discovers and fixes Svelte and Astro files by default", async (context
     `export default { semantic: { surfaceRootPrefixes: ["test-"] } }`,
   )
 
-  await execute(process.execPath, [cli, "check", "--config", config, "--cwd", directory, "--fix"])
+  const result = await executeCli(["check", "--config", config, "--cwd", directory, "--fix"])
+  assert.equal(result.code, 0, result.stderr)
 
   for (const file of files) {
     assert.match(await fs.readFile(file, "utf8"), /<button class="button">/)
@@ -74,19 +88,13 @@ test("CLI honours per-rule severity, and warnings do not fail the run", async (c
       config,
       `export default { files: ["*.vue"], severity: ${JSON.stringify(severity)}, semantic: { surfaceRootPrefixes: ["test-"] } }`,
     )
-    try {
-      const { stdout } = await execute(process.execPath, [
-        cli,
-        "check",
-        "--config",
-        config,
-        "--cwd",
-        directory,
-      ])
-      return { code: 0, stdout }
-    } catch (error) {
-      return { code: error.code, stdout: error.stdout }
-    }
+    return executeCli([
+      "check",
+      "--config",
+      config,
+      "--cwd",
+      directory,
+    ])
   }
 
   const errors = await run({})
@@ -113,14 +121,13 @@ test("CLI rejects an unknown or malformed severity entry", async (context) => {
     `export default { severity: { "no-such-rule": "warn", "stn-order": "maybe" }, semantic: { surfaceRootPrefixes: ["test-"] } }`,
   )
 
-  const failure = await execute(process.execPath, [
-    cli,
+  const failure = await executeCli([
     "check",
     "--config",
     config,
     "--cwd",
     directory,
-  ]).catch((error) => error)
+  ])
 
   assert.equal(failure.code, 2)
   assert.match(failure.stderr, /severity\.no-such-rule is not a Nagi CSS rule/)
@@ -147,14 +154,13 @@ test("CLI resolves token sources against the checked directory, not the config f
     } }`,
   )
 
-  const failure = await execute(process.execPath, [
-    cli,
+  const failure = await executeCli([
     "check",
     "--config",
     config,
     "--cwd",
     directory,
-  ]).catch((error) => error)
+  ])
 
   assert.equal(failure.code, 1)
   assert.match(failure.stdout, /"--color-edge" is not declared/)

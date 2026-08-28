@@ -127,7 +127,8 @@ vp run test
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) before changing vocabulary or rule
-behavior.
+behavior. Maintainers should follow the [release guide](docs/RELEASING.md) when
+publishing packages.
 
 ## License
 

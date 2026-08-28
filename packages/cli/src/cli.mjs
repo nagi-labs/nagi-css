@@ -114,10 +114,13 @@ function formatReport(diagnostics, cwd) {
   return lines.join("\n")
 }
 
-export async function run(argv = process.argv.slice(2)) {
+export async function run(
+  argv = process.argv.slice(2),
+  output = { stderr: process.stderr, stdout: process.stdout },
+) {
   const args = parseArgs(argv)
   if (args.command === "help") {
-    process.stdout.write(`${usage()}\n`)
+    output.stdout.write(`${usage()}\n`)
     return 0
   }
   if (args.command !== "check") throw new Error(`Unknown command: ${args.command}`)
@@ -139,14 +142,14 @@ export async function run(argv = process.argv.slice(2)) {
     ...validateSeverity(severity, knownRuleIds),
   ]
   if (configErrors.length > 0) {
-    for (const message of configErrors) process.stderr.write(`nagi-css: ${message}\n`)
+    for (const message of configErrors) output.stderr.write(`nagi-css: ${message}\n`)
     return 2
   }
 
   const config = { ...loaded, semantic, severity }
   const diagnostics = await runEslint(args.cwd, config, args.fix)
   const report = formatReport(diagnostics, args.cwd)
-  if (report) process.stdout.write(`${report}\n`)
+  if (report) output.stdout.write(`${report}\n`)
   return diagnostics.some((diagnostic) => diagnostic.severity === "error") ? 1 : 0
 }
 
