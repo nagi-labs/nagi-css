@@ -66,6 +66,9 @@ jobs:
           set -e
           printf '%s\n' "${stage_output}"
           if [ "${stage_status}" -ne 0 ]; then
+            error_summary=$(printf '%s\n' "${stage_output}" | grep -E '^(npm error|npm ERR!)' | head -n 6 | tr '\n\r' '  ' | cut -c1-1000)
+            error_summary=${error_summary//'%'/'%25'}
+            echo "::error file=.github/workflows/release.yml,line=59,title=npm stage publish failed::${error_summary}"
             {
               echo '### npm stage publish failure'
               echo '```text'
