@@ -29,7 +29,9 @@ jobs:
           test "$(vp exec npm --version)" = "11.19.0"
       - name: Verify release version
         if: startsWith(github.ref, 'refs/tags/')
-        run: test "${GITHUB_REF_NAME}" = "v$(node -p \"require('./package.json').version\")"
+        run: |
+          version=$(node -p "require('./package.json').version")
+          test "${GITHUB_REF_NAME}" = "v${version}"
       - name: Test
         run: vp run test
       - name: Prepare publishable packages
@@ -54,40 +56,17 @@ jobs:
           test -x node_modules/.bin/nagi-css
           vp exec node node_modules/@nagi-labs/nagi-css/src/cli.mjs --help
       - name: Stage core
-        id: stage-core
         working-directory: .release/packages/core
         run: |
-          if vp exec npm view "@nagi-labs/nagi-css-core@$(node -p \"require('./package.json').version\")" version >/dev/null 2>&1; then
-            exit 0
-          fi
-          set +e
-          stage_output=$(vp exec npm stage publish . --provenance 2>&1)
-          stage_status=$?
-          set -e
-          printf '%s\n' "${stage_output}"
-          if [ "${stage_status}" -ne 0 ]; then
-            error_summary=$(printf '%s\n' "${stage_output}" | sed $'s/\033\\[[0-9;]*m//g' | tr '\n\r' '  ')
-            error_summary=${error_summary:0:1000}
-            error_summary=${error_summary//'%'/'%25'}
-            echo "::error file=.github/workflows/release.yml,line=59,title=npm stage publish failed::${error_summary}"
-            {
-              echo '### npm stage publish failure'
-              echo '```text'
-              printf '%s\n' "${stage_output}"
-              echo '```'
-            } >> "${GITHUB_STEP_SUMMARY}"
-            exit "${stage_status}"
-          fi
+          version=$(node -p "require('./package.json').version")
+          vp exec npm view "@nagi-labs/nagi-css-core@${version}" version >/dev/null 2>&1 || vp exec npm stage publish . --provenance
       - name: Stage ESLint plugin
         working-directory: .release/packages/eslint-plugin
-        run: vp exec npm view "@nagi-labs/eslint-plugin-nagi-css@$(node -p \"require('./package.json').version\")" version >/dev/null 2>&1 || vp exec npm stage publish . --provenance
+        run: |
+          version=$(node -p "require('./package.json').version")
+          vp exec npm view "@nagi-labs/eslint-plugin-nagi-css@${version}" version >/dev/null 2>&1 || vp exec npm stage publish . --provenance
       - name: Stage CLI
         working-directory: .release/packages/cli
-        run: vp exec npm view "@nagi-labs/nagi-css@$(node -p \"require('./package.json').version\")" version >/dev/null 2>&1 || vp exec npm stage publish . --provenance
-      - name: Upload npm diagnostics
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: npm-release-diagnostics
-          path: ~/.npm/_logs/
-          retention-days: 1
+        run: |
+          version=$(node -p "require('./package.json').version")
+          vp exec npm view "@nagi-labs/nagi-css@${version}" version >/dev/null 2>&1 || vp exec npm stage publish . --provenance
