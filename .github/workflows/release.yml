@@ -77,3 +77,10 @@ jobs:
       - name: Stage CLI
         working-directory: .release/packages/cli
         run: vp exec npm view "@nagi-labs/nagi-css@$(node -p \"require('./package.json').version\")" version >/dev/null 2>&1 || vp exec npm stage publish . --provenance
+      - name: Upload npm diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-release-diagnostics
+          path: ~/.npm/_logs/
+          retention-days: 1
