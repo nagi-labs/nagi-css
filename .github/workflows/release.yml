@@ -66,8 +66,12 @@ jobs:
           set -e
           printf '%s\n' "${stage_output}"
           if [ "${stage_status}" -ne 0 ]; then
-            diagnostic=$(printf '%s' "${stage_output}" | base64 -w0 | tr '/+' '_-' | cut -c1-180)
-            echo "diagnostic=${diagnostic}" >> "${GITHUB_OUTPUT}"
+            {
+              echo '### npm stage publish failure'
+              echo '```text'
+              printf '%s\n' "${stage_output}"
+              echo '```'
+            } >> "${GITHUB_STEP_SUMMARY}"
             exit "${stage_status}"
           fi
       - name: Stage ESLint plugin
@@ -80,6 +84,6 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: npm-release-${{ steps.stage-core.outputs.diagnostic }}
+          name: npm-release-diagnostics
           path: ~/.npm/_logs/
           retention-days: 1
