@@ -1,6 +1,6 @@
 <template>
   <article class="test-raw-colors">
-    <p class="text">x</p>
+    <p class="p">x</p>
   </article>
 </template>
 
@@ -13,7 +13,7 @@
   color: var(--color-text, #333);
   outline-color: CanvasText;
 
-  > .text {
+  > .p {
     background: linear-gradient(to right, white, var(--color-surface));
     color: currentColor;
     font-family: Tan, serif;

@@ -55,7 +55,7 @@ for (const [key, { directory, manifest }] of manifests) {
     `${JSON.stringify(manifest, null, 2)}\n`,
   )
   await Promise.all(
-    ["README.md", "LICENSE"].map((file) =>
+    ["README.md", "CHANGELOG.md", "LICENSE"].map((file) =>
       fs.copyFile(path.join(repository, file), path.join(destination, file)),
     ),
   )

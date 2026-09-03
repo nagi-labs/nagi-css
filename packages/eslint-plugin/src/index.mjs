@@ -21,6 +21,7 @@ const FIXABLE_RULES = new Set([
   "component-class-required",
   "element-class-required",
   "owned-component-identity",
+  "role-identity-required",
   "stn-floor",
   "stn-order",
   "surface-root-name",
@@ -34,9 +35,13 @@ const ruleDescriptions = {
   "dynamic-class-requires-static-anchor":
     "Require a static owned class beside every dynamic class binding",
   "element-class-required": "Require configured static element classes when styled",
-  "reserved-element-name": "Reserve rendered element names for their mapped elements",
+  "layout-only-wrapper":
+    "Review sole-child div or span wrappers that only establish flex or grid layout around one child branch",
+  "reserved-element-name": "Keep Element Class Table identities on their owning elements",
   "owned-component-identity":
     "Style an owned child component by its own derived surface root, not a passed class",
+  "role-identity-required":
+    "Prefer a div or span's identifying ARIA role over anatomy and structural fallback names",
   "single-base-identity": "Allow exactly one base identity class per element",
   "state-not-class": "Represent runtime state with native, ARIA, or data attributes",
   "surface-root-name":
@@ -99,7 +104,12 @@ function violationLoc(sourceCode, violation) {
 function createAnalysisRule(ruleId) {
   return {
     meta: {
-      type: ruleId === "variant-order" ? "layout" : "problem",
+      type:
+        ruleId === "variant-order"
+          ? "layout"
+          : ruleId === "layout-only-wrapper"
+            ? "suggestion"
+            : "problem",
       docs: { description: ruleDescriptions[ruleId] },
       fixable: FIXABLE_RULES.has(ruleId) ? "code" : undefined,
       schema: [{ type: "object" }],
@@ -151,7 +161,7 @@ rules["valid-config"] = {
 }
 
 const plugin = {
-  meta: { name: "@nagi-labs/eslint-plugin-nagi-css", version: "0.2.0" },
+  meta: { name: "@nagi-labs/eslint-plugin-nagi-css", version: "0.3.0" },
   rules,
 }
 

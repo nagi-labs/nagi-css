@@ -1,6 +1,6 @@
 <template>
   <article class="test-motion-surface">
-    <p class="text">x</p>
+    <p class="p">x</p>
   </article>
 </template>
 
@@ -15,7 +15,7 @@
 
 @layer component {
   .test-motion-surface {
-    > .text { opacity: 1; }
+    > .p { opacity: 1; }
   }
 }
 

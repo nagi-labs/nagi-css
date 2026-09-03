@@ -56,6 +56,8 @@ export const STYLE_RULE_IDS = [
   "owned-dom-direct-child",
   "owned-dom-readable-nesting",
   "owned-surface-reach-in",
+  "apply-directive-not-enabled",
+  "apply-arbitrary-syntax",
   "selector-mirrors-template",
   "single-base-identity",
   "slot-surface-top-level",
@@ -85,6 +87,10 @@ export const STYLE_RULE_DESCRIPTIONS = {
   "owned-dom-direct-child": "Mirror owned parent-child DOM edges with direct-child selectors",
   "owned-dom-readable-nesting": "Express each owned parent-child depth as a nested CSS rule",
   "owned-surface-reach-in": "Keep selectors out of an owned child component's internal DOM",
+  "apply-directive-not-enabled":
+    "Keep declarations as plain CSS unless the project explicitly enables Tailwind @apply authoring",
+  "apply-arbitrary-syntax":
+    "Keep arbitrary Tailwind values and properties as visible plain CSS declarations",
   "selector-mirrors-template": "Require selector chains to match the component template",
   "single-base-identity": "Allow exactly one base identity class per selector compound",
   "slot-surface-top-level": "Keep attached slot surfaces below their UI-library boundary",
@@ -122,6 +128,16 @@ function isAnchorPlacementProp(prop) {
     name === "position-area" ||
     name === "inset-area" ||
     name.startsWith("position-try")
+  )
+}
+
+function externalLayoutUtility(token) {
+  const utility = token.replace(/^(?:[a-z-]+:)+/u, "").replace(/^-/u, "")
+  if (new Set(["absolute", "fixed", "relative", "static", "sticky"]).has(utility)) {
+    return true
+  }
+  return /^(?:m[trblxyse]?|inset(?:-[xy])?|top|right|bottom|left|start|end|z)-/u.test(
+    utility,
   )
 }
 const analysisCache = new WeakMap()
@@ -683,6 +699,20 @@ export function analyzeStyleRoot(root, inputConfig, templateContext = emptyTempl
         )
       }
     })
+    if (!ownsPlacement && config.declarationMode === "tailwind-apply") {
+      for (const node of rule.nodes ?? []) {
+        if (node.type !== "atrule" || node.name.toLowerCase() !== "apply") continue
+        for (const utility of node.params.trim().split(/\s+/u).filter(Boolean)) {
+          if (!externalLayoutUtility(utility)) continue
+          report(
+            node,
+            "surface-external-layout",
+            `Surface ".${token}" must not own external layout; Tailwind utility "${utility}" expands to placement owned by the parent layout.`,
+            utility,
+          )
+        }
+      }
+    }
   }
 
   // A container name is an identifier, so the contract derives it like every other
@@ -963,6 +993,33 @@ export function analyzeStyleRoot(root, inputConfig, templateContext = emptyTempl
   }
 
   walkRoot(root)
+
+  // Nagi's selector and ownership contract does not depend on how declarations
+  // are authored. Tailwind `@apply` is therefore an explicit implementation
+  // choice rather than an implicit escape hatch. In that mode selector checks
+  // remain active, while checks that require expanded declaration values remain
+  // Tailwind's responsibility unless a declaration is also written as CSS here.
+  if (config.declarationMode !== "tailwind-apply") {
+    root.walkAtRules("apply", (atRule) => {
+      report(
+        atRule,
+        "apply-directive-not-enabled",
+        '"@apply" requires declarationMode: "tailwind-apply". Keep this surface in plain CSS or enable the Tailwind declaration backend explicitly.',
+        "@apply",
+      )
+    })
+  } else {
+    root.walkAtRules("apply", (atRule) => {
+      const arbitrary = atRule.params.match(/\S*\[[^\]]*\]\S*/u)?.[0]
+      if (!arbitrary) return
+      report(
+        atRule,
+        "apply-arbitrary-syntax",
+        `Tailwind arbitrary syntax "${arbitrary}" hides a property or value from source analysis; write that declaration as plain CSS beside @apply.`,
+        arbitrary,
+      )
+    })
+  }
 
   // A `@container` query may only name a container this file declares. Querying
   // another component's container couples this surface to a name it does not own,

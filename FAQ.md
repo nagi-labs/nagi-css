@@ -28,28 +28,30 @@ contract decides *what they may say*.
 
 ## Why not Tailwind?
 
-Tailwind is optimized for *writing*: appearance is local to the element and
-unconstrained. Nagi CSS is optimized for *reading, reviewing, and
-maintaining*: names carry meaning and structure is verifiable.
+Tailwind is optimized for *writing*: appearance is local to the element and its
+theme gives teams a productive default design vocabulary. Nagi CSS is optimized
+for *reading, reviewing, and maintaining owned component structure*: names carry
+meaning and selectors can be checked against the template.
 
 The decisive difference is **canonical form**. Under Nagi CSS, given a tree and a
 configuration, the correct
 class for a node is *unique* — derived from the configured prefix and file name, the element and
 component tables, anatomy, or the STN ladder. A linter can therefore enforce
-it, and any two authors (human or AI) converge on the same output. Tailwind
-has no canonical form: many utility combinations produce the same look, and
-"is this the idiomatic, consistent one?" is not machine-decidable. Working
-Tailwind is easy to produce; *consistent* Tailwind remains a discipline
-problem forever.
+it, and any two authors (human or AI) converge on the same structural output.
+Tailwind permits multiple utility formulations for equivalent results. Its
+formatter, conflict detection, presets, and team conventions can narrow that
+space, but they do not derive a semantic selector tree from component ownership.
 
 Two follow-on effects favor the contract:
 
-- **Diffs.** A style change here is a changed property in a named rule. In
-  utility CSS it is one mutated token inside a long class string — hard to
-  review for humans and models alike.
-- **Cruft.** Utility CSS avoids orphaned stylesheet rules but accumulates
-  dead and conflicting utilities on elements (`p-4 p-2`, a leftover `flex`),
-  invisibly, per element. Without a canonical form, nobody notices.
+- **Diffs.** A style change here is a changed property in a named rule, separate
+  from the template. Utility CSS keeps that change at the element. Which is
+  easier to review depends on whether the reviewer is asking about appearance or
+  component structure.
+- **Cruft.** Utility CSS avoids orphaned stylesheet rules and can detect many
+  conflicting utilities. Nagi CSS instead detects dead rules and template paths
+  while retaining named styling surfaces. These are different failure modes,
+  not a claim that one tool catches all stale styling.
 
 Tailwind's genuine intrinsic win is local appearance comprehension — "how
 does this look" answered inline. If that is what you optimize for, Tailwind
@@ -57,31 +59,28 @@ is a fine choice. Nagi CSS bets on the other axis.
 
 ## Why not zero-runtime CSS-in-JS (StyleX, Panda, vanilla-extract)?
 
-These compile styles from JavaScript objects to static CSS, and they buy real
-things: deterministic composition (later wins, decided by the compiler rather
-than by source order), typed tokens, and atomic output. The case made for them
-lately is that AI agents accumulate conflicting and duplicated classes, and a
-compiler with types stops that.
+These compile styles from JavaScript or TypeScript descriptions to static CSS,
+and they buy real things: deterministic composition, typed authoring surfaces,
+and generated output. Exact guarantees differ by tool: StyleX, Panda, and
+vanilla-extract should not be treated as one implementation.
 
-That case is right about two of the three symptoms. Agents produce **conflicts**,
-**duplicates**, and **meaningless names** — and a compiler settles the first two
-while having nothing to say about the third. In StyleX the name is a local object
-key, arbitrary by design: `styles.container`, `styles.wrapper2`, and `styles.a`
-all compile. That third symptom is the one this contract exists for, and the two
-approaches are solving different halves rather than competing.
+Typed or compiled styling can prevent conflicts and constrain values. Local style
+identifiers, however, are still application-chosen unless a separate convention
+checks them: `styles.container`, `styles.wrapper2`, and `styles.a` can all be
+valid inputs. Nagi CSS concentrates on deriving that structural vocabulary and
+checking it against owned DOM. The approaches can be complementary.
 
 Where they differ in kind:
 
-- **Cost of adoption.** These tools are a migration: components are rewritten,
-  and a published measurement of one such port found roughly twice the
-  style-related lines of code. Nagi CSS changes no code. It is a lint
-  configuration over the CSS already written, and `severity` stages it one rule
-  at a time.
-- **What each constrains.** A compiler makes composition safe but leaves the
-  values open — write `padding: 13px` in an object and nothing objects. This
-  contract constrains the values (colors and scale lengths must come from tokens)
-  and the names, and leaves composition to the cascade, which the structural
-  rules keep flat.
+- **Cost of adoption.** Compiled styling rewrites the authoring model and adds a
+  build integration. Nagi CSS keeps standard CSS and has no runtime or compiler
+  in its default mode, but adopting its contract can still require changing
+  markup classes, selectors, and tokens. `severity` lets a project stage those
+  source changes one rule at a time.
+- **What each constrains.** Typed styling can restrict values when a project
+  defines tokens, recipes, types, or additional lint rules. Nagi CSS makes its
+  chosen boundary part of the default contract: colors and design-system scale
+  lengths use tokens, names are derived, and composition remains in the cascade.
 - **What it does not do.** These tools transform; a linter only checks. Atomic
   output, build-time dead-code elimination, and call-site type guarantees are
   outside what Nagi CSS attempts. It is not trying to make the CSS payload

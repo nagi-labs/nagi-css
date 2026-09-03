@@ -30,6 +30,9 @@ the judgments the linter cannot make.
   - `dl`, `dt`, and `dd` are used only for clear name-value or term-description lists.
   - Layout and component-internal display use `div` or `span` by default unless stronger native semantics are clearly needed.
   - Base names come from the first matching table-first step. Accessibility Semantics, allowlisted UI Anatomy Semantics, or STN are considered only for the residual `div`/`span` step.
+  - A paragraph is `<p class="p">`; `text` is Anatomy for a short textual run
+    or UI label on `div` / `span` (normally `span`), not a replacement class for
+    `p`.
   - A table-mapped element keeps its fixed base when it carries an additional ARIA role: `<li class="item" role="separator">`, selected as `.item[role="separator"]`.
   - Domain Semantics do not appear in internal style element names.
   - Vague names such as `wrapper`, `container`, `inner`, `box`, `thing`, and `content-area` are avoided.
@@ -45,6 +48,10 @@ the judgments the linter cannot make.
 
 - Utilities:
   - Standalone utility classes are not used.
+  - `-assistive` and `-sr-only` are not added merely to name visual concealment;
+    visually-hidden CSS targets the element's derived base selector.
+  - ARIA attributes describe accessibility semantics and exposure, not a CSS-only
+    visibility mode. They are never added solely as styling hooks.
 
 - State:
   - Runtime state is not represented by classes.
@@ -125,11 +132,11 @@ Good:
 Bad:
 
 ```html
-<footer class="footer sr-only">...</footer>
+<footer class="footer compact">...</footer>
 ```
 
 Good:
 
 ```html
-<footer class="footer -sr-only">...</footer>
+<footer class="footer -compact">...</footer>
 ```

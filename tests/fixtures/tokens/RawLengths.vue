@@ -1,6 +1,6 @@
 <template>
   <article class="test-raw-lengths">
-    <p class="text">x</p>
+    <p class="p">x</p>
   </article>
 </template>
 
@@ -16,7 +16,7 @@
   inline-size: 32rem;
   translate: 0 var(--local-hairline-nudge);
 
-  > .text {
+  > .p {
     font-size: 1.125rem;
     line-height: 1.5;
     margin-inline: calc(var(--space-3) * -1);

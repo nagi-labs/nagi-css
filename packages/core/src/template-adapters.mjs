@@ -263,6 +263,13 @@ function normalizeSvelteElement(node, source) {
         (attribute.type === "SvelteAttribute" && attribute.key?.name === "class") ||
         attribute.type === "SvelteSpreadAttribute",
     ),
+    nagiHasNonClassAttribute: attributes.some(
+      (attribute) =>
+        !(
+          (attribute.type === "SvelteAttribute" && attribute.key?.name === "class") ||
+          (attribute.type === "SvelteDirective" && attribute.kind === "Class")
+        ),
+    ),
     nagiOpaqueComponent: dynamicSpecial,
   }
 }
@@ -520,6 +527,10 @@ function normalizeAstroElement(node, source, styles) {
         name === "class" ||
         attribute.type === "JSXSpreadAttribute"
       )
+    }),
+    nagiHasNonClassAttribute: attributes.some((attribute) => {
+      const name = jsxName(attribute.name)
+      return !new Set(["class", "class:list", "classList"]).has(name)
     }),
   }
 }

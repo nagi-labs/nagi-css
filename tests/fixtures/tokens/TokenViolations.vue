@@ -1,6 +1,6 @@
 <template>
   <article class="test-token-violations">
-    <p class="text">x</p>
+    <p class="p">x</p>
   </article>
 </template>
 
@@ -10,6 +10,6 @@
 
   background: var(--palette-red-500);
 
-  > .text { color: var(--color-surfce); }
+  > .p { color: var(--color-surfce); }
 }
 </style>

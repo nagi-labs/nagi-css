@@ -8,9 +8,12 @@ configuration, so humans and AI agents converge on the same answer.
 [Documentation](docs/getting-started/index.md) ·
 [Contract](CONTRACT.md)
 
-It keeps styling in plain CSS: no runtime, build step, utility classes, or new
-syntax. One ESLint plugin checks the component template and its `<style>` blocks
-together across Vue, Nuxt, Svelte, and Astro.
+It keeps semantic classes and selectors in component-owned CSS, with no runtime
+of its own. Plain CSS is the stable declaration backend. An experimental,
+explicit `tailwind-apply` compatibility backend lets an owned implementation use
+Tailwind `@apply` without putting utility classes in its template. One ESLint
+plugin checks the component template and its `<style>` blocks together across
+Vue, Nuxt, Svelte, and Astro.
 
 ## Install
 
@@ -18,7 +21,7 @@ Requirements:
 
 - Node.js 22.18 or newer
 - ESLint 9 or newer
-- component-owned `<style>` blocks written in plain CSS
+- component-owned `<style>` blocks whose selectors remain statically readable
 
 ```sh
 vp add -D @nagi-labs/eslint-plugin-nagi-css
@@ -63,9 +66,14 @@ Given the component and configuration, Nagi CSS derives one canonical form:
 - the surface root from the configured prefix and component filename;
 - fixed classes from HTML elements and configured UI components;
 - a small anatomy vocabulary and structural fallback for `div` and `span`;
-- static variants and attribute-based runtime state;
+- identifying ARIA roles before anatomy or structural fallback names;
+- a non-failing review warning for `div`/`span` wrappers that appear to exist only for flex/grid layout;
+- static variants that may restore local meaning even without a same-base peer,
+  and attribute-based runtime state;
 - selectors that mirror owned DOM with `>` and stop at component boundaries;
-- token references for colors and design-system scale values.
+- semantic token references for colors and repeated design-system scale values,
+  while component geometry stays plain CSS and genuine one-off optical
+  corrections use descriptive `--local-*` values.
 
 ```vue
 <template>
@@ -89,6 +97,13 @@ Nagi CSS extends the framework's official ESLint config instead of replacing
 its parser, globals, or generated settings. A separate configuration file is
 not required for normal application setup.
 
+Visual visibility and accessibility-tree exposure remain separate. ARIA states
+may be selected when they already describe real component state, but ARIA must
+not be invented as a styling hook. Content that is visually concealed while
+remaining available to assistive technology is styled through its derived base
+selector rather than an `-assistive` or `-sr-only` class. See
+[Visual hiding and the accessibility tree](CONTRACT.md#visual-hiding-and-the-accessibility-tree).
+
 ## Documentation
 
 - [Contract](CONTRACT.md) — the complete naming, selector, ownership, and value rules
@@ -96,6 +111,7 @@ not required for normal application setup.
 - [Configuration reference](skills/nagi-css/references/configuration.md) — UI libraries, slots, severity, emit policy, and tokens
 - [Agent instructions](AGENTS.md) — portable rules for agents editing components
 - [Agent skill](skills/nagi-css) — the complete generate-and-verify workflow
+- [Migrating to 0.3](docs/migrations/0.3.md) — lint behavior and configuration changes
 
 ## Packages
 
@@ -109,8 +125,11 @@ external configurations and projects that use another primary linter.
 ## Scope
 
 Nagi CSS checks Vue, Svelte, and Astro component templates together with their
-plain-CSS `<style>` blocks. Nuxt is supported through Vue's parser and Nuxt's
-generated ESLint config.
+CSS `<style>` blocks. Nuxt is supported through Vue's parser and Nuxt's generated
+ESLint config. The default `plain` declaration mode needs no additional CSS
+compiler. `tailwind-apply` requires the application to provide Tailwind's build
+integration and remains experimental in 0.3.x; its coverage and API may change
+before it is promoted to a stable backend.
 
 Preprocessor syntax and standalone `.css` files are outside the component-owned
 contract. Global resets, token declarations, and cross-surface exceptions remain

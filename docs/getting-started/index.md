@@ -154,5 +154,14 @@ The same rules apply everywhere: runtime state belongs in native, ARIA, or
 `data-*` attributes, dynamic classes need a static owned anchor, and selectors
 mirror owned DOM with `>`.
 
+Visual visibility is separate from accessibility-tree exposure. Do not add
+ARIA merely to obtain a CSS selector: `aria-hidden="true"` removes content from
+assistive technology but does not hide it visually. When text must be visually
+concealed while remaining available to assistive technology, apply the
+visually-hidden declarations directly to its derived base selector instead of
+adding an `-assistive`, `-sr-only`, or standalone utility class. See the
+[complete contract](../../CONTRACT.md#visual-hiding-and-the-accessibility-tree)
+for the canonical pattern.
+
 See the [configuration reference](https://github.com/nagi-labs/nagi-css/blob/main/skills/nagi-css/references/configuration.md)
 for UI-library boundaries, slots, severity, emit policy, and design tokens.

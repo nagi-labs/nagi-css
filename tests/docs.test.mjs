@@ -127,3 +127,23 @@ test("the getting-started token file declares exactly the names the table promis
 
   assert.deepEqual([...declared].sort(), promised)
 })
+
+test("portable agent guidance matches the paragraph and text identities", async () => {
+  const [agents, naming, pattern] = await Promise.all([
+    fs.readFile(path.join(repository, "AGENTS.md"), "utf8"),
+    fs.readFile(path.join(repository, "skills/nagi-css/references/naming-flow.md"), "utf8"),
+    fs.readFile(
+      path.join(repository, "skills/nagi-css/references/patterns/loading-error-empty.md"),
+      "utf8",
+    ),
+  ])
+  const config = defineNagiConfig({ surfaceRootPrefixes: ["app-"] })
+
+  assert.equal(config.elementClasses.p, "p")
+  assert.ok(config.anatomyClasses.includes("text"))
+  assert.match(agents, /`p` → `p`/)
+  assert.match(agents, /`actions` `field` `icon` `media` `text` `value`/)
+  assert.doesNotMatch(agents, /\| `p` \| `text` \|/)
+  assert.match(naming, /A prose paragraph is `<p class="p">`/)
+  assert.match(pattern, /self-mapped `p` identity/)
+})

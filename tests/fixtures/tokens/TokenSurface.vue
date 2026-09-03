@@ -1,6 +1,6 @@
 <template>
   <article class="test-token-surface">
-    <p class="text">x</p>
+    <p class="p">x</p>
   </article>
 </template>
 
@@ -13,6 +13,6 @@
   translate: 0 var(--local-hairline-nudge);
   color: var(--date-picker-accent-color);
 
-  > .text { color: var(--color-danger-text); }
+  > .p { color: var(--color-danger-text); }
 }
 </style>

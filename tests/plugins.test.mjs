@@ -20,6 +20,17 @@ const invalidStyleFile = path.join(root, "fixtures/style/InvalidBoundarySurface.
 
 const testSurface = { surfaceRootPrefixes: ["test-"] }
 
+test("plugin metadata matches the package version", async () => {
+  const manifest = JSON.parse(
+    await fs.readFile(
+      path.resolve(root, "../packages/eslint-plugin/package.json"),
+      "utf8",
+    ),
+  )
+
+  assert.equal(nagiCss.meta.version, manifest.version)
+})
+
 const semantic = {
   ...testSurface,
   componentClasses: { Column: "ui-column", DataTable: "ui-data-table" },
@@ -123,6 +134,73 @@ test("recommended config rejects unknown severity keys during config loading", (
   )
 })
 
+test("Tailwind apply is explicit while selector checks remain active", async () => {
+  const source = `<template>
+  <section class="test-apply-card">
+    <button class="button">Save</button>
+  </section>
+</template>
+<style scoped>
+.test-apply-card {
+  @apply grid gap-4;
+
+  > .button {
+    @apply rounded-md px-3 py-2;
+  }
+}
+</style>`
+
+  const plain = await lintEslint(
+    path.join(root, "fixtures/style/ApplyCard.vue"),
+    {},
+    source,
+  )
+  assert.ok(
+    plain.messages.some(
+      ({ ruleId }) => ruleId === "nagi-css/apply-directive-not-enabled",
+    ),
+  )
+
+  const tailwind = await lintEslint(
+    path.join(root, "fixtures/style/ApplyCard.vue"),
+    { declarationMode: "tailwind-apply" },
+    source,
+  )
+  assert.equal(tailwind.errorCount, 0, JSON.stringify(tailwind.messages))
+
+  const brokenSelector = await lintEslint(
+    path.join(root, "fixtures/style/ApplyCard.vue"),
+    { declarationMode: "tailwind-apply" },
+    source.replace("> .button {", "> .missing {"),
+  )
+  assert.ok(
+    brokenSelector.messages.some(({ ruleId }) => ruleId === "nagi-css/dead-rule"),
+  )
+
+  const arbitrary = await lintEslint(
+    path.join(root, "fixtures/style/ApplyCard.vue"),
+    { declarationMode: "tailwind-apply" },
+    source.replace("rounded-md", "font-[inherit]"),
+  )
+  assert.ok(
+    arbitrary.messages.some(
+      ({ ruleId }) => ruleId === "nagi-css/apply-arbitrary-syntax",
+    ),
+  )
+
+  const hiddenSurfaceLayout = await lintEslint(
+    path.join(root, "fixtures/style/ApplyCard.vue"),
+    { declarationMode: "tailwind-apply" },
+    source.replace("@apply grid gap-4;", "@apply relative mt-4 z-10;"),
+  )
+  assert.equal(
+    hiddenSurfaceLayout.messages.filter(
+      ({ ruleId }) => ruleId === "nagi-css/surface-external-layout",
+    ).length,
+    3,
+  )
+})
+
 test("template and style rules share an exact configured surface prefix", async () => {
   const file = path.join(root, "fixtures/prefixed/Toggle.vue")
   const config = { surfaceRootPrefixes: ["n-"] }
@@ -150,6 +228,58 @@ test("ESLint autofixes an unambiguous required static class", async () => {
 
   assert.match(result.output, /<button class="button">/)
   assert.equal(result.messages.length, 0)
+})
+
+test("ESLint replaces an anatomy or STN fallback with an identifying role", async () => {
+  const eslint = new ESLint({
+    cwd: root,
+    fix: true,
+    overrideConfigFile: true,
+    overrideConfig: createNagiStandaloneEslintConfigs(testSurface),
+  })
+  const [result] = await eslint.lintText(
+    `<template><section class="test-role-host"><div class="unit -fields" role="group" /></section></template>`,
+    { filePath: path.join(root, "fixtures/RoleHost.vue") },
+  )
+
+  assert.match(result.output, /class="group -fields" role="group"/)
+  assert.equal(result.messages.length, 0)
+})
+
+test("ESLint reports a layout-only wrapper as a non-failing warning without a fix", async () => {
+  const result = await lintEslint(
+    path.join(root, "fixtures/LayoutWrapper.vue"),
+    {},
+  `<template>
+  <section class="test-layout-wrapper">
+    <div class="unit -viewport">
+      <div class="seg -items">
+        <article v-for="item in items" :key="item.id" class="article" />
+      </div>
+    </div>
+  </section>
+</template>
+<style>
+.test-layout-wrapper {
+  > .unit.-viewport {
+    overflow: auto;
+    > .seg.-items {
+      display: flex;
+      inline-size: 100%;
+      > .article {}
+    }
+  }
+}
+</style>`,
+  )
+
+  const warning = result.messages.find(
+    ({ ruleId }) => ruleId === "nagi-css/layout-only-wrapper",
+  )
+  assert.ok(warning, JSON.stringify(result.messages))
+  assert.equal(warning.severity, 1)
+  assert.equal(result.errorCount, 0)
+  assert.equal(result.output, undefined)
 })
 
 test("ESLint accepts Svelte and Astro component templates and styles", async () => {
@@ -475,8 +605,8 @@ test("ESLint keeps external layout off surfaces except top-layer or anchored one
 test("ESLint rejects selector variants that shadow vocabulary names", async () => {
   const file = path.join(root, "fixtures/ShadowSurface.vue")
   const result = await lintStyles(file, testSurface,
-    `<template><section class="test-shadow-surface"><p class="text -lead">x</p></section></template>
-<style scoped>.test-shadow-surface { > .text.-title {} > .text.-lead {} }</style>`)
+    `<template><section class="test-shadow-surface"><p class="p -lead">x</p></section></template>
+<style scoped>.test-shadow-surface { > .p.-title {} > .p.-lead {} }</style>`)
   const shadowWarnings = result.results[0].warnings.filter(
     ({ rule }) => rule === "nagi-css/variant-shadows-vocabulary",
   )
@@ -492,13 +622,32 @@ test("ESLint rejects template variants that shadow vocabulary names", async () =
     overrideConfig: createNagiStandaloneEslintConfigs(testSurface),
   })
   const [result] = await eslint.lintText(
-    `<template><section class="test-shadow-surface"><p class="text -title">x</p></section></template>`,
+    `<template><section class="test-shadow-surface"><p class="p -title">x</p></section></template>`,
     { filePath: path.join(root, "fixtures/ShadowSurface.vue") },
   )
 
   assert.ok(
     result.messages.some(({ ruleId }) => ruleId === "nagi-css/variant-shadows-vocabulary"),
   )
+})
+
+test("ESLint rejects an Element Class Table identity on the wrong tag", async () => {
+  const eslint = new ESLint({
+    cwd: root,
+    overrideConfigFile: true,
+    overrideConfig: createNagiStandaloneEslintConfigs(testSurface),
+  })
+  const [result] = await eslint.lintText(
+    `<template><section class="test-text-surface"><p class="text">Paragraph</p><span class="title">Label</span></section></template>
+<style scoped>.test-text-surface { > .text {} > .title {} }</style>`,
+    { filePath: path.join(root, "fixtures/TextSurface.vue") },
+  )
+
+  assert.equal(
+    result.messages.filter(({ ruleId }) => ruleId === "nagi-css/reserved-element-name").length,
+    1,
+  )
+  assert.ok(result.messages.some(({ ruleId }) => ruleId === "nagi-css/anatomy-allowed"))
 })
 
 test("ESLint rejects multiple base identities", async () => {

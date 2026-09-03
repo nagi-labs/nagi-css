@@ -18,10 +18,10 @@ Domain meaning never goes in a style-element name — only in the surface identi
 | element | class | | element | class |
 |---|---|---|---|---|
 | `h1`–`h6` | `title` | | `ul` `ol` `dl` | `list` (`-description` for dl) |
-| `p` | `text` | | `li` | `item` |
-| `small` | `note` | | `dt` | `term` |
-| `a` | `link` | | `dd` | `definition` |
-| `img` | `image` | | `tr` | `row` |
+| `small` | `note` | | `li` | `item` |
+| `a` | `link` | | `dt` | `term` |
+| `img` | `image` | | `dd` | `definition` |
+| | | | `tr` | `row` |
 | `th` `td` | `cell` | | | |
 
 Every mapping is **a single base class**; there is no fixed-variant mechanism.
@@ -41,7 +41,8 @@ Every other rendered element **self-maps** (class = tag name): `header`,
 `<b>` `<i>` `<u>` `<s>`, whose tag names describe a rendering rather than a
 meaning: they are banned as class names, so a styled one has to become
 `<strong>`/`<em>` or a variant on its surroundings (unstyled prose is untouched,
-and `<i class="icon">` still works — that is the anatomy name, not the tag name). An override exists
+and an icon wrapper is written as `<span class="icon">`, because Anatomy is
+available only to `div` and `span`). An override exists
 only where **the tag varies for reasons unrelated to styling** (`h1`–`h6`
 follow the document outline); an abbreviation alone is not a reason, so `nav`,
 `svg`, and `dfn` self-map. A glyph-sized `<svg>` keeps `svg`; use an `icon`
@@ -69,8 +70,8 @@ This class is a boundary **anchor, not a `>` licence into internals**. Style lib
 
 ## 4. div / span only — the Semantics model
 
-- **4a. Accessibility Semantics** — a class equal to an ARIA role (`toolbar`, `tablist`, `tabpanel`, `menu`, `option`, `alert`, `status`, `dialog`, `separator`, …) is allowed **only when this `div`/`span` carries the matching `role="X"` attribute**. No `role` attribute → no role name. Elements covered by an earlier table keep that table identity and use an attribute selector for the role.
-- **4b. UI Anatomy allowlist** (closed, deliberately tiny): `field` (label+control wrapper) · `value` (read-only datum) · `actions` (button/action group) · `media` (image/figure wrapper) · `icon` (glyph-sized pictogram). Nothing else. Banned: `wrapper  container  inner  box  thing  content-area`. Dropped names route elsewhere: `title/body`→element table or STN, `list/item`→`<ul>/<li>`, `card/panel`→STN+`-card`, `status`→`-success` variant or `role="status"`, `trigger/overlay/viewport`→`role=` or variant.
+- **4a. Accessibility Semantics** — a class equal to an identifying ARIA role (`toolbar`, `tablist`, `tabpanel`, `menu`, `option`, `alert`, `status`, `dialog`, `separator`, …) is required when this styled `div`/`span` carries the matching static `role="X"` attribute. Do not fall through to anatomy or STN. `generic`, `none`, and `presentation` do not identify a CSS part and do fall through. No `role` attribute → no role name. Elements covered by an earlier table keep that table identity and use an attribute selector for the role.
+- **4b. UI Anatomy allowlist** (closed, deliberately tiny, and available only to `div`/`span`): `field` (visible form-field or composite-control frame; its accessible label may be associated from outside) · `value` (read-only datum) · `actions` (button/action group) · `media` (image/figure wrapper) · `icon` (glyph-sized pictogram wrapper) · `text` (short textual run or UI label with no more specific semantic element; normally a `span`). A prose paragraph is `<p class="p">`, not `p.text`. Nothing else. Banned: `wrapper  container  inner  box  thing  content-area`. Dropped names route elsewhere: `title/body`→element table or STN, `list/item`→`<ul>/<li>`, `card/panel`→STN+`-card`, `status`→`-success` variant or `role="status"`, `trigger/overlay/viewport`→`role=` or variant.
 - **4c. STN** — ladder coarse→fine: `stratum · region · block · unit · seg · fr · g`. **Leaf-anchored + unit floor**, enforced by three local relations (depth counted along the **STN chain**, not raw DOM — semantic/component nodes between STN nodes don't count):
   - **Consecutive**: a STN element is exactly one tier finer than its nearest STN ancestor (`unit → seg → fr → g`); no skip, no inversion (siblings share a tier).
   - **Floor**: the shallowest STN in a surface (no STN ancestor) is `unit` or coarser — never `seg`/`fr`/`g` at the top. So an isolated STN div is `unit`.

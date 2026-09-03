@@ -20,7 +20,7 @@ Use this when revising existing markup/CSS to follow the Nagi CSS contract.
    - A `div`/`span` earns its place only if it is a styling surface, **groups two or more children that must be laid out or styled together**, carries an Accessibility/Anatomy meaning, or is a STN node with actual styled purpose.
    - Remove a wrapper that ends up holding a single (visible) child — e.g. a group whose siblings are `display:none` or were deleted — and promote the child in its place. Delete permanently hidden / dead elements rather than keeping them plus their wrapper.
    - Fewer wrappers = shallower nesting = lower STN tiers and fewer STN elements. This is the everyday complement to "split when too deep" (CONTRACT.md §"Depth is capped"): also **collapse** a level that adds nothing.
-   - Example: `<div class="unit"><h1 class="title"/><p class="text -subtitle"/></div>` where the subtitle is always `display:none` → delete the subtitle and the wrapper, leaving `<h1 class="title"/>` directly under the header.
+   - Example: `<div class="unit"><h1 class="title"/><p class="p -subtitle"/></div>` where the subtitle is always `display:none` → delete the subtitle and the wrapper, leaving `<h1 class="title"/>` directly under the header.
 
 4. Normalize internal style elements.
    - Replace domain-heavy internal names with Accessibility Semantics, allowlisted UI Anatomy Semantics, or STN.
@@ -31,7 +31,10 @@ Use this when revising existing markup/CSS to follow the Nagi CSS contract.
 
 5. Convert utilities to variants.
    - Replace standalone utility classes with variants on the owned surface or element.
-   - Example: `class="footer sr-only"` becomes `class="footer -sr-only"`.
+   - Example: `class="footer compact"` becomes `class="footer -compact"`.
+   - Visual concealment is different: do not convert `sr-only` into
+     `-sr-only`. Keep the content exposed to assistive technology and put the
+     visually-hidden CSS directly on its derived base selector.
 
 6. Fix state classes.
    - Replace `is-*`, `has-*`, and runtime `-*` state classes with native state, ARIA, or `data-*`.
@@ -42,7 +45,15 @@ Use this when revising existing markup/CSS to follow the Nagi CSS contract.
    - Use the public contracts listed in CONTRACT.md §"Appendix: Non-owned Boundaries" instead.
    - Split styled slot content into independent owned surfaces when it must carry local CSS.
 
-8. Verify with the linter.
+8. Normalize design values without flattening real exceptions.
+   - Replace repeated raw colors and scale lengths with semantic tokens.
+   - Keep component geometry and functional values as ordinary CSS.
+   - Give a genuine one-off optical correction a descriptive `--local-*` value
+     in the same stylesheet; do not use a local escape for color.
+   - Promote a value to the token source when the same role recurs across
+     components.
+
+9. Verify with the linter.
    - Run the project's normal ESLint command; use `--fix` only for unambiguous derived fixes.
 
 ## Common Refactors
@@ -70,11 +81,11 @@ Refactor:
 Utility class:
 
 ```html
-<footer class="footer sr-only">...</footer>
+<footer class="footer compact">...</footer>
 ```
 
 Refactor:
 
 ```html
-<footer class="footer -sr-only">...</footer>
+<footer class="footer -compact">...</footer>
 ```

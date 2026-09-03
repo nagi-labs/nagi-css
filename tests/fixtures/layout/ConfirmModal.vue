@@ -1,6 +1,6 @@
 <template>
   <dialog class="test-confirm-modal">
-    <p class="text">Sure?</p>
+    <p class="p">Sure?</p>
   </dialog>
 </template>
 <style scoped>
@@ -8,6 +8,6 @@
   margin: auto;
   inset: 0;
   z-index: var(--z-modal);
-  > .text { color: inherit; }
+  > .p { color: inherit; }
 }
 </style>

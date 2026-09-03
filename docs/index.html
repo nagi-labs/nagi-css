@@ -17,12 +17,12 @@
   <header class="header">
     <img class="image" src="nagi-css.svg" alt="Nagi CSS">
     <h1 class="title">Nagi CSS</h1>
-    <p class="text -tagline">CSS, after the wind.</p>
-    <p class="text -lead">
+    <p class="p -tagline">CSS, after the wind.</p>
+    <p class="p -lead">
       A lint-enforced semantic contract — every class name has exactly one
       correct answer.
     </p>
-    <p class="text -meaning">
+    <p class="p -meaning">
       <em>Nagi</em> (“NAH-ghee”) is Japanese for the calm when the wind dies
       down — the state a codebase reaches when naming entropy stops.
       <small class="note">(Yes, the linter is a bit naggy. That’s the point.)</small>
@@ -39,7 +39,7 @@
 
   <section class="section -naming">
     <h2 class="title">Every name is derived</h2>
-    <p class="text">
+    <p class="p">
       One component, named entirely by rule. Nothing below was invented — each
       class comes from a lookup, and the linter enforces every derivation.
       The result reads as plain, unforced semantics.
@@ -81,12 +81,12 @@
       <ul class="list -rules">
         <li class="item -surface">
           <h3 class="title">Surface — from the file name</h3>
-          <p class="text"><code class="code">invoice-card</code> is the
+          <p class="p"><code class="code">invoice-card</code> is the
           component file's name, kebab-cased. Never chosen.</p>
         </li>
         <li class="item -element">
           <h3 class="title">Elements — from the tag</h3>
-          <p class="text"><code class="code">header</code>, <code class="code">title</code>,
+          <p class="p"><code class="code">header</code>, <code class="code">title</code>,
           <code class="code">image</code>, <code class="code">list</code>,
           <code class="code">term</code>, <code class="code">definition</code>,
           <code class="code">note</code>, <code class="code">footer</code>,
@@ -94,8 +94,8 @@
         </li>
         <li class="item -anatomy">
           <h3 class="title">UI anatomy — a tiny allowlist</h3>
-          <p class="text">Names for common UI parts that HTML has no tag for:
-          <code class="code">field</code> (label + control),
+          <p class="p">Names for common UI parts that HTML has no tag for:
+          <code class="code">field</code> (form field or composite control),
           <code class="code">value</code>, <code class="code">actions</code>,
           <code class="code">media</code>, <code class="code">icon</code>
           by default — five words go a long way, and the list is configurable
@@ -103,7 +103,7 @@
         </li>
         <li class="item -stn">
           <h3 class="title">Structural Tier Names (STN)</h3>
-          <p class="text">A structural ladder (<code class="code">unit</code> ·
+          <p class="p">A structural ladder (<code class="code">unit</code> ·
           <code class="code">seg</code> · <code class="code">fr</code> ·
           <code class="code">g</code>) for the <code class="code">div</code>s
           that nothing else fits — the tier is determined by depth, so
@@ -112,13 +112,13 @@
         </li>
         <li class="item -variant">
           <h3 class="title">Variants — modifiers, not names</h3>
-          <p class="text"><code class="code">-user</code>,
+          <p class="p"><code class="code">-user</code>,
           <code class="code">-primary</code>, … — they qualify an anchor,
           never name what an element is, and stay alphabetical.</p>
         </li>
         <li class="item -state">
           <h3 class="title">State — attributes, not classes</h3>
-          <p class="text"><code class="code">disabled</code>,
+          <p class="p"><code class="code">disabled</code>,
           <code class="code">aria-*</code>, <code class="code">data-*</code> —
           runtime state never becomes a class.</p>
         </li>
@@ -128,7 +128,7 @@
 
   <section class="section -why">
     <h2 class="title">Why</h2>
-    <p class="text">
+    <p class="p">
       The property everything else falls out of is <strong>canonical form</strong>:
       given the markup, the correct class for a node is unique — derived from the
       file name, the element and component tables, and a structural ladder,
@@ -137,7 +137,7 @@
     <ul class="list">
       <li class="item">
         <h3 class="title">Machine-checkable</h3>
-        <p class="text">
+        <p class="p">
           A linter can verify every derivation: template classes, selector
           structure, ownership edges, UI-library boundaries. Consistency stops
           being a discipline problem.
@@ -145,14 +145,14 @@
       </li>
       <li class="item">
         <h3 class="title">Convergent</h3>
-        <p class="text">
+        <p class="p">
           Two authors — or an AI agent — arrive at the same class names for the
           same markup. Generated CSS stops drifting.
         </p>
       </li>
       <li class="item">
         <h3 class="title">Meaning in the source</h3>
-        <p class="text">
+        <p class="p">
           <code class="code">class="user-card"</code> self-documents. Diffs
           are a changed property in a named rule, not a mutated utility string.
         </p>
@@ -162,7 +162,7 @@
 
   <section class="section -usage" id="usage">
     <h2 class="title">Usage</h2>
-    <p class="text">
+    <p class="p">
       Install the ESLint plugin, then add it after the framework's official flat
       config. The framework keeps ownership of its parser and generated settings.
     </p>
@@ -175,12 +175,12 @@ export default [
     surfaceRootPrefixes: ["app-"],
   }),
 ]</code></pre>
-    <p class="text">
+    <p class="p">
       One ESLint run validates templates, selectors, CSS nesting, ownership, and
       values. A separate Nagi configuration file is not required for normal
       Vue, Nuxt, Svelte, or Astro setup.
     </p>
-    <p class="text">
+    <p class="p">
       Choose a guide for
       <a class="link" href="https://github.com/nagi-labs/nagi-css/blob/main/docs/getting-started/vue.md">Vue</a>,
       <a class="link" href="https://github.com/nagi-labs/nagi-css/blob/main/docs/getting-started/nuxt.md">Nuxt</a>,
@@ -191,7 +191,7 @@ export default [
 
   <section class="section -agents">
     <h2 class="title">Built for AI agents</h2>
-    <p class="text">
+    <p class="p">
       The repository ships an agent skill that packages the contract as a
       workflow: what to derive, in what order, and how to verify the result.
       An agent applies the skill; the linter proves the output conforms.
@@ -201,11 +201,11 @@ export default [
   </section>
 
   <footer class="footer">
-    <p class="text">
+    <p class="p">
       MIT licensed, by nagi-labs contributors.
       <a class="link" href="https://github.com/nagi-labs/nagi-css">Source on GitHub</a>.
     </p>
-    <p class="text -colophon">
+    <p class="p -colophon">
       This page is plain HTML and CSS with the Nagi contract applied by hand —
       no JavaScript, no utilities, every selector anchored with
       <code class="code">&gt;</code>.

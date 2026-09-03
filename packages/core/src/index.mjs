@@ -27,7 +27,6 @@ const ELEMENT_CLASSES = {
   main: "main",
   nav: "nav",
   ol: "list",
-  p: "text",
   section: "section",
   small: "note",
   svg: "svg",
@@ -116,7 +115,7 @@ const SEMANTIC_TOKENS = Object.freeze({
 // Which family a property draws from, so a diagnostic can name the token the
 // author should have reached for instead of only saying "use a token".
 const DEFAULT_CONFIG = Object.freeze({
-  anatomyClasses: ["actions", "field", "icon", "media", "value"],
+  anatomyClasses: ["actions", "field", "icon", "media", "text", "value"],
   bannedClasses: [
     "b", "box", "container", "content-area", "i", "inner", "s", "thing", "u", "wrapper",
   ],
@@ -124,9 +123,11 @@ const DEFAULT_CONFIG = Object.freeze({
   componentClasses: {},
   componentSlotPrefixes: {},
   componentSlots: {},
+  declarationMode: "plain",
   detachedSlotSurfaces: [],
   elementClasses: ELEMENT_CLASSES,
   emitPolicy: "when-styled",
+  intrinsicComponents: {},
   libraryBoundaryPrefixes: [],
   libraryInternalPrefixes: [],
   // A cheap catch for the obvious static spellings. Words that double as a tone
@@ -137,6 +138,7 @@ const DEFAULT_CONFIG = Object.freeze({
     "-invalid", "-loading", "-open", "-pressed", "-selected",
   ],
   surfaceRootPrefixes: [],
+  transparentComponents: [],
   tiers: ["stratum", "region", "block", "unit", "seg", "fr", "g"],
   // Nagi CSS ships no tokens: design values belong to the design system, not to a
   // naming contract. It checks the boundary instead — that a referenced token was
@@ -383,6 +385,10 @@ export function defineNagiConfig(config = {}) {
       config.detachedSlotSurfaces ?? DEFAULT_CONFIG.detachedSlotSurfaces,
     ),
     elementClasses: { ...DEFAULT_CONFIG.elementClasses, ...config.elementClasses },
+    intrinsicComponents: {
+      ...DEFAULT_CONFIG.intrinsicComponents,
+      ...config.intrinsicComponents,
+    },
     libraryBoundaryPrefixes: unique(
       config.libraryBoundaryPrefixes ?? DEFAULT_CONFIG.libraryBoundaryPrefixes,
     ),
@@ -394,6 +400,9 @@ export function defineNagiConfig(config = {}) {
       config.surfaceRootPrefixes,
       DEFAULT_CONFIG.surfaceRootPrefixes,
     ),
+    transparentComponents: unique(
+      config.transparentComponents ?? DEFAULT_CONFIG.transparentComponents,
+    ),
     tiers: unique(config.tiers ?? DEFAULT_CONFIG.tiers),
     tokens: { ...DEFAULT_CONFIG.tokens, ...config.tokens },
   }
@@ -402,17 +411,20 @@ export function defineNagiConfig(config = {}) {
 const SEVERITY_LEVELS = ["error", "warn", "off"]
 const DEFAULT_SEVERITY_KEY = "*"
 
-// Rules that report what the toolchain could not verify rather than a violation.
-// The code may well be correct, so the default is a warning: it tells a project
-// where the linter is blind without failing a build over it.
-const COVERAGE_RULES = { "unverifiable-dynamic-class": "warn" }
+// Rules that report uncertainty or a review candidate rather than a violation.
+// The code may well be correct, so these default to warnings instead of failing
+// a build. Explicit severity configuration can still tighten or disable them.
+const DEFAULT_WARNING_RULES = {
+  "layout-only-wrapper": "warn",
+  "unverifiable-dynamic-class": "warn",
+}
 
 // Per-rule severity. `warn` exists for adopting the contract in an existing
 // codebase; the intended steady state is `error` in CI. Explicit configuration
 // always wins over a rule's own default, so `"*": "error"` tightens everything.
 export function resolveSeverity(severity = {}) {
   const fallback = severity[DEFAULT_SEVERITY_KEY]
-  return (ruleId) => severity[ruleId] ?? fallback ?? COVERAGE_RULES[ruleId] ?? "error"
+  return (ruleId) => severity[ruleId] ?? fallback ?? DEFAULT_WARNING_RULES[ruleId] ?? "error"
 }
 
 export function validateSeverity(severity = {}, knownRuleIds = []) {
@@ -516,6 +528,9 @@ export function buildNagiSets(input) {
 
 export function validateNagiConfig(config) {
   const errors = []
+  if (!["plain", "tailwind-apply"].includes(config.declarationMode)) {
+    errors.push('declarationMode must be "plain" or "tailwind-apply"')
+  }
   if (!['always', 'when-styled'].includes(config.emitPolicy)) {
     errors.push('emitPolicy must be "always" or "when-styled"')
   }
@@ -545,6 +560,26 @@ export function validateNagiConfig(config) {
       )
     } else if (value.trim().startsWith("-")) {
       errors.push(`elementClasses.${tag} must be a base class, not a variant; received "${value}"`)
+    }
+  }
+
+  for (const [component, tag] of Object.entries(config.intrinsicComponents ?? {})) {
+    if (typeof component !== "string" || component.length === 0) {
+      errors.push("intrinsicComponents keys must be non-empty component names")
+    }
+    if (!RENDERED_ELEMENTS.includes(tag)) {
+      errors.push(
+        `intrinsicComponents.${component} must map to a rendered HTML element; received ${JSON.stringify(tag)}`,
+      )
+    }
+  }
+  if (!Array.isArray(config.transparentComponents)) {
+    errors.push("transparentComponents must be an array")
+  } else {
+    for (const component of config.transparentComponents) {
+      if (typeof component !== "string" || component.length === 0) {
+        errors.push("transparentComponents entries must be non-empty component names")
+      }
     }
   }
 

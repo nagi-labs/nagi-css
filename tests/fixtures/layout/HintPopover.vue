@@ -1,6 +1,6 @@
 <template>
   <section class="test-hint-popover">
-    <p class="text">Tip</p>
+    <p class="p">Tip</p>
   </section>
 </template>
 <style scoped>
@@ -8,6 +8,6 @@
   position: fixed;
   position-anchor: --hint;
   position-area: block-end;
-  > .text { color: inherit; }
+  > .p { color: inherit; }
 }
 </style>

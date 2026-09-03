@@ -73,6 +73,25 @@ packs, installs, and submits the packages to npm staged publishing through
 OIDC. Trusted publishing automatically attaches provenance for this public
 repository.
 
+Before changing the version:
+
+1. Add the user-visible changes and migration notes to `CHANGELOG.md` and
+   `docs/migrations/`.
+2. Run `vp run test` from the repository root.
+3. Run `vp run release:prepare` and inspect every generated manifest and public
+   document under `.release/packages`.
+4. Pack and install the generated packages in isolated copies of representative
+   consumers. For a contract or configuration change, the Nagi UI Blueprints and
+   at least one alternate Implementation component are required scopes; do not
+   validate only against workspace imports.
+5. Run Nagi CSS lint on those declared conformance scopes and run their component
+   tests before tagging. A showcase page that has not adopted the contract must
+   remain visibly outside that scope rather than being counted as passing.
+
+While versions remain below 1.0, a new rule, configuration key, default
+diagnostic, or derived-name change increments the minor version. Reserve a patch
+release for corrections that preserve the existing contract.
+
 When the workflow succeeds, review the staged packages on npmjs.com and approve
 them in dependency order: core, ESLint plugin, then CLI. Approval makes each
 version public. Reject a staged package instead if its contents are not the

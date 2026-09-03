@@ -90,7 +90,7 @@ body {
       line-height: 1.05;
     }
 
-    > .text {
+    > .p {
       margin: 0;
       max-inline-size: var(--measure);
 
@@ -153,7 +153,7 @@ body {
       line-height: 1.2;
     }
 
-    > .text {
+    > .p {
       margin: 0;
       max-inline-size: var(--measure);
 
@@ -267,7 +267,7 @@ body {
                 line-height: 1.4;
               }
 
-              > .text {
+              > .p {
                 margin: 0;
                 font-size: 0.9rem;
                 color: var(--color-muted);
@@ -357,7 +357,7 @@ body {
             color: var(--color-accent);
           }
 
-          > .text {
+          > .p {
             margin: 0;
             font-size: 0.95rem;
 
@@ -382,7 +382,7 @@ body {
     color: var(--color-muted);
     font-size: 0.9rem;
 
-    > .text {
+    > .p {
       margin: 0;
       max-inline-size: var(--measure);
 

@@ -3,8 +3,8 @@
 Mark a slot surface detached only when Teleport actually renders it outside the parent tree.
 
 ```vue
-<template><Teleport to="body"><section class="pv-dialog-content"><p class="text"/></section></Teleport></template>
-<style scoped>.pv-dialog-content { > .text {} }</style>
+<template><Teleport to="body"><section class="pv-dialog-content"><p class="p"/></section></Teleport></template>
+<style scoped>.pv-dialog-content { > .p {} }</style>
 ```
 
 ```js

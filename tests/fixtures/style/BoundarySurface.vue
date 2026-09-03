@@ -6,7 +6,7 @@
           <Column class="ui-column">
             <template #body>
               <div class="ui-table-column-body">
-                <p class="text">Value</p>
+                <p class="p">Value</p>
               </div>
             </template>
           </Column>
@@ -22,7 +22,7 @@
     .ui-data-table-body {
       > .ui-column {
         .ui-table-column-body {
-          > .text {}
+          > .p {}
           :deep(.third-party-node span) {}
         }
       }

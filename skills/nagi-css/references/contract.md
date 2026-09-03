@@ -10,12 +10,35 @@
   does not exist (`selector-mirrors-template`) is reported.
 - Use classes for owned styling targets; do not target bare owned elements.
 - Keep runtime state in native, ARIA, or `data-*` attributes.
+- Review `layout-only-wrapper` warnings: they identify a `div`/`span` that is
+  its parent's sole visible branch, has one child template branch, and owns only
+  flex/grid layout or sizing. They do not prove the wrapper is removable; verify
+  scroll, intrinsic sizing, and motion in a browser. The rule deliberately has
+  no autofix.
 - Derive a surface name exactly from its configured namespace prefix and component or routed page file.
 - Use only configured anatomy, element, component, STN, slot, or matching role names below a surface.
+- Use UI Anatomy and STN only on `div` and `span`. Every other native element
+  keeps its Element Class Table identity: a paragraph is `<p class="p">`, while
+  a short UI label may be `<span class="text">`. Use `p` only when the content
+  is genuinely a prose paragraph, not as a generic text container.
+- On a styled `div` or `span`, a static identifying ARIA role is the required
+  base identity before anatomy or STN. `generic`, `none`, and `presentation`
+  are non-identifying and fall through.
 - Keep `-variant` classes alphabetical.
 - Keep `-variant` stems outside the **base-identity** vocabulary (element, component, anatomy, STN, slot, banned, and rendered element names). Variants modify an anchor; they never name what an element is. If a variant wants one of those (`-title`, `-header`, `-footer`), use the matching element/class or attribute instead.
+- A static variant may restore local meaning to a generic base even when no
+  same-base peer exists (`unit -viewport`). Do not infer redundancy from peer
+  counts, ancestor paths, framework-specific `data-part` markers, accessible
+  names, or ARIA ID relationships.
 - An ARIA role name that is *not* a base identity is a legal variant (`-search`, `-toolbar`, `-status`) — it says which part of the design this is. It is rejected only on an element that declares the matching role, where it was available as the base.
 - **Write variants in the static `class` attribute.** A variant applied by a binding is runtime state: `:class="{ '-collapsed': !open }"` reports `variant-must-be-static`; use `:data-collapsed="!open"` and select `[data-collapsed="true"]`.
+- Keep visual visibility separate from accessibility-tree exposure. Existing
+  native or ARIA state may be selected when it is already the source of truth,
+  but never add ARIA as a styling hook. `aria-hidden="true"` removes content
+  from the accessibility tree and does not hide it visually. For content that
+  is visually concealed but remains available to assistive technology, put the
+  CSS on the derived base selector; do not add `-assistive` or `-sr-only` merely
+  to name that treatment.
 
 ## UI Libraries
 

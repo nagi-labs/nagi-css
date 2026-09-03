@@ -24,6 +24,7 @@ test("release staging replaces workspace ranges and includes public documents", 
     assert.equal(manifest.version, workspaceVersion)
     assert.doesNotMatch(JSON.stringify(manifest), /workspace:/)
     await fs.access(path.join(root, "README.md"))
+    await fs.access(path.join(root, "CHANGELOG.md"))
     await fs.access(path.join(root, "LICENSE"))
   }
 

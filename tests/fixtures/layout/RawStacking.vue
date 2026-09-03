@@ -1,6 +1,6 @@
 <template>
   <dialog class="test-raw-stacking">
-    <p class="text">Sure?</p>
+    <p class="p">Sure?</p>
   </dialog>
 </template>
 <style scoped>
@@ -8,6 +8,6 @@
   margin: auto;
   inset: 0;
   z-index: 100;
-  > .text { color: inherit; z-index: 2; }
+  > .p { color: inherit; z-index: 2; }
 }
 </style>

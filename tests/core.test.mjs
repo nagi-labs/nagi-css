@@ -36,6 +36,91 @@ test("derives UI library classes with the default pv prefix", () => {
   })
 })
 
+test("defaults declaration authoring to plain CSS and validates explicit backends", () => {
+  assert.equal(defineNagiConfig().declarationMode, "plain")
+  assert.equal(
+    defineNagiConfig({ declarationMode: "tailwind-apply" }).declarationMode,
+    "tailwind-apply",
+  )
+  assert.deepEqual(
+    validateNagiConfig(
+      defineNagiConfig({
+        declarationMode: "utilities",
+        surfaceRootPrefixes: ["app-"],
+      }),
+    ),
+    ['declarationMode must be "plain" or "tailwind-apply"'],
+  )
+})
+
+test("maps intrinsic render proxies and transparent control components onto owned DOM", () => {
+  const result = analyzeVueTemplate(
+    `<template>
+  <section class="n-motion-card">
+    <AnimatePresence>
+      <motion.article class="article">
+        <p class="p">Ready</p>
+      </motion.article>
+      <motion.div class="status" role="status">
+        <motion.span class="text">Synced</motion.span>
+      </motion.div>
+    </AnimatePresence>
+  </section>
+</template>
+<style>
+.n-motion-card {
+  > .article {
+    > .p {}
+  }
+  > .status {
+    > .text {}
+  }
+}
+</style>`,
+    "/src/components/MotionCard.vue",
+    {
+      intrinsicComponents: {
+        "motion.article": "article",
+        "motion.div": "div",
+        "motion.span": "span",
+      },
+      surfaceRootPrefixes: ["n-"],
+      transparentComponents: ["AnimatePresence"],
+    },
+  )
+
+  assert.deepEqual(result.violations, [])
+  assert.equal(result.tree[0].children[0].tag, "article")
+  assert.equal(Boolean(result.tree[0].children[0].opaque), false)
+  assert.equal(result.tree[0].children[1].tag, "div")
+  assert.equal(result.tree[0].children[1].children[0].tag, "span")
+  assert.deepEqual(
+    validateNagiConfig(
+      defineNagiConfig({
+        intrinsicComponents: { "motion.div": "div", "motion.span": "span" },
+        surfaceRootPrefixes: ["n-"],
+      }),
+    ),
+    [],
+  )
+})
+
+test("validates intrinsic and transparent component mappings", () => {
+  assert.deepEqual(
+    validateNagiConfig(
+      defineNagiConfig({
+        intrinsicComponents: { MotionBox: "box" },
+        surfaceRootPrefixes: ["n-"],
+        transparentComponents: [""],
+      }),
+    ),
+    [
+      'intrinsicComponents.MotionBox must map to a rendered HTML element; received "box"',
+      "transparentComponents entries must be non-empty component names",
+    ],
+  )
+})
+
 test("keeps initialisms as one kebab-case word in derived surface names", () => {
   assert.equal(deriveSurfaceRootName("/src/components/OTPField.vue"), "otp-field")
 })
@@ -436,13 +521,13 @@ test("keeps element-table identity ahead of additional ARIA semantics", () => {
 
 test("rejects variants that shadow vocabulary names", () => {
   const shadowed = analyzeVueTemplate(
-    `<template><section class="shadow-surface"><p class="text -title">x</p></section></template>
-<style>.shadow-surface { > .text {} }</style>`,
+    `<template><section class="shadow-surface"><p class="p -title">x</p></section></template>
+<style>.shadow-surface { > .p {} }</style>`,
     "/src/components/ShadowSurface.vue",
   )
   const modifier = analyzeVueTemplate(
-    `<template><section class="shadow-surface"><p class="text -lead">x</p></section></template>
-<style>.shadow-surface { > .text {} }</style>`,
+    `<template><section class="shadow-surface"><p class="p -lead">x</p></section></template>
+<style>.shadow-surface { > .p {} }</style>`,
     "/src/components/ShadowSurface.vue",
   )
 
@@ -506,6 +591,72 @@ test("keeps a role-name identity on div/span that shares an element spelling", (
     mismatched.violations.some(({ ruleId }) => ruleId === "reserved-element-name"),
     true,
   )
+})
+
+test("keeps Element Class Table identities on their owning tags", () => {
+  const spanText = analyzeVueTemplate(
+    `<template><section class="text-host"><span class="text">Label</span></section></template>
+<style>.text-host { > .text {} }</style>`,
+    "/src/components/TextHost.vue",
+  )
+  const spanTitle = analyzeVueTemplate(
+    `<template><section class="text-host"><span class="title">Label</span></section></template>
+<style>.text-host { > .title {} }</style>`,
+    "/src/components/TextHost.vue",
+  )
+  const paragraphText = analyzeVueTemplate(
+    `<template><section class="text-host"><p class="text">Paragraph</p></section></template>
+<style>.text-host { > .text {} }</style>`,
+    "/src/components/TextHost.vue",
+  )
+
+  assert.deepEqual(spanText.violations, [])
+  assert.equal(
+    spanTitle.violations.some(({ ruleId }) => ruleId === "reserved-element-name"),
+    true,
+  )
+  assert.equal(
+    paragraphText.violations.some(({ ruleId }) => ruleId === "anatomy-allowed"),
+    true,
+  )
+  assert.equal(
+    paragraphText.violations.some(({ ruleId }) => ruleId === "element-class-required"),
+    true,
+  )
+})
+
+test("requires an identifying ARIA role before anatomy or STN on div and span", () => {
+  const stnFallback = analyzeVueTemplate(
+    `<template><section class="role-host"><div class="unit -fields" role="group" /></section></template>`,
+    "/src/components/RoleHost.vue",
+  )
+  const anatomyFallback = analyzeVueTemplate(
+    `<template><section class="role-host"><span class="field" role="status" /></section></template>`,
+    "/src/components/RoleHost.vue",
+  )
+
+  for (const result of [stnFallback, anatomyFallback]) {
+    assert.equal(
+      result.violations.some(({ ruleId }) => ruleId === "role-identity-required"),
+      true,
+    )
+  }
+  assert.equal(
+    stnFallback.violations.find(({ ruleId }) => ruleId === "role-identity-required")
+      ?.fix?.text,
+    '"group -fields"',
+  )
+
+  for (const source of [
+    `<template><section class="role-host"><div class="group" role="group" /></section></template>`,
+    `<template><section class="role-host"><div class="region" role="region" /></section></template>`,
+    `<template><section class="role-host"><div class="unit" role="presentation" /></section></template>`,
+    `<template><section class="role-host"><li class="item" role="separator" /></section></template>`,
+    `<template><div class="role-host" role="group" /></template>`,
+  ]) {
+    const result = analyzeVueTemplate(source, "/src/components/RoleHost.vue")
+    assert.deepEqual(result.violations, [], source)
+  }
 })
 
 test("treats level-free wrappers as transparent so the surface root stays at the root", () => {
@@ -852,8 +1003,9 @@ test("purely presentational elements get no class of their own", () => {
 
   // the semantic elements the author should reach for keep their self-map
   assert.deepEqual(host(`<strong class="strong">x</strong>`), [])
-  // and the contract's sanctioned icon use of <i> is untouched
-  assert.deepEqual(host(`<i class="icon" />`), [])
+  // Anatomy belongs only to div/span, including an icon wrapper.
+  assert.ok(host(`<i class="icon" />`).some(({ ruleId }) => ruleId === "anatomy-allowed"))
+  assert.deepEqual(host(`<span class="icon" />`), [])
 })
 
 test("reports a class binding whose names cannot be read", () => {
@@ -877,12 +1029,76 @@ test("reports a class binding whose names cannot be read", () => {
   }
 })
 
-test("a coverage rule warns by default and explicit configuration wins", () => {
+test("reports a layout-only wrapper as a review candidate, not a proven violation", () => {
+  const analyze = ({
+    attributes = "",
+    declarations = "display: flex; inline-size: 100%;",
+    children,
+    sibling = "",
+  } = {}) =>
+    analyzeVueTemplate(
+      `<template>
+  <section class="app-carousel">
+    <div class="unit -viewport">
+      ${sibling}
+      <div class="seg -slides" ${attributes}>
+        ${children ?? '<article v-for="item in items" :key="item.id" class="article -slide" />'}
+      </div>
+    </div>
+  </section>
+</template>
+<style>
+.app-carousel {
+  > .unit.-viewport {
+    overflow: auto;
+    > .seg.-slides {
+      ${declarations}
+      > .article.-slide {}
+      > .p.-empty {}
+    }
+  }
+}
+</style>`,
+      "/src/components/Carousel.vue",
+      { surfaceRootPrefixes: ["app-"] },
+    ).violations.filter(({ ruleId }) => ruleId === "layout-only-wrapper")
+
+  const candidate = analyze()
+  assert.equal(candidate.length, 1)
+  assert.match(candidate[0].message, /review whether that layout can move/u)
+  assert.equal("fix" in candidate[0], false)
+
+  for (const attributes of [
+    'role="group"',
+    'data-part="slides"',
+    'ref="track"',
+    '@click="activate"',
+  ]) {
+    assert.deepEqual(analyze({ attributes }), [], attributes)
+  }
+  assert.deepEqual(analyze({ declarations: "display: flex; overflow: hidden;" }), [])
+  assert.deepEqual(analyze({ declarations: "display: flex; transform: translateX(0);" }), [])
+  assert.deepEqual(
+    analyze({ declarations: "display: flex; &[data-moving] { transform: translateX(0); }" }),
+    [],
+  )
+  assert.deepEqual(
+    analyze({
+      children: '<article class="article -slide" /><p class="p -empty">Empty</p>',
+    }),
+    [],
+  )
+  assert.deepEqual(analyze({ sibling: '<h2 class="title">Choices</h2>' }), [])
+})
+
+test("advisory rules warn by default and explicit configuration wins", () => {
   const levelFor = resolveSeverity()
+  assert.equal(levelFor("layout-only-wrapper"), "warn")
   assert.equal(levelFor("unverifiable-dynamic-class"), "warn")
   assert.equal(levelFor("anatomy-allowed"), "error")
 
   // "*" is an explicit choice about everything, so it overrides the rule default
+  assert.equal(resolveSeverity({ "*": "error" })("layout-only-wrapper"), "error")
   assert.equal(resolveSeverity({ "*": "error" })("unverifiable-dynamic-class"), "error")
   assert.equal(resolveSeverity({ "*": "off" })("unverifiable-dynamic-class"), "off")
   // and a rule-specific entry wins over both

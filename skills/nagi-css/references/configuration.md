@@ -24,6 +24,7 @@ export default [
       },
       libraryBoundaryPrefixes: ["pv-"],
       libraryInternalPrefixes: ["vendor-", "icon"],
+      declarationMode: "plain",
       emitPolicy: "when-styled",
     },
     {
@@ -36,6 +37,30 @@ export default [
   ),
 ]
 ```
+
+`declarationMode` chooses how declarations inside those readable selectors are
+authored:
+
+- `"plain"` is the default. `@apply` is rejected, and Nagi CSS can inspect every
+  declaration directly.
+- `"tailwind-apply"` is an experimental compatibility backend that permits
+  Tailwind `@apply`. Template class vocabulary,
+  selector nesting, owned-DOM boundaries, state selectors, and selector/template
+  matching remain checked. Tailwind owns utility-name validation and expansion;
+  Nagi CSS does not claim complete property/value coverage over an unexpanded
+  utility list. Raw CSS declarations beside `@apply` are still checked normally.
+
+Arbitrary syntax such as `font-[inherit]` or `[mask-type:luminance]` is rejected
+inside `@apply`; keep that property visible as plain CSS. Nagi CSS also recognizes
+surface-root position, margin, inset, and z-index utilities so `@apply` cannot
+hide external layout ownership. Other named utilities are validated and expanded
+by Tailwind. Its coverage and configuration may change before it is promoted to
+a stable declaration backend.
+
+The second mode does not permit utility classes in the template. It only changes
+the declaration backend behind Nagi's derived classes and nested selectors. Use
+it for an owned implementation that deliberately accepts Tailwind as a build
+dependency; keep reusable, dependency-free Blueprints on `"plain"`.
 
 `tiers` sets the STN ladder. Its default is seven names, and a surface that is
 irreducibly deeper can be given headroom by adding a coarser name at the front —
@@ -51,10 +76,15 @@ An unknown rule name is a configuration error, so a typo cannot quietly disable
 a check. Use `warn` to stage adoption in an existing codebase — do not leave a
 project there, since an unenforced contract is back to consistency by discipline.
 
-`unverifiable-dynamic-class` is the exception: it defaults to `warn` because it
-reports what could not be checked rather than a violation. Raise it to `error`
-where every element must be verifiable, or turn it `off` if the gaps are known
-and accepted.
+Two advisory rules default to `warn` because they do not prove a violation:
+
+- `unverifiable-dynamic-class` reports class names that cannot be checked;
+- `layout-only-wrapper` reports a `div`/`span` that appears to exist only for
+  flex/grid layout and may be collapsible after rendered verification.
+
+Raise either to `error` when review is mandatory, or turn it `off` when the gaps
+or candidates are known and accepted. Neither advisory has a speculative
+autofix.
 
 `componentClasses` lists only opaque third-party or UI-library components. The
 array shorthand derives each class as `pv-` plus the component name in
@@ -71,6 +101,34 @@ componentClasses: {
 
 Do not register application-owned components here. Their surface root is
 derived from their own filename and the required `surfaceRootPrefixes`.
+
+When one repository both consumes package components and owns copied or
+replacement implementations, use separate ESLint config entries. Consumer
+templates may load the package's `componentClasses` boundary map; owned source
+files must omit that map and use their own surface prefix. Otherwise the linter
+correctly treats an owned root such as `.n-carousel` as an opaque dependency and
+refuses to inspect its children.
+
+Components that only proxy a fixed native element are not opaque library
+boundaries. Map them with `intrinsicComponents` so element naming and owned-child
+selector checks continue through the proxy. Components that render no DOM at all
+go in `transparentComponents`:
+
+```js
+intrinsicComponents: {
+  "motion.article": "article",
+  "motion.div": "div",
+  "motion.li": "li",
+  "motion.span": "span",
+},
+transparentComponents: ["AnimatePresence"],
+```
+
+Use these only where the rendered shape is fixed by the component API.
+`motion.article` always renders an `article`, and `AnimatePresence` contributes no
+element. A polymorphic component whose tag is chosen at runtime is not an
+intrinsic mapping; its tree remains unverifiable. Neither option changes the
+runtime or asks Nagi CSS to understand the component's behavior.
 
 ```js
 surfaceRootPrefixes: ["n-", "app-"]
@@ -168,6 +226,8 @@ the token layer. Both prefixes must start with `--`. `exposedPrefixes` also
 exempts a fallback, so `var(--pv-datepicker-fg, #333)` documents an exposed
 default while `var(--color-text, #333)` is a raw color.
 
-The semantic object also accepts `surfaceRootPrefixes`, `componentClassPrefix`, `elementClasses`, `anatomyClasses`,
-`bannedClasses`, `stateClasses`, and `tiers`. Prefer narrow project mappings
-over growing anatomy vocabulary to accommodate one local component.
+The semantic object also accepts `surfaceRootPrefixes`, `componentClassPrefix`,
+`elementClasses`, `anatomyClasses`, `bannedClasses`, `stateClasses`, `tiers`,
+`declarationMode`, `intrinsicComponents`, and `transparentComponents`. Prefer
+narrow project mappings over growing anatomy vocabulary to accommodate one local
+component.

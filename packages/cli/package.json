@@ -1,6 +1,6 @@
 {
   "name": "@nagi-labs/nagi-css",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "CSS, after the wind. Optional standalone ESLint runner for the Nagi CSS contract.",
   "license": "MIT",
   "repository": {
@@ -26,7 +26,8 @@
   },
   "exports": "./src/cli.mjs",
   "files": [
-    "src"
+    "src",
+    "CHANGELOG.md"
   ],
   "publishConfig": {
     "access": "public"

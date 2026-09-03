@@ -79,8 +79,8 @@ test("CLI honours per-rule severity, and warnings do not fail the run", async (c
   // Two violations: a banned template class and a missing `>` in its style block.
   await fs.writeFile(
     path.join(directory, "SeveritySurface.vue"),
-    `<template><section class="test-severity-surface"><div class="wrapper"><p class="text">x</p></div></section></template>
-<style>.test-severity-surface { .text {} }</style>`,
+    `<template><section class="test-severity-surface"><div class="wrapper"><p class="p">x</p></div></section></template>
+<style>.test-severity-surface { .p {} }</style>`,
   )
 
   const run = async (severity) => {

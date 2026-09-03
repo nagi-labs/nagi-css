@@ -20,10 +20,12 @@ same output.
 It is **not** a universal rule for the entire rendered tree. Instead, it defines strict rules for styling **owned DOM inside a styling surface**, and lighter contract-based rules for everything outside that boundary.
 
 The contract is built on six principles. Two of them carry the weight:
-**Standard-first** decides what the contract is made of — plain CSS and the
-platform's own model, not a parallel system in JavaScript — and **Deterministic**
-is what turns the rest from qualities many conventions aspire to into claims a
-machine can check.
+**Standard-first** decides the public model — CSS selectors and the platform's
+own state, not a parallel system in JavaScript — and **Deterministic** is what
+turns the rest from qualities many conventions aspire to into claims a machine
+can check. Plain CSS is the default declaration backend; an owned implementation
+may explicitly delegate declaration expansion to Tailwind without changing the
+template or selector contract.
 
 ### Semantic
 
@@ -43,11 +45,14 @@ Runtime state should be expressed through native states, ARIA attributes, and `d
 
 ### Standard-first
 
-Styling is expressed in CSS, not in JavaScript. The contract adds no runtime, no
-build step, and no new syntax. What it constrains is plain CSS with native
-nesting, custom properties, and container queries, and it uses the platform's own
-model for state — native states, ARIA, and `data-*` — rather than a parallel one
-built out of class names. It reaches for the newest parts of the platform
+Styling is expressed in CSS, not in JavaScript. The contract adds no runtime.
+Its default `plain` mode adds no build step or new syntax. What it constrains is
+CSS with statically readable selectors, native nesting, custom properties, and
+container queries, and it uses the platform's own model for state — native
+states, ARIA, and `data-*` — rather than a parallel one built out of class names.
+An optional `tailwind-apply` mode delegates declaration expansion to an
+application-provided Tailwind build while keeping those selectors and states
+unchanged. It reaches for the newest parts of the platform
 (container queries, the top layer, anchor positioning, Shadow DOM and `::part()`)
 instead of working around them.
 
@@ -176,6 +181,49 @@ So the exclusion follows from the contract's own rules rather than from a toolin
 limitation. Support may be reconsidered if a concrete need appears; nothing is
 scaffolded for it in advance.
 
+### Declaration authoring modes
+
+`declarationMode: "plain"` is the canonical default. Every declaration is visible
+to Nagi CSS, so selector, ownership, layout, token, and raw-value rules can all be
+evaluated from the component source. `@apply` in this mode is reported by
+`apply-directive-not-enabled`.
+
+`declarationMode: "tailwind-apply"` is an **experimental compatibility backend**
+in the 0.3 line, not the standard authoring path. Its coverage and API may change
+before promotion to stable. Derived classes, variants, attribute state, nested
+`>` edges, and component boundaries remain exactly the same. Only declarations
+may use Tailwind utilities behind those selectors:
+
+```css
+.app-user-card {
+  @apply grid gap-4;
+
+  > .button {
+    @apply rounded-md px-3 py-2;
+  }
+}
+```
+
+This is not Tailwind-in-template. Standalone utility classes remain forbidden in
+markup. Tailwind validates utility names and expands their declarations. Before
+expansion Nagi CSS cannot generally inspect the property and resolved value
+behind a named utility, so declaration-dependent rules do not claim complete
+coverage of those utilities. Raw declarations written beside `@apply` are still
+inspected. The `layout-only-wrapper` advisory is likewise unavailable for a rule
+whose layout exists only inside `@apply`.
+
+Arbitrary Tailwind syntax is rejected inside `@apply`. Write `font: inherit`
+beside `@apply` instead of hiding it in `font-[inherit]`; the same applies to
+arbitrary properties and values. Surface-root position, margin, inset, and
+stacking utilities are interpreted far enough to preserve the existing external
+layout rule. Tailwind remains responsible for expanding and validating the
+ordinary named utilities.
+
+The consequence is intentional and visible: `plain` provides Nagi's full
+declaration audit with no CSS toolchain dependency; `tailwind-apply` preserves
+the structural contract while delegating declaration correctness to Tailwind and
+the application's theme configuration.
+
 ---
 
 ## Core Concepts
@@ -205,7 +253,7 @@ Example of controllable DOM:
   <header class="header">
     <h2 class="title">Delete item</h2>
   </header>
-  <p class="text">Are you sure?</p>
+  <p class="p">Are you sure?</p>
 </div>
 ```
 
@@ -314,6 +362,16 @@ regardless of the word: `:class="{ '-collapsed': !open }"` becomes
 `:data-collapsed="!open"`, selected as `[data-collapsed="true"]`. This is what
 makes the state rule enforceable — the linter does not have to decide which words
 mean state, only that state is what changes.
+
+A static variant does not need a same-base peer. It may restore local meaning to
+a generic base (`unit -viewport`) even when that base occurs only once under its
+parent. The linter therefore does not infer redundancy from peer counts, an
+ancestor path, or an unrelated framework marker such as `data-part`. Accessible
+names and ID relationships (`aria-label`, `aria-labelledby`,
+`aria-describedby`) are likewise not CSS identities: they remain free to change
+with content, locale, and accessibility composition. Nagi CSS rejects only
+provable protocol conflicts; whether two different words such as `thead` and
+`-head` repeat the same human meaning remains a source-review decision.
 
 #### The variant stem is convention, not derivation
 
@@ -438,16 +496,15 @@ Examples:
 - `-avatar`
 - `-sidebar`
 - `-dense`
-- `-sr-only`
 
 Variants are for styling differences, not runtime state.
 
-Multiple variants may be applied to the same styling surface or style element, and **must be written in alphabetical order** (`-dense -sr-only`, not `-sr-only -dense`) so the ordering is deterministic.
+Multiple variants may be applied to the same styling surface or style element, and **must be written in alphabetical order** (`-compact -muted`, not `-muted -compact`) so the ordering is deterministic.
 
 Example:
 
 ```html
-<footer class="footer -dense -sr-only">...</footer>
+<footer class="footer -dense">...</footer>
 ```
 
 ---
@@ -495,7 +552,9 @@ Example:
 
 ### UI Anatomy Semantics
 
-UI Anatomy Semantics are contract-defined names for common UI parts that are not directly covered by Accessibility Semantics.
+UI Anatomy Semantics are contract-defined names for common UI parts that are not directly covered by Accessibility Semantics. They apply only to the residual
+`div` / `span` branch of the naming procedure; they never replace a semantic
+HTML element's Element Class Table identity.
 
 They are not open-ended. The contract ships a deliberately tiny default allowlist, and a project must decide which additional UI anatomy semantic names are allowed.
 
@@ -506,7 +565,7 @@ Example:
   <header class="header">
     <h3 class="title">Invoice</h3>
   </header>
-  <p class="text">...</p>
+  <p class="p">...</p>
 </article>
 ```
 
@@ -613,7 +672,6 @@ and the list is deliberately closed:
 
 | Element | class | |
 |---|---|---|
-| `<p>` | `text` | |
 | `<small>` | `note` | side comments and fine print |
 | `<a>` | `link` | |
 | `<img>` | `image` | |
@@ -626,11 +684,17 @@ variant alongside a base: a distinction a selector can reach belongs in an
 attribute or an ancestor step (see the notes below), and one it cannot reach
 means the elements want different classes.
 
-Everything else self-maps: `<header>` → `header`, `<section>` → `section`,
+Everything else self-maps: `<p>` → `p`, `<header>` → `header`, `<section>` → `section`,
 `<button>` → `button`, `<dialog>` → `dialog` (a top-layer surface, and a
 surface root when natural), `<details>` → `details`, `<form>` → `form`,
 `<select>` → `select`, `<thead>` → `thead`, `<tbody>` → `tbody`, and so on for
 every rendered element. Notes that survive the trimming:
+
+- **`<p class="p">` means a prose paragraph, not generic UI text.** A short
+  label, title-like label, or display string that does not form a paragraph uses
+  a `div` / `span` and the first matching Semantics-model identity (often
+  `text`). The linter enforces the class boundary (`p.text` is invalid); whether
+  the content is genuinely a paragraph remains an HTML-authoring review.
 
 - **`<b>` `<i>` `<u>` `<s>` self-map to nothing.** Their tag names describe a
   rendering (bold, italic, underline, strike-through), not a meaning, so a
@@ -638,8 +702,8 @@ every rendered element. Notes that survive the trimming:
   Semantic principle rejects. They are banned as class names instead. In prose
   they need no class and are untouched; a *styled* one has no legal class, which
   is the pressure to use `<strong>`, `<em>`, or a variant on the surrounding
-  element. The contract's icon use of `<i>` is unaffected, because that element
-  takes the `icon` anatomy name rather than its tag name.
+  element. UI Anatomy is limited to `div` and `span`, so an icon wrapper is
+  `<span class="icon">`, not `<i class="icon">`.
 - `<section>` vagueness is resolved by a variant (`section -payment`), and an
   internal `<article>` that is actually a surface root is named by identity
   (`card`, …).
@@ -700,6 +764,32 @@ The linter receives boundary prefixes separately from internal prefixes so selec
 
 Do not use `componentClasses` as a registry of owned components. An owned child is covered by the rule below instead, which needs no configuration.
 
+### Fixed intrinsic proxies and transparent control components
+
+Some third-party components are neither opaque widgets nor owned child surfaces.
+They are syntax around a fixed platform element. `motion.article`, for example,
+renders an `article` while adding animation behavior; `AnimatePresence` renders
+no wrapper at all. Treating either as an opaque boundary would make the selector
+tree less accurate than the runtime DOM.
+
+Declare that fixed relationship explicitly:
+
+```js
+intrinsicComponents: {
+  "motion.article": "article",
+  "motion.div": "div",
+  "motion.li": "li",
+  "motion.span": "span",
+},
+transparentComponents: ["AnimatePresence"],
+```
+
+An intrinsic proxy receives the mapped Element Class Table identity, and its
+children remain owned DOM. A transparent component contributes no selector depth.
+These mappings are valid only when the library API fixes the rendered shape. A
+polymorphic component whose element is selected dynamically remains opaque; the
+linter must not guess its runtime tag.
+
 ### Owned child components (nothing is passed down)
 
 An **owned** component you place in your markup already carries a surface root on
@@ -747,12 +837,20 @@ The following three steps name a `div`/`span` — the only elements the tables d
 ### 1. Accessibility Semantics
 
 Use Accessibility Semantics as the first source for base names inside owned DOM.
+For a styled `div` or `span` with a static identifying role, this order is
+enforced rather than advisory: the matching role name is the base identity, and
+an anatomy or STN fallback is rejected. For example,
+`<div class="group" role="group">` is canonical; `class="field"` or
+`class="unit"` on that same element is not. The linter can replace one
+unambiguous fallback while preserving its static variants.
 
 This includes native element roles, ARIA roles, and common interaction roles. For
 the residual `div`/`span` step only, a class equal to an **ARIA role name**
 (`toolbar`, `tablist`, `tabpanel`, `menu`, `option`, `alert`, `status`,
 `dialog`, `separator`, …) is permitted **only when the element carries the
-matching `role="X"` attribute**. An element already covered by the Element
+matching `role="X"` attribute**. The non-identifying roles `generic`, `none`,
+and `presentation` do not supply a CSS identity and continue to anatomy or STN.
+An element already covered by the Element
 Class Table keeps that fixed identity and exposes its additional ARIA semantics
 through the attribute selector. No explicit `role` on a `div`/`span` → fall
 back to a UI Anatomy name or STN.
@@ -785,11 +883,15 @@ Use UI Anatomy Semantics only when the name is part of the project or contract a
 
 Default allowlist — deliberately tiny. Each has a crisp definition; anything that does not match exactly falls back to STN.
 
-- `field` — a wrapper pairing a label with its control
+- `field` — a visible form-field or composite-control frame; its accessible
+  label may be inside the frame or associated from a sibling
 - `value` — the read-only display of a single datum
 - `actions` — a group/row of buttons or action controls
 - `media` — a wrapper for an image / figure / illustration
-- `icon` — a glyph-sized pictogram, whatever element renders it (`<svg>`, `<i>`, `<span>`)
+- `icon` — a glyph-sized pictogram wrapper
+- `text` — a short textual run or UI label that has no more specific semantic
+  element; it is Anatomy and therefore appears only on `div` / `span` (normally
+  `span`). An actual prose paragraph remains `<p class="p">`.
 
 Dropped names route elsewhere: `title`/`body` → element table or STN; `list`/`item` → `<ul>`/`<ol>`/`<li>`; `card`/`panel` → STN + a `-card` variant; `status` → a `-success`/`-error` variant or `role="status"`; `trigger`/`overlay`/`viewport` → `role=` or a variant.
 
@@ -800,7 +902,7 @@ Example:
   <header class="header">
     <h3 class="title">Invoice</h3>
   </header>
-  <p class="text">...</p>
+  <p class="p">...</p>
 </article>
 ```
 
@@ -821,6 +923,36 @@ The scheme is enforced by three **local relations** — no global depth computat
 These three uniquely determine the tiers for any tree and are machine-checkable per surface (parent/child adjacency + a per-surface "is `g` present?" check). A slot sub-surface is its own surface and resets the chain.
 
 - Restore local meaning with a variant (`unit -filters`), never by changing the tier.
+
+#### Layout-only wrapper review
+
+STN names make structural wrappers readable; they do not prove that every
+wrapper is necessary. `layout-only-wrapper` therefore reports a **warning** when
+a `div` or `span` has only a static class, is the sole visible branch of its
+parent, contains one visible template branch, and every declaration applied to
+it is flex/grid layout or sizing. The warning asks for review; it does not claim
+that the element can be removed.
+
+The rule stays silent when the element owns semantics or behavior (`role`,
+`aria-*`, `data-*`, `ref`, events, or other directives), has multiple child
+branches, or owns properties such as `overflow`, `position`, `transform`,
+`transition`, or `animation`. It has no autofix. Moving layout can change scroll
+geometry, intrinsic sizing, containment, or animation ownership, so removal must
+be verified in the rendered component and its browser tests.
+
+```html
+<!-- review candidate; not automatically invalid -->
+<div class="seg -items">
+  <article class="article" v-for="item in items">...</article>
+</div>
+```
+
+```css
+.seg.-items {
+  display: flex;
+  inline-size: 100%;
+}
+```
 
 #### STN naming charter
 
@@ -1018,7 +1150,7 @@ Example:
   <header class="header">
     <h2 class="title">Delete item</h2>
   </header>
-  <p class="text">Are you sure?</p>
+  <p class="p">Are you sure?</p>
   <footer class="footer">
     <button class="button -secondary">Cancel</button>
     <button class="button -danger">Delete</button>
@@ -1088,7 +1220,7 @@ Example:
     margin-bottom: 0.75rem;
   }
 
-  > .text {
+  > .p {
     margin-bottom: 1rem;
   }
 
@@ -1225,7 +1357,7 @@ Preferred example:
 ```html
 <div class="dialog-panel">
   <header class="header">...</header>
-  <p class="text">...</p>
+  <p class="p">...</p>
 </div>
 
 <h2 class="dialog-title">Delete item</h2>
@@ -1542,19 +1674,57 @@ default.
 
 ### Utilities
 
-Standalone utility classes are not allowed.
+Standalone utility classes in markup are not allowed.
 
 Utility-like concerns must be expressed as variants on a styling surface or style element.
 
 Example:
 
 ```html
-<footer class="footer -dense -sr-only">...</footer>
+<footer class="footer -dense">...</footer>
 ```
 
-In this example, `footer` remains the style element, while `-dense` and `-sr-only` express local styling concerns as variants.
+In this example, `footer` remains the style element, while `-dense` expresses a local styling concern as a variant.
 
 Nagi CSS preserves readable styling surfaces rather than collapsing meaning into flat utility composition.
+In `tailwind-apply` mode utilities may implement declarations behind those
+surfaces; they do not become the template vocabulary.
+
+### Visual hiding and the accessibility tree
+
+Visual visibility and accessibility-tree exposure are separate concerns. ARIA
+does not provide an attribute meaning “visually hidden but still exposed to
+assistive technology.” In particular, `aria-hidden="true"` removes content from
+the accessibility tree and does not hide it visually.
+
+- When content is absent for everyone, use the native `hidden` attribute or the
+  component's native visibility mechanism.
+- When an existing native or ARIA state is the source of truth for dynamic UI
+  visibility, select that state directly. Do not duplicate it with a class.
+- When content must remain available to assistive technology but be visually
+  concealed, apply the visually-hidden CSS directly to its derived base selector.
+  Do not add `-assistive` or `-sr-only` merely to restate that CSS treatment.
+- Never add an ARIA attribute only to obtain a CSS selector.
+
+```html
+<span class="status" role="status" aria-live="polite">Saved</span>
+```
+
+```css
+.settings-panel {
+  > .status {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    clip-path: inset(50%);
+    overflow: hidden;
+  }
+}
+```
+
+The `status` class is the derived styling identity. The CSS controls visual
+presentation; `role` and `aria-live` independently describe accessibility
+semantics.
 
 ---
 

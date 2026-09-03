@@ -5,8 +5,9 @@ This file is the portable version of the Nagi CSS contract, for agents that read
 `skills/nagi-css` skill instead and does not need this file.
 
 Copy this into the application repository you are working in, or link to it, so
-the agent writing components has the rules before it writes them. Everything
-below is enforced by ESLint, so guessing costs a round trip.
+the agent writing components has the rules before it writes them. Mechanical
+rules below are enforced by ESLint; the explicitly identified authoring choices
+remain review criteria.
 
 Full reasoning: [CONTRACT.md](CONTRACT.md). Objections: [FAQ.md](FAQ.md).
 
@@ -28,8 +29,11 @@ Apply top to bottom, stop at the first match.
    Element Class Table below. No judgment.
 3. **A configured UI-library component** — takes its configured class
    (`DataTable` → `pv-data-table` by default).
-4. **`div` / `span`** — and only here is there a choice: an ARIA role name backed
-   by a real `role` attribute, then the anatomy allowlist, then STN.
+4. **`div` / `span`** — and only here is there a choice: an identifying ARIA
+   role name backed by a real `role` attribute, then the anatomy allowlist, then
+   STN. This priority is mandatory: `role="group"` takes `group`, not `field` or
+   `unit`. `generic`, `none`, and `presentation` do not identify a CSS part and
+   fall through.
 
 Domain meaning belongs in the surface identity or in a variant, never in a
 style-element name: `field -recipient`, not `recipient-field`.
@@ -39,24 +43,27 @@ style-element name: `field -recipient`, not `recipient-field`.
 | element | class | element | class |
 |---|---|---|---|
 | `h1`–`h6` | `title` | `ul` `ol` `dl` | `list` |
-| `p` | `text` | `li` | `item` |
-| `small` | `note` | `dt` | `term` |
-| `a` | `link` | `dd` | `definition` |
-| `img` | `image` | `tr` | `row` |
-| `th` `td` | `cell` | | |
+| `li` | `item` | `small` | `note` |
+| `dt` | `term` | `a` | `link` |
+| `dd` | `definition` | `img` | `image` |
+| `tr` | `row` | `th` `td` | `cell` |
 
-Every other rendered element **self-maps**: `header` → `header`, `section` →
-`section`, `button` → `button`, `dialog` → `dialog`, `thead` → `thead`, and so
-on. `<b>` `<i>` `<u>` `<s>` are the exception — their tag names describe a
-rendering rather than a meaning, so those class names are banned; use `<strong>`
-/ `<em>`, or a variant.
+Every other rendered element **self-maps**: `p` → `p`, `header` → `header`,
+`section` → `section`, `button` → `button`, `dialog` → `dialog`, `thead` →
+`thead`, and so on. `<b>` `<i>` `<u>` `<s>` are the exception — their tag names
+describe a rendering rather than a meaning, so those class names are banned;
+use `<strong>` / `<em>`, or a variant.
+
+`<p class="p">` is reserved for a prose paragraph. Short UI text that is not a
+paragraph normally uses `<span class="text">`; the linter enforces the class/tag
+boundary, while whether the content is genuinely prose remains an HTML review.
 
 A distinction a selector can already reach is selected, not renamed:
 `.input[type="checkbox"]`, `.item[role="separator"]`, `.thead > .row > .cell`.
 
 ### Anatomy allowlist (`div`/`span` only)
 
-`actions` `field` `icon` `media` `value` — and nothing else. `wrapper`,
+`actions` `field` `icon` `media` `text` `value` — and nothing else. `wrapper`,
 `container`, `inner`, `box`, `content-area` are banned.
 
 ### STN — the structural fallback

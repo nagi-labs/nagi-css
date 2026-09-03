@@ -18,6 +18,47 @@ const ELEMENT = 1
 const NATIVE = 0
 const COMPONENT = 1
 const TEMPLATE = 3
+const NON_IDENTIFYING_ROLES = new Set(["generic", "none", "presentation"])
+const LAYOUT_WRAPPER_DISPLAY_VALUES = new Set(["flex", "grid", "inline-flex", "inline-grid"])
+const LAYOUT_WRAPPER_PROPERTIES = new Set([
+  "align-content",
+  "align-items",
+  "block-size",
+  "column-gap",
+  "display",
+  "flex",
+  "flex-basis",
+  "flex-direction",
+  "flex-flow",
+  "flex-grow",
+  "flex-shrink",
+  "flex-wrap",
+  "gap",
+  "grid",
+  "grid-auto-columns",
+  "grid-auto-flow",
+  "grid-auto-rows",
+  "grid-template",
+  "grid-template-areas",
+  "grid-template-columns",
+  "grid-template-rows",
+  "height",
+  "inline-size",
+  "justify-content",
+  "justify-items",
+  "max-block-size",
+  "max-height",
+  "max-inline-size",
+  "max-width",
+  "min-block-size",
+  "min-height",
+  "min-inline-size",
+  "min-width",
+  "place-content",
+  "place-items",
+  "row-gap",
+  "width",
+])
 
 // Wrappers that add no DOM level of their own, so they neither shift a surface
 // root off the template root nor count as a step in an STN chain. Teleport is
@@ -35,9 +76,12 @@ const TRANSPARENT_TAGS = new Set([
   "suspense",
 ])
 
-function isTransparentWrapper(node) {
+function isTransparentWrapper(node, config = {}) {
   return (
-    node?.type === ELEMENT && (node.tagType === TEMPLATE || TRANSPARENT_TAGS.has(node.tag))
+    node?.type === ELEMENT &&
+    (node.tagType === TEMPLATE ||
+      TRANSPARENT_TAGS.has(node.tag) ||
+      config.transparentComponents?.includes(node.tag))
   )
 }
 
@@ -274,6 +318,120 @@ function collectStyledClasses(styles) {
   return classes
 }
 
+// Records declarations against the selector subject only. An ancestor class in
+// `.surface > .track > .slide` does not own the slide declarations, while the
+// final `.slide` compound does. The wrapper advisory intentionally refuses
+// conditional subjects because state, pseudo-elements, and attribute branches
+// may make the element more than a layout box.
+function collectStyleSubjects(styles) {
+  const subjects = []
+  for (const style of styles) {
+    let root
+    try {
+      root = postcss.parse(style.content)
+    } catch {
+      continue
+    }
+    root.walkRules((rule) => {
+      const declarations = (rule.nodes ?? [])
+        .filter((node) => node.type === "decl")
+        .map((node) => ({ prop: node.prop.toLowerCase(), value: node.value.trim().toLowerCase() }))
+      if (declarations.length === 0) return
+      const unresolvedOwnerBranch = (rule.nodes ?? []).some(
+        (node) =>
+          node.type === "atrule" ||
+          (node.type === "rule" &&
+            node.selector
+              .split(",")
+              .some((selector) => /^\s*&(?!\s*[>+~])/u.test(selector))),
+      )
+      try {
+        selectorParser((selectors) => {
+          selectors.each((selector) => {
+            const nodes = selector.nodes ?? []
+            let start = 0
+            for (const [index, node] of nodes.entries()) {
+              if (node.type === "combinator") start = index + 1
+            }
+            const subject = nodes.slice(start).filter((node) => node.type !== "comment")
+            const classes = subject
+              .filter((node) => node.type === "class")
+              .map((node) => node.value)
+            if (classes.length === 0) return
+            subjects.push({
+              classes,
+              conditional:
+                unresolvedOwnerBranch ||
+                subject.some((node) => node.type !== "class" && node.type !== "nesting"),
+              declarations,
+            })
+          })
+        }).processSync(rule.selector)
+      } catch {
+        // Malformed selectors are reported by style analysis. This advisory
+        // stays silent when it cannot identify the declaration owner.
+      }
+    })
+  }
+  return subjects
+}
+
+function hasOnlyStaticClassAttribute(node, info) {
+  if (!info.staticProp || info.dynamic || node.nagiHasNonClassAttribute) return false
+  return (node.props ?? []).every(
+    (property) => property.type === 6 && property.name === "class",
+  )
+}
+
+function hasOneVisibleChildBranch(node, config) {
+  const branches = []
+  let unknown = false
+  const collect = (children) => {
+    for (const child of children ?? []) {
+      if (isTransparentWrapper(child, config)) {
+        collect(child.children)
+      } else if (child?.type === ELEMENT) {
+        branches.push(child)
+      } else if (child?.nagiOpaque) {
+        unknown = true
+      } else if (child?.type === 2 && (child.content ?? "").trim() === "") {
+        // Ignore whitespace-only Vue text nodes.
+      } else if (child?.type === 3) {
+        // Comments do not create a rendered child.
+      } else if (child != null) {
+        unknown = true
+      }
+    }
+  }
+  collect(node.children)
+  return !unknown && branches.length === 1
+}
+
+function isLayoutOnlyWrapper(node, parent, info, styleSubjects, config) {
+  if (node.tagType !== NATIVE || (node.tag !== "div" && node.tag !== "span")) return false
+  if (
+    !parent ||
+    !hasOnlyStaticClassAttribute(node, info) ||
+    !hasOneVisibleChildBranch(parent, config) ||
+    !hasOneVisibleChildBranch(node, config)
+  ) {
+    return false
+  }
+
+  const tokens = new Set(info.staticTokens)
+  const matching = styleSubjects.filter(
+    (subject) =>
+      subject.classes.length > 0 && subject.classes.every((token) => tokens.has(token)),
+  )
+  if (matching.length === 0 || matching.some((subject) => subject.conditional)) return false
+
+  const declarations = matching.flatMap((subject) => subject.declarations)
+  if (declarations.some(({ prop }) => !LAYOUT_WRAPPER_PROPERTIES.has(prop))) return false
+  return declarations.some(
+    ({ prop, value }) => prop === "display" && LAYOUT_WRAPPER_DISPLAY_VALUES.has(value),
+  )
+}
+
 function buildClassFix(node, info, requiredClass) {
   if (info.staticProp) return rewriteClassFix(info, [...info.staticTokens, requiredClass])
   if (node.nagiHasClassAttribute) return undefined
@@ -376,6 +534,7 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
   }
 
   const styledClasses = collectStyledClasses(descriptor.styles)
+  const styleSubjects = collectStyleSubjects(descriptor.styles)
   const expectedRoots = new Set(
     deriveAllowedSurfaceRootNames(filename, config.surfaceRootPrefixes),
   )
@@ -393,15 +552,27 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
     node.tagType === COMPONENT &&
     !node.nagiOpaqueComponent &&
     !Object.hasOwn(config.componentClasses, node.tag) &&
-    !isTransparentWrapper(node)
+    !isTransparentWrapper(node, config) &&
+    !Object.hasOwn(config.intrinsicComponents, node.tag)
   const childSurfaceRoots = new Set()
   // Classes the tables would put on elements this template already has. A rule
   // referencing one of these is not dead — the markup is missing the class, which
   // element-class-required already reports.
   const expectedClasses = new Set()
 
-  function visit(node, depth, nearestStnIndex = null, surfaceContext = null, siblings = tree) {
+  function visit(
+    node,
+    depth,
+    nearestStnIndex = null,
+    surfaceContext = null,
+    siblings = tree,
+    parent = null,
+  ) {
     if (!node || node.type !== ELEMENT) return
+
+    const intrinsicTag =
+      node.tagType === COMPONENT ? config.intrinsicComponents?.[node.tag] : undefined
+    if (intrinsicTag) node = { ...node, tag: intrinsicTag, tagType: NATIVE }
 
     const info = extractClassInfo(node)
     const staticTokens = new Set(info.staticTokens)
@@ -454,6 +625,15 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
     const isSlotSurface = slotSurfaceTokens.length > 0
     const isSurfaceRoot = isMainRoot || isSlotSurface
 
+    if (!isSurfaceRoot && isLayoutOnlyWrapper(node, parent, info, styleSubjects, config)) {
+      push(
+        violations,
+        node,
+        "layout-only-wrapper",
+        `<${node.tag} class="${info.staticTokens.join(" ")}"> is its parent's only visible branch, has no semantic or behavioral attributes, and only establishes flex/grid layout around one child template branch; review whether that layout can move to its parent or child and the wrapper can be removed.`,
+      )
+    }
+
     if (isMainRoot) {
       for (const token of matchingRootTokens) {
         surfaceRoots.add(token)
@@ -491,6 +671,42 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
     const role = getStaticAttr(node, "role")
     const acceptsRoleIdentity =
       node.tagType === NATIVE && (node.tag === "div" || node.tag === "span")
+    const identifyingRole =
+      acceptsRoleIdentity &&
+      role &&
+      sets.roleVocabulary.has(role) &&
+      !NON_IDENTIFYING_ROLES.has(role)
+
+    if (identifyingRole && !isSurfaceRoot) {
+      const staticBaseTokens = ownedBaseTokens(info.staticTokens, config, sets)
+      const styledTrigger =
+        config.emitPolicy === "always" ||
+        styledClasses.has(role) ||
+        info.staticTokens.some((token) => styledClasses.has(token))
+
+      if (styledTrigger || staticBaseTokens.length > 0) expectedClasses.add(role)
+      if (
+        (styledTrigger || staticBaseTokens.length > 0) &&
+        !staticTokens.has(role)
+      ) {
+        const fix =
+          staticBaseTokens.length === 1
+            ? replaceToken(info, staticBaseTokens[0], role)
+            : staticBaseTokens.length === 0
+              ? info.staticProp
+                ? rewriteClassFix(info, [role, ...info.staticTokens])
+                : buildClassFix(node, info, role)
+              : undefined
+        push(
+          violations,
+          node,
+          "role-identity-required",
+          `<${node.tag}> with role="${role}" must use "${role}" as its table-first base identity instead of anatomy or STN.`,
+          fix,
+        )
+      }
+    }
+
     if (acceptsRoleIdentity && role && staticTokens.has(role)) roleNames.add(role)
 
     for (const token of allTokens) checkState(token, node, sets, violations)
@@ -570,6 +786,23 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
     }
 
     for (const token of allTokens) {
+      if (isVariant(token) || isLibraryInternal(token, config)) continue
+      if (!sets.anatomy.has(token) && !sets.stn.has(token)) continue
+      if (
+        node.tagType === NATIVE &&
+        node.tag !== "div" &&
+        node.tag !== "span"
+      ) {
+        push(
+          violations,
+          node,
+          "anatomy-allowed",
+          `Class "${token}" is ${sets.anatomy.has(token) ? "UI Anatomy" : "an STN tier"}; only <div> and <span> use the Semantics model. <${node.tag}> keeps its Element Class Table identity.`,
+        )
+      }
+    }
+
+    for (const token of allTokens) {
       const isStaticRootIdentity = isMainRoot && identityTokens.includes(token)
       if (!isStaticRootIdentity && !isSlotSurface) {
         const arbitrary =
@@ -643,19 +876,33 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
     if (!isSurfaceRoot) {
       for (const token of allTokens) {
         if (isVariant(token) || isLibraryInternal(token, config)) continue
-        if (!sets.renderedElements.has(token)) continue
         // Already reported as a banned name, with a message that explains why.
         if (sets.banned.has(token)) continue
         // A div/span carrying the matching role keeps the role name as its base
         // identity, even when an element shares that spelling (dialog, menu, …).
         if (acceptsRoleIdentity && token === role && staticTokens.has(token)) continue
-        const allowed = sets.elementNameReverse.get(token)
-        if (!allowed?.has(node.tag)) {
+
+        const owners = sets.elementNameReverse.get(token)
+        const requiredForTag =
+          node.tagType === NATIVE && Object.hasOwn(config.elementClasses, node.tag)
+            ? mappingBase(config.elementClasses[node.tag])
+            : ""
+        const borrowsMappedIdentity = owners && !owners.has(node.tag)
+        const replacesMappedIdentity =
+          requiredForTag &&
+          token !== requiredForTag &&
+          sets.knownNames.has(token) &&
+          !sets.anatomy.has(token) &&
+          !sets.stn.has(token)
+
+        if (borrowsMappedIdentity || replacesMappedIdentity) {
           push(
             violations,
             node,
             "reserved-element-name",
-            `Class "${token}" is reserved for <${token}> or an explicitly mapped element.`,
+            owners
+              ? `Class "${token}" belongs to ${[...owners].map((tag) => `<${tag}>`).join(" or ")} in the Element Class Table; it cannot identify <${node.tag}>.`
+              : `<${node.tag}> uses the Element Class Table identity "${requiredForTag}", not "${token}".`,
           )
         }
       }
@@ -698,7 +945,11 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
     }
     siblings.push(record)
 
-    const stnToken = [...staticTokens].find((token) => sets.stnIndex.has(token))
+    const stnToken = [...staticTokens].find(
+      (token) =>
+        sets.stnIndex.has(token) &&
+        !(identifyingRole && token === role),
+    )
     const stnIndex = stnToken ? sets.stnIndex.get(stnToken) : null
     const context = isSurfaceRoot ? { coarse: [], hasLeaf: false } : surfaceContext
     if (stnIndex != null) {
@@ -744,8 +995,10 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
               opaque: true,
               tag: "",
             })
-          } else if (isTransparentWrapper(child)) visitChildren(child.children, childDepth)
-          else visit(child, childDepth, childNearest, context, record.children)
+          } else if (isTransparentWrapper(child, config)) {
+            visitChildren(child.children, childDepth)
+          }
+          else visit(child, childDepth, childNearest, context, record.children, node)
         }
       }
       visitChildren(node.children, depth + 1)
@@ -766,7 +1019,7 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
   const visitRoots = (children) => {
     for (const child of children ?? []) {
       if (child?.type !== ELEMENT) continue
-      if (isTransparentWrapper(child)) visitRoots(child.children)
+      if (isTransparentWrapper(child, config)) visitRoots(child.children)
       else visit(child, 0)
     }
   }

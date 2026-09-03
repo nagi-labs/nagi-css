@@ -20,6 +20,9 @@ Use this when creating new markup and CSS under the Nagi CSS contract.
    - HTML element ≠ `div`/`span`: take the fixed class from the Element Class Table (no judgment).
    - Configured library component: take the fixed class from the Library Component Class Table (no judgment).
    - Only for `div`/`span`, apply the Semantics model: Accessibility Semantics (ARIA role) → allowlisted UI Anatomy (`field`, `value`, `actions`, `media`, `icon`) → STN (leaf-anchored ladder with a `unit` floor: `stratum`/`region`/`block`/`unit`/`seg`/`fr`/`g`).
+   - `text` is UI Anatomy for a short textual run or UI label on `div` / `span`
+     (normally `span`); a prose paragraph uses the Element Class Table identity
+     `<p class="p">`. Anatomy never replaces a semantic element's fixed identity.
    - A class equal to a rendered element name appears only on that element. There is no blanket exemption for document-only names: `.body` belongs to `<body>` and is invalid on a content `<div>`. Deliberate mappings such as `.title` on `<h1>`–`<h6>` and `.link` on `<a>` remain valid.
    - Keep exactly one base identity. Additional ARIA semantics on a table-mapped element stay in the attribute: `<li class="item" role="separator">` with `.item[role="separator"]`. Only the residual `div`/`span` step may use the matching role name as its base.
 
@@ -27,14 +30,31 @@ Use this when creating new markup and CSS under the Nagi CSS contract.
    - Use variants for styling role, density, size, domain meaning, and utility-like concerns.
    - Multiple variants are allowed and must be written in alphabetical order.
    - ARIA role names are protocol vocabulary and cannot be copied into variants (`-separator`, `-toolbar`).
-   - Example: `class="footer -dense -sr-only"`.
+   - Example: `class="footer -dense"`.
 
 5. Express runtime state without classes.
    - Prefer native states and pseudo-classes.
    - Use ARIA state attributes when accessibility state is required.
    - Use `data-*` only as an explicit styling contract when native or ARIA state is not appropriate.
+   - Do not add ARIA merely to control visual presentation. ARIA controls
+     accessibility-tree exposure, not visual hiding.
+   - For content that is visually concealed but remains exposed to assistive
+     technology, style its derived base selector directly. Do not add
+     `-assistive` or `-sr-only` merely to name the treatment.
 
-6. Verify with the linter.
+6. Classify every design value.
+   - Use semantic tokens for repeated visual rhythm: colors, spacing, radius,
+     border width, type size, and elevation.
+   - Keep component geometry and functional values as ordinary CSS: a surface's
+     own size or position, ratios, relative units, zero, and angles are not scale
+     tokens merely because they contain a number.
+   - For a genuine one-off optical correction, declare a descriptive
+     `--local-*` custom property in the same stylesheet. Colors have no local
+     escape; derive them from a semantic token or add a theme-level token.
+   - If the value should recur across components, promote it to the semantic
+     token source rather than copying a local value.
+
+7. Verify with the linter.
    - Run the project's normal ESLint command and fix diagnostics at their owning markup or selector.
 
 ## Example
@@ -52,7 +72,7 @@ Use this when creating new markup and CSS under the Nagi CSS contract.
       </div>
     </dl>
   </div>
-  <footer class="footer -dense -sr-only">...</footer>
+  <footer class="footer -dense">...</footer>
 </article>
 ```
 
@@ -63,7 +83,7 @@ Use this when creating new markup and CSS under the Nagi CSS contract.
   <div class="invoice-header">
     <h3 class="invoice-title">Invoice</h3>
   </div>
-  <div class="content sr-only">...</div>
+  <div class="content visually-hidden">...</div>
 </article>
 ```
 
@@ -71,5 +91,5 @@ Problems:
 
 - Domain Semantics appear in internal style element names.
 - Generic `content` is not deterministic for internal elements. It is acceptable only when it comes from a public contract such as a named slot surface.
-- `sr-only` is a standalone utility instead of a variant.
+- `visually-hidden` is a standalone utility and `content` is not a derived base.
 - Native element names must not be reused on other elements.

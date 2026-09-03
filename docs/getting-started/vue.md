@@ -49,7 +49,7 @@ and Vue settings and append only the Nagi CSS entry.
 <template>
   <article class="app-user-card" :data-active="active">
     <h2 class="title">Ada Lovelace</h2>
-    <p class="text">First programmer</p>
+    <p class="p">First programmer</p>
   </article>
 </template>
 
@@ -62,7 +62,7 @@ defineProps({
 <style scoped>
 .app-user-card {
   > .title {}
-  > .text {}
+  > .p {}
 }
 </style>
 ```

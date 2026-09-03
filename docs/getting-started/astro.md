@@ -41,13 +41,13 @@ const { active = false } = Astro.props
 
 <article class="app-user-card" data-active={active}>
   <h2 class="title">Ada Lovelace</h2>
-  <p class="text">First programmer</p>
+  <p class="p">First programmer</p>
 </article>
 
 <style>
   .app-user-card {
     > .title {}
-    > .text {}
+    > .p {}
   }
 </style>
 ```
