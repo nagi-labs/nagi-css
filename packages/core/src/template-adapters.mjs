@@ -145,7 +145,7 @@ function makeStaticProperty(name, content, attribute, valueRange) {
   }
 }
 
-function transparent(children, node) {
+function transparent(children, node, nagiDynamicBranch = false) {
   return {
     type: ELEMENT,
     tagType: TEMPLATE,
@@ -153,6 +153,7 @@ function transparent(children, node) {
     props: [],
     children,
     loc: normalizedLoc(node),
+    nagiDynamicBranch,
   }
 }
 
@@ -302,7 +303,7 @@ function normalizeSvelteChild(node, source) {
       "SvelteSnippetBlock",
     ]).has(node.type)
   ) {
-    return transparent(svelteBlockChildren(node, source), node)
+    return transparent(svelteBlockChildren(node, source), node, true)
   }
   if (
     node.type === "SvelteRenderTag" ||
@@ -460,7 +461,7 @@ function normalizeAstroChild(node, source, styles) {
     return transparent(normalizeAstroChildren(node.children, source, styles), node)
   }
   if (node.type === "JSXExpressionContainer") {
-    return transparent(normalizeAstroExpression(node.expression, source, styles), node)
+    return transparent(normalizeAstroExpression(node.expression, source, styles), node, true)
   }
   return null
 }

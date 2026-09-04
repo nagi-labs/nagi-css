@@ -26,10 +26,18 @@
   are non-identifying and fall through.
 - Keep `-variant` classes alphabetical.
 - Keep `-variant` stems outside the **base-identity** vocabulary (element, component, anatomy, STN, slot, banned, and rendered element names). Variants modify an anchor; they never name what an element is. If a variant wants one of those (`-title`, `-header`, `-footer`), use the matching element/class or attribute instead.
-- A static variant may restore local meaning to a generic base even when no
-  same-base peer exists (`unit -viewport`). Do not infer redundancy from peer
-  counts, ancestor paths, framework-specific `data-part` markers, accessible
-  names, or ARIA ID relationships.
+- A non-STN variant requires another occurrence of the same base identity in
+  the component (`button -cancel` beside `button -save`). A lone
+  `article -slide` is redundant and reports `variant-requires-peer`; remove the
+  variant from both template and selector. STN is the exception because its
+  base describes structural depth: `unit -viewport` may restore local role even
+  without another `unit`. Ancestor paths, `data-part`, accessible names, and
+  ARIA ID relationships do not count as same-base peers. The rule has no
+  autofix because template and CSS must change together.
+- Static sibling branches that share an STN tier need variants unique among
+  those peers (`unit -announcements` beside `unit -stack`). Review
+  `stn-peer-variant` warnings; repeated collection instances and mutually
+  exclusive conditional branches are excluded, and the rule has no autofix.
 - An ARIA role name that is *not* a base identity is a legal variant (`-search`, `-toolbar`, `-status`) — it says which part of the design this is. It is rejected only on an element that declares the matching role, where it was available as the base.
 - **Write variants in the static `class` attribute.** A variant applied by a binding is runtime state: `:class="{ '-collapsed': !open }"` reports `variant-must-be-static`; use `:data-collapsed="!open"` and select `[data-collapsed="true"]`.
 - Keep visual visibility separate from accessibility-tree exposure. Existing
@@ -47,8 +55,9 @@
 - **Pass no class to an owned child component.** Its root already carries the surface
   root derived from its own file, so style it by that name: `<UserAvatar />` in the
   markup, `> .app-user-avatar` in the CSS. A base class on the tag is
-  `owned-component-identity` (autofixable); placement variants may still be passed
-  (`<UserAvatar class="-lead" />` → `> .app-user-avatar.-lead`).
+  `owned-component-identity` (autofixable); placement variants may be passed only
+  to distinguish multiple instances of the same owned component
+  (`<UserAvatar class="-lead" />` and `<UserAvatar class="-trail" />`).
 - Style that root — the parent's external layout — but never descend below it: the
   child's file owns its insides. Reported as `owned-surface-reach-in`. The accepted
   names are derived from the component tags in the template, so a typo or a stale

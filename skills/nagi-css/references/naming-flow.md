@@ -17,7 +17,7 @@ Domain meaning never goes in a style-element name — only in the surface identi
 
 | element | class | | element | class |
 |---|---|---|---|---|
-| `h1`–`h6` | `title` | | `ul` `ol` `dl` | `list` (`-description` for dl) |
+| `h1`–`h6` | `title` | | `ul` `ol` `dl` | `list` |
 | `small` | `note` | | `li` | `item` |
 | `a` | `link` | | `dt` | `term` |
 | `img` | `image` | | `dd` | `definition` |
@@ -48,7 +48,11 @@ follow the document outline); an abbreviation alone is not a reason, so `nav`,
 `svg`, and `dfn` self-map. A glyph-sized `<svg>` keeps `svg`; use an `icon`
 `div`/`span` wrapper only when a separate anatomy wrapper is actually needed.
 
-Multiple same-tag elements share the base class; differentiate with variants (`button -danger`).
+Multiple same-tag elements share the base class; differentiate them with variants
+only when at least two occurrences exist in the component (`button -cancel` and
+`button -save`). A unique non-STN base needs no variant (`article`, not
+`article -slide`). STN variants are exempt because an STN base conveys depth,
+not local role.
 Override only by rule: wrong default → it's a surface root (name by identity) or add a variant. Never rename the base.
 An element and a selector compound each carry exactly one base identity;
 `item separator` is never a valid composition.
@@ -62,7 +66,7 @@ componentClasses: ["DataTable", "Column"]
 // DataTable -> pv-data-table; Column -> pv-column
 ```
 
-List only opaque third-party/UI-library components the project actually uses. Never add an application-owned component: **pass it no class at all**. Its root already carries the surface root derived from its own file, so the parent writes `<UserAvatar />` and styles `> .app-user-avatar` (prefix from `surfaceRootPrefixes` + kebab-case tag). Placement variants may still be passed: `<UserAvatar class="-lead" />`.
+List only opaque third-party/UI-library components the project actually uses. Never add an application-owned component: **pass it no base class at all**. Its root already carries the surface root derived from its own file, so the parent writes `<UserAvatar />` and styles `> .app-user-avatar` (prefix from `surfaceRootPrefixes` + kebab-case tag). Placement variants may be passed only when multiple instances need distinct roles, such as `-lead` and `-trail` on two `UserAvatar` instances.
 
 This class is a boundary **anchor, not a `>` licence into internals**. Style library internals via props → pass-through APIs → CSS custom properties → `::part()`. Never descend from a boundary class into library-owned internals.
 
@@ -77,7 +81,7 @@ This class is a boundary **anchor, not a `>` licence into internals**. Style lib
   - **Floor**: the shallowest STN in a surface (no STN ancestor) is `unit` or coarser — never `seg`/`fr`/`g` at the top. So an isolated STN div is `unit`.
   - **Reach-g**: if a surface uses a tier coarser than `unit` (`block`/`region`/`stratum`) it must also use `g` ("`block` without `g`" is illegal).
 
-  Effect: coarse names appear only in genuinely deep surfaces (a "this is deep → maybe split" signal). Past `g` → split the surface. Local meaning via a non-vocabulary variant (`unit -filters`), never by changing the tier. `unit` is a hierarchy name, not a measurement unit; `fr` is short for `fraction`.
+  Effect: coarse names appear only in genuinely deep surfaces (a "this is deep → maybe split" signal). Past `g` → split the surface. Local meaning via a non-vocabulary variant (`unit -filters`), never by changing the tier. Static sibling STN branches at the same tier each need a variant unique among those peers (`unit -announcements` and `unit -stack`); repeated collection instances and mutually exclusive conditional branches are excluded. `unit` is a hierarchy name, not a measurement unit; `fr` is short for `fraction`.
 
 ## Reserved-element-name rule
 
@@ -125,7 +129,7 @@ Bad (flattened, and forces `>` past readability):
     <h3 class="title">Invoice</h3>
   </header>
   <div class="unit">
-    <dl class="list -description">
+    <dl class="list">
       <div class="field -user">
         <dt class="term">User</dt>
         <dd class="definition">A. Customer</dd>

@@ -68,8 +68,11 @@ Given the component and configuration, Nagi CSS derives one canonical form:
 - a small anatomy vocabulary and structural fallback for `div` and `span`;
 - identifying ARIA roles before anatomy or structural fallback names;
 - a non-failing review warning for `div`/`span` wrappers that appear to exist only for flex/grid layout;
-- static variants that may restore local meaning even without a same-base peer,
-  and attribute-based runtime state;
+- a non-failing review warning when static sibling STN branches share a tier
+  without unique variants;
+- non-STN variants only when they distinguish repeated instances of the same
+  base identity, STN variants for structural role, and attribute-based runtime
+  state;
 - selectors that mirror owned DOM with `>` and stop at component boundaries;
 - semantic token references for colors and repeated design-system scale values,
   while component geometry stays plain CSS and genuine one-off optical
@@ -111,6 +114,7 @@ selector rather than an `-assistive` or `-sr-only` class. See
 - [Configuration reference](skills/nagi-css/references/configuration.md) — UI libraries, slots, severity, emit policy, and tokens
 - [Agent instructions](AGENTS.md) — portable rules for agents editing components
 - [Agent skill](skills/nagi-css) — the complete generate-and-verify workflow
+- [Migrating to 0.4](docs/migrations/0.4.md) — peer-based variant rules
 - [Migrating to 0.3](docs/migrations/0.3.md) — lint behavior and configuration changes
 
 ## Packages

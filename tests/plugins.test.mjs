@@ -238,11 +238,11 @@ test("ESLint replaces an anatomy or STN fallback with an identifying role", asyn
     overrideConfig: createNagiStandaloneEslintConfigs(testSurface),
   })
   const [result] = await eslint.lintText(
-    `<template><section class="test-role-host"><div class="unit -fields" role="group" /></section></template>`,
+    `<template><section class="test-role-host"><div class="unit" role="group" /></section></template>`,
     { filePath: path.join(root, "fixtures/RoleHost.vue") },
   )
 
-  assert.match(result.output, /class="group -fields" role="group"/)
+  assert.match(result.output, /class="group" role="group"/)
   assert.equal(result.messages.length, 0)
 })
 
@@ -280,6 +280,55 @@ test("ESLint reports a layout-only wrapper as a non-failing warning without a fi
   assert.equal(warning.severity, 1)
   assert.equal(result.errorCount, 0)
   assert.equal(result.output, undefined)
+})
+
+test("ESLint reports an indistinguishable sibling STN branch as a warning", async () => {
+  const result = await lintEslint(
+    path.join(root, "fixtures/PeerVariants.vue"),
+    {},
+  `<template>
+  <section class="test-peer-variants">
+    <div class="unit -announcements" />
+    <div class="unit" />
+  </section>
+</template>
+<style>
+.test-peer-variants {
+  > .unit {}
+  > .unit.-announcements {}
+}
+</style>`,
+  )
+
+  const warning = result.messages.find(
+    ({ ruleId }) => ruleId === "nagi-css/stn-peer-variant",
+  )
+  assert.ok(warning, JSON.stringify(result.messages))
+  assert.equal(warning.severity, 1)
+  assert.equal(result.errorCount, 0)
+  assert.equal(result.output, undefined)
+})
+
+test("ESLint rejects a non-STN variant without a same-base peer", async () => {
+  const result = await lintEslint(
+    path.join(root, "fixtures/Carousel.vue"),
+    {},
+    `<template>
+  <section class="test-carousel">
+    <div class="unit -presence"><article class="article -slide" /></div>
+  </section>
+</template>
+<style>
+.test-carousel { > .unit.-presence { > .article.-slide {} } }
+</style>`,
+  )
+
+  const error = result.messages.find(
+    ({ ruleId }) => ruleId === "nagi-css/variant-requires-peer",
+  )
+  assert.ok(error, JSON.stringify(result.messages))
+  assert.equal(error.severity, 2)
+  assert.match(error.message, /-slide/u)
 })
 
 test("ESLint accepts Svelte and Astro component templates and styles", async () => {

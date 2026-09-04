@@ -526,7 +526,7 @@ test("rejects variants that shadow vocabulary names", () => {
     "/src/components/ShadowSurface.vue",
   )
   const modifier = analyzeVueTemplate(
-    `<template><section class="shadow-surface"><p class="p -lead">x</p></section></template>
+    `<template><section class="shadow-surface"><p class="p -lead">x</p><p class="p -support">y</p></section></template>
 <style>.shadow-surface { > .p {} }</style>`,
     "/src/components/ShadowSurface.vue",
   )
@@ -852,10 +852,10 @@ test("rejects a class passed to an owned child component, and removes it", () =>
     `<template><header class="app-boundary-host"><UserAvatar /></header></template>`,
   )
 
-  // a variant is placement, not identity, so it may still be passed down
+  // placement variants remain valid when they distinguish same-base peers
   const variant = analyzeVueTemplate(
-    `<template><header class="app-boundary-host"><UserAvatar class="-lead" /></header></template>
-<style>.app-boundary-host { > .app-user-avatar.-lead {} }</style>`,
+    `<template><header class="app-boundary-host"><UserAvatar class="-lead" /><UserAvatar class="-trail" /></header></template>
+<style>.app-boundary-host { > .app-user-avatar.-lead {} > .app-user-avatar.-trail {} }</style>`,
     "/src/components/BoundaryHost.vue",
     config,
   )
@@ -1042,7 +1042,7 @@ test("reports a layout-only wrapper as a review candidate, not a proven violatio
     <div class="unit -viewport">
       ${sibling}
       <div class="seg -slides" ${attributes}>
-        ${children ?? '<article v-for="item in items" :key="item.id" class="article -slide" />'}
+        ${children ?? '<article v-for="item in items" :key="item.id" class="article" />'}
       </div>
     </div>
   </section>
@@ -1053,8 +1053,8 @@ test("reports a layout-only wrapper as a review candidate, not a proven violatio
     overflow: auto;
     > .seg.-slides {
       ${declarations}
-      > .article.-slide {}
-      > .p.-empty {}
+      > .article {}
+      > .p {}
     }
   }
 }
@@ -1084,21 +1084,163 @@ test("reports a layout-only wrapper as a review candidate, not a proven violatio
   )
   assert.deepEqual(
     analyze({
-      children: '<article class="article -slide" /><p class="p -empty">Empty</p>',
+      children: '<article class="article" /><p class="p">Empty</p>',
     }),
     [],
   )
   assert.deepEqual(analyze({ sibling: '<h2 class="title">Choices</h2>' }), [])
 })
 
+test("warns when static sibling STN branches cannot be distinguished", () => {
+  const warnings = (children) =>
+    analyzeVueTemplate(
+      `<template>
+  <section class="app-toast">
+    ${children}
+  </section>
+</template>`,
+      "/src/components/Toast.vue",
+      { emitPolicy: "always", surfaceRootPrefixes: ["app-"] },
+    ).violations.filter(({ ruleId }) => ruleId === "stn-peer-variant")
+
+  const oneBare = warnings(`
+    <div class="unit -announcements" />
+    <div class="unit" />
+  `)
+  assert.equal(oneBare.length, 1)
+  assert.match(oneBare[0].message, /add a unique static variant/u)
+  assert.equal("fix" in oneBare[0], false)
+
+  assert.equal(
+    warnings(`
+      <div class="unit -announcements" />
+      <div class="unit -stack" />
+    `).length,
+    0,
+  )
+  assert.equal(
+    warnings(`
+      <div class="unit -shared" />
+      <div class="unit -shared" />
+    `).length,
+    2,
+  )
+})
+
+test("requires a same-base peer for non-STN variants", () => {
+  const redundantVariants = (children) =>
+    analyzeVueTemplate(
+      `<template>
+  <section class="app-carousel">
+    ${children}
+  </section>
+</template>`,
+      "/src/components/Carousel.vue",
+      { emitPolicy: "always", surfaceRootPrefixes: ["app-"] },
+    ).violations.filter(({ ruleId }) => ruleId === "variant-requires-peer")
+
+  const slide = redundantVariants(`
+    <div class="unit -presence">
+      <article class="article -slide" />
+    </div>
+  `)
+  assert.equal(slide.length, 1)
+  assert.match(slide[0].message, /article/u)
+  assert.match(slide[0].message, /-slide/u)
+  assert.equal("fix" in slide[0], false)
+
+  assert.deepEqual(redundantVariants('<div class="unit -presence" />'), [])
+  assert.deepEqual(
+    redundantVariants(`
+      <article class="article -primary" />
+      <article class="article -secondary" />
+    `),
+    [],
+  )
+  assert.deepEqual(
+    redundantVariants(
+      '<article class="article -featured" /><article class="article" />',
+    ),
+    [],
+  )
+  assert.deepEqual(
+    redundantVariants(`
+      <header><button class="button -primary" /></header>
+      <footer><button class="button -secondary" /></footer>
+    `),
+    [],
+  )
+
+  const configuredComponent = (children) =>
+    analyzeVueTemplate(
+      `<template><section class="app-actions">${children}</section></template>`,
+      "/src/components/Actions.vue",
+      {
+        componentClasses: { NButton: "n-button" },
+        emitPolicy: "always",
+        surfaceRootPrefixes: ["app-"],
+      },
+    ).violations.filter(({ ruleId }) => ruleId === "variant-requires-peer")
+
+  assert.equal(configuredComponent('<NButton class="-primary" />').length, 1)
+  assert.deepEqual(
+    configuredComponent(
+      '<NButton class="-cancel" /><NButton class="-save" />',
+    ),
+    [],
+  )
+
+  const transparent = analyzeVueTemplate(
+    `<template><section class="app-nav"><RouterLink class="link -home" /></section></template>`,
+    "/src/components/Nav.vue",
+    {
+      emitPolicy: "always",
+      surfaceRootPrefixes: ["app-"],
+      transparentComponents: ["RouterLink"],
+    },
+  ).violations.filter(({ ruleId }) => ruleId === "variant-requires-peer")
+  assert.equal(transparent.length, 1)
+})
+
+test("does not require peer variants for repeated or mutually exclusive branches", () => {
+  const warnings = (children) =>
+    analyzeVueTemplate(
+      `<template>
+  <section class="app-list">
+    ${children}
+  </section>
+</template>`,
+      "/src/components/List.vue",
+      { emitPolicy: "always", surfaceRootPrefixes: ["app-"] },
+    ).violations.filter(({ ruleId }) => ruleId === "stn-peer-variant")
+
+  assert.deepEqual(warnings('<div v-for="item in items" :key="item.id" class="unit" />'), [])
+  assert.deepEqual(
+    warnings(`
+      <div v-if="ready" class="unit" />
+      <div v-else class="unit" />
+    `),
+    [],
+  )
+  assert.deepEqual(
+    warnings(`
+      <template v-if="ready"><div class="unit" /></template>
+      <template v-else><div class="unit" /></template>
+    `),
+    [],
+  )
+})
+
 test("advisory rules warn by default and explicit configuration wins", () => {
   const levelFor = resolveSeverity()
   assert.equal(levelFor("layout-only-wrapper"), "warn")
+  assert.equal(levelFor("stn-peer-variant"), "warn")
   assert.equal(levelFor("unverifiable-dynamic-class"), "warn")
   assert.equal(levelFor("anatomy-allowed"), "error")
 
   // "*" is an explicit choice about everything, so it overrides the rule default
   assert.equal(resolveSeverity({ "*": "error" })("layout-only-wrapper"), "error")
+  assert.equal(resolveSeverity({ "*": "error" })("stn-peer-variant"), "error")
   assert.equal(resolveSeverity({ "*": "error" })("unverifiable-dynamic-class"), "error")
   assert.equal(resolveSeverity({ "*": "off" })("unverifiable-dynamic-class"), "off")
   // and a rule-specific entry wins over both
@@ -1234,6 +1376,31 @@ test("Svelte and Astro use the same semantic template analysis", () => {
     assert.deepEqual(result.violations, [], filename)
     assert.deepEqual([...result.surfaceRoots], ["test-shared-card"], filename)
     assert.equal(result.tree[0].children[0].tag, "button", filename)
+  }
+})
+
+test("Svelte and Astro conditional branches do not become static STN peers", () => {
+  const config = { emitPolicy: "always", surfaceRootPrefixes: ["test-"] }
+  const cases = [
+    [
+      "/src/components/Conditional.svelte",
+      `<section class="test-conditional">
+  {#if ready}<div class="unit" />{:else}<div class="unit" />{/if}
+</section>`,
+    ],
+    [
+      "/src/components/Conditional.astro",
+      `<section class="test-conditional">
+  {ready ? <div class="unit" /> : <div class="unit" />}
+</section>`,
+    ],
+  ]
+
+  for (const [filename, source] of cases) {
+    const warnings = analyzeTemplate(source, filename, config).violations.filter(
+      ({ ruleId }) => ruleId === "stn-peer-variant",
+    )
+    assert.deepEqual(warnings, [], filename)
   }
 })
 

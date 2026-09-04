@@ -48,6 +48,8 @@ const ruleDescriptions = {
     "Derive component and page surface names from the configured prefix and component file",
   "stn-floor": "Start each STN chain at unit or a coarser tier",
   "stn-order": "Keep adjacent STN tiers consecutive",
+  "stn-peer-variant":
+    "Distinguish static sibling STN branches at the same tier with unique variants",
   "stn-reach-g": "Make surfaces above unit reach the g tier",
   "unsupported-style-syntax":
     "Report style blocks the toolchain cannot read instead of skipping them",
@@ -56,6 +58,8 @@ const ruleDescriptions = {
   "variant-must-be-static":
     "Keep variants out of class bindings, so a variant cannot express runtime state",
   "variant-order": "Keep static variant classes in alphabetical order",
+  "variant-requires-peer":
+    "Use non-STN variants only to distinguish multiple occurrences of the same base identity",
   "variant-shadows-vocabulary":
     "Keep variant names outside the element, component, anatomy, STN, slot, and ARIA role vocabulary",
 }
@@ -107,7 +111,7 @@ function createAnalysisRule(ruleId) {
       type:
         ruleId === "variant-order"
           ? "layout"
-          : ruleId === "layout-only-wrapper"
+          : ruleId === "layout-only-wrapper" || ruleId === "stn-peer-variant"
             ? "suggestion"
             : "problem",
       docs: { description: ruleDescriptions[ruleId] },
@@ -161,7 +165,7 @@ rules["valid-config"] = {
 }
 
 const plugin = {
-  meta: { name: "@nagi-labs/eslint-plugin-nagi-css", version: "0.3.0" },
+  meta: { name: "@nagi-labs/eslint-plugin-nagi-css", version: "0.4.0" },
   rules,
 }
 

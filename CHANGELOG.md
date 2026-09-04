@@ -1,6 +1,22 @@
 # Changelog
 
-## 0.3.0 — Unreleased
+## 0.4.0 — 2026-09-04
+
+### Changed
+
+- Non-STN variants now require another occurrence of the same base identity in
+  the component. The new `variant-requires-peer` error rejects redundant forms
+  such as a lone `article -slide`; STN role variants remain exempt.
+- Static sibling STN branches at the same tier now receive a
+  `stn-peer-variant` review warning when they do not have unique role variants.
+  Repeated collections and mutually exclusive conditional branches are
+  excluded.
+
+### Migration
+
+See [Migrating to 0.4](docs/migrations/0.4.md).
+
+## 0.3.0
 
 ### Added
 
@@ -22,7 +38,8 @@
 - Element-table identities are reserved for their owning elements more
   consistently.
 - Static variants may restore local meaning without requiring another instance
-  of the same base class. Runtime state remains attribute-based.
+  of the same base class. This 0.3 behavior is superseded by the 0.4
+  `variant-requires-peer` rule for non-STN bases.
 - Documentation now separates mechanically enforced rules from HTML and design
   review criteria.
 

@@ -416,6 +416,7 @@ const DEFAULT_SEVERITY_KEY = "*"
 // a build. Explicit severity configuration can still tighten or disable them.
 const DEFAULT_WARNING_RULES = {
   "layout-only-wrapper": "warn",
+  "stn-peer-variant": "warn",
   "unverifiable-dynamic-class": "warn",
 }
 

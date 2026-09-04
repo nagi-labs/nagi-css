@@ -363,15 +363,23 @@ regardless of the word: `:class="{ '-collapsed': !open }"` becomes
 makes the state rule enforceable — the linter does not have to decide which words
 mean state, only that state is what changes.
 
-A static variant does not need a same-base peer. It may restore local meaning to
-a generic base (`unit -viewport`) even when that base occurs only once under its
-parent. The linter therefore does not infer redundancy from peer counts, an
-ancestor path, or an unrelated framework marker such as `data-part`. Accessible
-names and ID relationships (`aria-label`, `aria-labelledby`,
-`aria-describedby`) are likewise not CSS identities: they remain free to change
-with content, locale, and accessibility composition. Nagi CSS rejects only
-provable protocol conflicts; whether two different words such as `thead` and
-`-head` repeat the same human meaning remains a source-review decision.
+A non-STN variant needs another occurrence of the same base identity in the
+component. It distinguishes repeated roles such as `button -cancel` and
+`button -save`; it does not repeat the meaning of a base that already has a
+unique owned selector path. Therefore `article -slide` with no other `article`
+is rejected as `variant-requires-peer` and becomes `article` in both template
+and selector.
+
+STN is the deliberate exception. A tier such as `unit` describes structural
+depth rather than local role, so `unit -viewport` may restore that role even if
+it is the only `unit`. When static sibling STN branches share a tier, each still
+needs a unique role variant as described below.
+
+The peer check uses CSS base identity only. An ancestor path, framework marker
+such as `data-part`, accessible name, or ID relationship (`aria-label`,
+`aria-labelledby`, `aria-describedby`) is not a same-base peer. The rule has no
+autofix because removing the template variant and updating every matching CSS
+selector is one coordinated change.
 
 #### The variant stem is convention, not derivation
 
@@ -799,15 +807,15 @@ the tag and styles the child by that derived name:
 ```vue
 <template>
   <header class="app-profile-header">
-    <UserAvatar />                       <!-- no class here -->
-    <NavSidebar class="-collapsed" />    <!-- placement variants may still be passed -->
+    <UserAvatar class="-author" />
+    <UserAvatar class="-reviewer" />
   </header>
 </template>
 ```
 ```css
 .app-profile-header {
-  > .app-user-avatar { margin-inline-end: 0.75rem; }
-  > .app-nav-sidebar.-collapsed { inline-size: 3rem; }
+  > .app-user-avatar.-author { margin-inline-end: 0.75rem; }
+  > .app-user-avatar.-reviewer { opacity: 0.8; }
 }
 ```
 
@@ -823,7 +831,8 @@ Two consequences:
 - **A base class on an owned component tag is a violation.** The child's identity
   is already decided by its file; a second name for the same element would mean
   two correct answers. Variants are different — they express *placement*, which is
-  the parent's business, and may be passed down.
+  the parent's business, and may be passed down only when multiple occurrences
+  of that owned component need distinct placement roles.
 - **The parent may style that root and nothing below it.** The DOM inside belongs
   to the child's surface. In Vue this is also how the platform behaves: scoped CSS
   puts the parent's scope id on the child's root element *and no deeper*, so a
@@ -923,6 +932,23 @@ The scheme is enforced by three **local relations** — no global depth computat
 These three uniquely determine the tiers for any tree and are machine-checkable per surface (parent/child adjacency + a per-surface "is `g` present?" check). A slot sub-surface is its own surface and resets the chain.
 
 - Restore local meaning with a variant (`unit -filters`), never by changing the tier.
+
+#### Sibling STN role review
+
+Static sibling branches that share an STN tier must each have a variant that is
+unique among those peers. The tier says where an element sits; the variant says
+which static role it owns. For example, a Toast may contain
+`unit -announcements` for its assistive live regions and `unit -stack` for the
+visible notification stack. Leaving the latter as bare `unit` makes both the
+template and a selector such as `> .unit` ambiguous, and can leak visible-stack
+declarations into the concealed announcement region.
+
+`stn-peer-variant` reports indistinguishable static peer branches as a warning.
+It deliberately excludes repeated branches (`v-for`, Svelte `each`) and
+mutually exclusive branches (`v-if` / `v-else`, Svelte or Astro conditional
+expressions): those represent instances or alternatives of one logical role,
+not multiple simultaneous static roles. The rule has no autofix because only
+the component author can name the roles correctly.
 
 #### Layout-only wrapper review
 

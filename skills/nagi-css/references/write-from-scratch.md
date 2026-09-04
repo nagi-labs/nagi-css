@@ -65,7 +65,7 @@ Use this when creating new markup and CSS under the Nagi CSS contract.
     <h3 class="title">Invoice</h3>
   </header>
   <div class="unit">
-    <dl class="list -description">
+    <dl class="list">
       <div class="field -user">
         <dt class="term">User</dt>
         <dd class="definition">A. Customer</dd>

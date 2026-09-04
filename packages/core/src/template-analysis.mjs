@@ -19,6 +19,7 @@ const NATIVE = 0
 const COMPONENT = 1
 const TEMPLATE = 3
 const NON_IDENTIFYING_ROLES = new Set(["generic", "none", "presentation"])
+const DYNAMIC_BRANCH_DIRECTIVES = new Set(["for", "if", "else-if", "else"])
 const LAYOUT_WRAPPER_DISPLAY_VALUES = new Set(["flex", "grid", "inline-flex", "inline-grid"])
 const LAYOUT_WRAPPER_PROPERTIES = new Set([
   "align-content",
@@ -197,6 +198,78 @@ function getStaticAttr(node, name) {
 
 function hasStaticAttr(node, name) {
   return (node.props ?? []).some((property) => property.type === 6 && property.name === name)
+}
+
+function hasDynamicBranchDirective(node) {
+  return (node?.props ?? []).some(
+    (property) =>
+      property.type === 7 &&
+      DYNAMIC_BRANCH_DIRECTIVES.has(property.name),
+  )
+}
+
+function reviewSiblingStnVariants(children, violations) {
+  const peersByTier = new Map()
+
+  for (const child of children) {
+    if (!child.stnToken || child.dynamicBranch) continue
+    const peers = peersByTier.get(child.stnToken) ?? []
+    peers.push(child)
+    peersByTier.set(child.stnToken, peers)
+  }
+
+  for (const [tier, peers] of peersByTier) {
+    if (peers.length < 2) continue
+
+    for (const peer of peers) {
+      const hasUniqueVariant = peer.variants.some((variant) =>
+        peers.every((other) => other === peer || !other.variants.includes(variant)),
+      )
+      if (hasUniqueVariant) continue
+
+      push(
+        violations,
+        peer,
+        "stn-peer-variant",
+        `Sibling STN branches share "${tier}"; add a unique static variant to distinguish this branch from its peers.`,
+      )
+    }
+  }
+}
+
+function reviewNonStnVariantPeers(tree, violations) {
+  const records = []
+
+  function collect(children) {
+    for (const child of children ?? []) {
+      records.push(child)
+      collect(child.children)
+    }
+  }
+
+  collect(tree)
+
+  const baseCounts = new Map()
+  for (const record of records) {
+    if (record.baseTokens?.length !== 1) continue
+    const [base] = record.baseTokens
+    baseCounts.set(base, (baseCounts.get(base) ?? 0) + 1)
+  }
+
+  for (const record of records) {
+    if (record.stnToken || record.baseTokens?.length !== 1 || record.variants?.length === 0) {
+      continue
+    }
+    const [base] = record.baseTokens
+    if ((baseCounts.get(base) ?? 0) > 1) continue
+
+    push(
+      violations,
+      record,
+      "variant-requires-peer",
+      `Non-STN base "${base}" has no same-base peer in this component, so ${record.variants.length === 1 ? `variant "${record.variants[0]}" is` : `variants "${record.variants.join(" ")}" are`} redundant; remove the variant${record.variants.length === 1 ? "" : "s"} and select "${base}" through the owned structure.`,
+    )
+  }
 }
 
 function collectLiteralClassTokens(node, output) {
@@ -555,10 +628,40 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
     !isTransparentWrapper(node, config) &&
     !Object.hasOwn(config.intrinsicComponents, node.tag)
   const childSurfaceRoots = new Set()
+  const variantUsages = []
   // Classes the tables would put on elements this template already has. A rule
   // referencing one of these is not dead — the markup is missing the class, which
   // element-class-required already reports.
   const expectedClasses = new Set()
+
+  function collectVariantUsage(node) {
+    if (!node || node.type !== ELEMENT) return
+
+    const info = extractClassInfo(node)
+    const variants = info.staticTokens.filter(isVariant)
+
+    const configuredComponentBase =
+      node.tagType === COMPONENT && Object.hasOwn(config.componentClasses, node.tag)
+        ? config.componentClasses[node.tag]
+        : null
+    const derivedRoots = isOwnedComponent(node) ? childSurfaceRoot(node.tag) : []
+    const baseTokens = [
+      ...new Set([
+        ...ownedBaseTokens(info.staticTokens, config, sets),
+        ...(configuredComponentBase ? [configuredComponentBase] : []),
+        ...derivedRoots,
+      ]),
+    ]
+    const stnToken = info.staticTokens.find((token) => sets.stnIndex.has(token))
+
+    variantUsages.push({
+      baseTokens,
+      children: [],
+      loc: node.loc,
+      stnToken,
+      variants,
+    })
+  }
 
   function visit(
     node,
@@ -567,12 +670,19 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
     surfaceContext = null,
     siblings = tree,
     parent = null,
+    inheritedDynamicBranch = false,
   ) {
     if (!node || node.type !== ELEMENT) return
+
+    collectVariantUsage(node)
 
     const intrinsicTag =
       node.tagType === COMPONENT ? config.intrinsicComponents?.[node.tag] : undefined
     if (intrinsicTag) node = { ...node, tag: intrinsicTag, tagType: NATIVE }
+    const configuredComponentBase =
+      node.tagType === COMPONENT && Object.hasOwn(config.componentClasses, node.tag)
+        ? config.componentClasses[node.tag]
+        : null
 
     const info = extractClassInfo(node)
     const staticTokens = new Set(info.staticTokens)
@@ -930,26 +1040,39 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
       }
     }
 
-    // The record a selector chain is checked against. Variants are left out: they
-    // are frequently conditional, and matching on them would only add doubt. An
-    // owned child carries its derived root at runtime even though nothing is
-    // written here.
-    const record = {
-      children: [],
-      classes: [
-        ...new Set([...info.staticTokens.filter((token) => !isVariant(token)), ...derivedRoots]),
-      ],
-      dynamic: info.dynamic,
-      opaque: node.tagType === COMPONENT || node.tag === "slot" || node.nagiOpaqueComponent,
-      tag: node.tag,
-    }
-    siblings.push(record)
-
     const stnToken = [...staticTokens].find(
       (token) =>
         sets.stnIndex.has(token) &&
         !(identifyingRole && token === role),
     )
+
+    // The record a selector chain is checked against. Variants are tracked
+    // separately for sibling-role review and left out of base identity matching.
+    // An owned child carries its derived root at runtime even though nothing is
+    // written here.
+    const record = {
+      baseTokens: [
+        ...new Set([
+          ...ownedBaseTokens(info.staticTokens, config, sets),
+          ...(configuredComponentBase ? [configuredComponentBase] : []),
+          ...derivedRoots,
+        ]),
+      ],
+      children: [],
+      classes: [
+        ...new Set([...info.staticTokens.filter((token) => !isVariant(token)), ...derivedRoots]),
+      ],
+      dynamic: info.dynamic,
+      dynamicBranch:
+        inheritedDynamicBranch || node.nagiDynamicBranch || hasDynamicBranchDirective(node),
+      loc: node.loc,
+      opaque: node.tagType === COMPONENT || node.tag === "slot" || node.nagiOpaqueComponent,
+      stnToken,
+      tag: node.tag,
+      variants: staticVariants,
+    }
+    siblings.push(record)
+
     const stnIndex = stnToken ? sets.stnIndex.get(stnToken) : null
     const context = isSurfaceRoot ? { coarse: [], hasLeaf: false } : surfaceContext
     if (stnIndex != null) {
@@ -985,23 +1108,38 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
         : stnIndex != null
           ? stnIndex
           : nearestStnIndex
-      const visitChildren = (children, childDepth) => {
+      const visitChildren = (children, childDepth, inheritedBranch = false) => {
         for (const child of children ?? []) {
+          const dynamicBranch =
+            inheritedBranch || child?.nagiDynamicBranch || hasDynamicBranchDirective(child)
           if (child?.nagiOpaque) {
+            collectVariantUsage(child)
             record.children.push({
               children: [],
               classes: [],
               dynamic: true,
+              dynamicBranch,
               opaque: true,
               tag: "",
             })
           } else if (isTransparentWrapper(child, config)) {
-            visitChildren(child.children, childDepth)
+            collectVariantUsage(child)
+            visitChildren(child.children, childDepth, dynamicBranch)
+          } else {
+            visit(
+              child,
+              childDepth,
+              childNearest,
+              context,
+              record.children,
+              node,
+              dynamicBranch,
+            )
           }
-          else visit(child, childDepth, childNearest, context, record.children, node)
         }
       }
       visitChildren(node.children, depth + 1)
+      reviewSiblingStnVariants(record.children, violations)
     }
 
     if (isSurfaceRoot && context?.coarse.length > 0 && !context.hasLeaf) {
@@ -1016,14 +1154,22 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
   }
 
   // A transparent wrapper at the template root keeps the surface root at depth 0.
-  const visitRoots = (children) => {
+  const visitRoots = (children, inheritedBranch = false) => {
     for (const child of children ?? []) {
       if (child?.type !== ELEMENT) continue
-      if (isTransparentWrapper(child, config)) visitRoots(child.children)
-      else visit(child, 0)
+      const dynamicBranch =
+        inheritedBranch || child?.nagiDynamicBranch || hasDynamicBranchDirective(child)
+      if (isTransparentWrapper(child, config)) {
+        collectVariantUsage(child)
+        visitRoots(child.children, dynamicBranch)
+      } else {
+        visit(child, 0, null, null, tree, null, dynamicBranch)
+      }
     }
   }
   visitRoots(template.children)
+  reviewSiblingStnVariants(tree, violations)
+  reviewNonStnVariantPeers(variantUsages, violations)
 
   return {
     childSurfaceRoots,

@@ -77,6 +77,12 @@ Rules: the shallowest tier used is `unit` or coarser; descendant tiers are
 consecutive; a surface starting above `unit` must reach `g`. A surface full of
 coarse tiers means the component is too deep — split it.
 
+Static sibling branches that share an STN tier need unique variants so their
+roles remain readable: `unit -announcements` beside `unit -stack`. Repeated
+branches (`v-for`) and mutually exclusive branches (`v-if` / `v-else`) are not
+separate static roles and are excluded. `stn-peer-variant` reports this as a
+review warning and has no autofix.
+
 ## Variants
 
 - Start with `-`, alphabetical: `class="footer -dense -sr-only"`.

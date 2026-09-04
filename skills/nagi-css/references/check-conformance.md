@@ -41,6 +41,11 @@ the judgments the linter cannot make.
   - Variants start with `-` and are written in alphabetical order.
   - Variant stems stay outside the base-identity vocabulary: element classes, component classes, anatomy, STN tiers, slot surfaces, banned generic names, and rendered element names are not variant stems (`-title`, `-header`, `-footer`, `-wrapper`, `-span`). A role name that is not a base identity (`-search`, `-toolbar`) is fine unless the element declares that role.
   - Variants are static. A variant inside a `:class` binding is runtime state and belongs in a `data-*` attribute.
+  - A non-STN variant distinguishes at least two occurrences of the same base
+    identity in the component. A lone `article -slide` becomes `article`; an
+    ancestor path, `data-part`, accessible name, or ARIA ID relationship is not
+    a peer. STN variants are exempt because they restore local role to a
+    structural-depth identity.
   - Multiple variants are allowed.
   - Domain distinctions inside a surface are variants only when they create a styling or UI role distinction.
   - Raw data/content categories are not variants, such as `-description` for a field named description.
