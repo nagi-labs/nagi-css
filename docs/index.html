@@ -30,12 +30,68 @@
     <nav class="nav">
       <ul class="list">
         <li class="item"><a class="link" href="#usage">Get started</a></li>
+        <li class="item"><a class="link" href="#test">90-second test</a></li>
         <li class="item"><a class="link" href="https://github.com/nagi-labs/nagi-css">GitHub</a></li>
         <li class="item"><a class="link" href="https://github.com/nagi-labs/nagi-css/blob/main/CONTRACT.md">Contract</a></li>
         <li class="item"><a class="link" href="https://github.com/nagi-labs/nagi-css/blob/main/FAQ.md">FAQ</a></li>
       </ul>
     </nav>
   </header>
+
+  <section class="section -test" id="test">
+    <h2 class="title">See the contract fail for the right reasons</h2>
+    <p class="p">
+      Nagi CSS is for teams that keep CSS beside component markup and want names,
+      DOM paths, and ownership boundaries to remain reviewable as that markup
+      changes. It is an ESLint contract for Vue, Nuxt, Svelte, and Astro—not a UI
+      library, runtime, or required dependency on Nagi UI.
+    </p>
+    <p class="p">
+      This checked Vue fixture derives its root from
+      <code class="code">ProfileCard.vue</code>, uses fixed element identities,
+      and stops at the owned <code class="code">UserAvatar</code> boundary.
+    </p>
+    <pre class="pre"><code>&lt;article class="test-profile-card"&gt;
+  &lt;header class="header"&gt;
+    &lt;h2 class="title"&gt;Profile&lt;/h2&gt;
+  &lt;/header&gt;
+  &lt;div class="unit"&gt;
+    &lt;span class="text"&gt;Ada Lovelace&lt;/span&gt;
+  &lt;/div&gt;
+  &lt;UserAvatar /&gt;
+&lt;/article&gt;
+
+.test-profile-card {
+  &gt; .header { &gt; .title { margin: 0; } }
+  &gt; .unit { &gt; .text { color: var(--color-text); } }
+  &gt; .test-user-avatar { align-self: center; }
+}</code></pre>
+    <p class="p"><strong>Result:</strong> <code class="code">0 errors</code>.</p>
+    <ol class="list -diagnostics">
+      <li class="item">
+        <h3 class="title">1. The base identity is guessed</h3>
+        <pre class="pre"><code>nagi-css/surface-root-name
+Surface root must be named ".test-profile-card" from the configured prefix and Vue file name.</code></pre>
+      </li>
+      <li class="item">
+        <h3 class="title">2. Markup moves but its old CSS path remains</h3>
+        <pre class="pre"><code>nagi-css/selector-mirrors-template
+Selector "&gt; .text" does not follow the template: no element matches this path.</code></pre>
+      </li>
+      <li class="item">
+        <h3 class="title">3. A parent reaches into an owned child</h3>
+        <pre class="pre"><code>nagi-css/owned-surface-reach-in
+Selector "&gt; .image" reaches below ".test-user-avatar", the root of an owned child component;
+that DOM belongs to the child's surface, so style it there or pass a value in.</code></pre>
+      </li>
+    </ol>
+    <p class="p">
+      These are assertions over real fixtures, not copied terminal decoration.
+      <a class="link" href="https://github.com/nagi-labs/nagi-css/tree/main/tests/fixtures/profile-card">Read all four fixtures</a>
+      or run <code class="code">vp run test</code> and look for
+      <code class="code">ESLint validates the ProfileCard example and reports three isolated structural violations</code>.
+    </p>
+  </section>
 
   <section class="section -naming">
     <h2 class="title">Every name is derived</h2>
@@ -186,6 +242,41 @@ export default [
       <a class="link" href="https://github.com/nagi-labs/nagi-css/blob/main/docs/getting-started/nuxt.md">Nuxt</a>,
       <a class="link" href="https://github.com/nagi-labs/nagi-css/blob/main/docs/getting-started/svelte.md">Svelte</a>, or
       <a class="link" href="https://github.com/nagi-labs/nagi-css/blob/main/docs/getting-started/astro.md">Astro</a>.
+    </p>
+    <p class="p">
+      For a complete isolated Vite project pinned to Node 22.18+, ESLint 10.10,
+      Vue 3.5.42, and the published Nagi CSS plugin 0.4.0, use the
+      <a class="link" href="https://github.com/nagi-labs/nagi-css/tree/main/examples/vue-minimal">Vue minimal example</a>.
+      Run <code class="code">vp install --frozen-lockfile</code>,
+      <code class="code">vp run lint</code>, and <code class="code">vp run build</code>.
+    </p>
+  </section>
+
+  <section class="section -tradeoffs">
+    <h2 class="title">A narrow guarantee, with visible tradeoffs</h2>
+    <p class="p">
+      Tailwind puts presentational utilities in markup; StyleX provides typed,
+      deterministic property composition; Panda generates typed atomic styles
+      and recipes; CSS Modules provide local class scope. Nagi CSS does not
+      replace those guarantees. It keeps ordinary component CSS and instead
+      checks that semantic identities, selectors, and owned DOM paths agree.
+      Its experimental Tailwind <code class="code">@apply</code> backend is
+      separate from the stable plain-CSS mode.
+    </p>
+    <p class="p">
+      It does not prove that the DOM semantics, accessibility, visual result, or
+      maintenance cost are correct. It cannot completely analyze dynamic class
+      names or DOM outside the owned boundary. The question is narrower: when
+      component-owned CSS is your chosen medium, does making these structural
+      decisions executable help your real changes?
+    </p>
+    <p class="p">
+      Follow a real application from
+      <a class="link" href="https://github.com/nagi-labs/nagi-ui-deep-sea/blob/main/src/views/DashboardView.vue">Deep Sea's dashboard source</a>
+      into its
+      <a class="link" href="https://github.com/nagi-labs/nagi-ui-deep-sea/blob/main/eslint.config.mjs">lint configuration</a>.
+      Nagi UI's optional Button style-axis compiler is a separate build-time
+      dependency and is not part of Nagi CSS plain mode.
     </p>
   </section>
 

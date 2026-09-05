@@ -56,6 +56,10 @@ Framework-specific setup:
 - [Svelte](docs/getting-started/svelte.md)
 - [Astro](docs/getting-started/astro.md)
 
+The [isolated Vue example](examples/vue-minimal) pins the published plugin and
+can be installed, linted, and built without resolving this monorepo's workspace
+packages.
+
 The [setup index](docs/getting-started/index.md) covers shared installation,
 design tokens, incremental adoption, and verification.
 

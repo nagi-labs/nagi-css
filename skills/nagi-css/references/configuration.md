@@ -52,7 +52,7 @@ authored:
 
 Arbitrary syntax such as `font-[inherit]` or `[mask-type:luminance]` is rejected
 inside `@apply`; keep that property visible as plain CSS. Nagi CSS also recognizes
-surface-root position, margin, inset, and z-index utilities so `@apply` cannot
+external surface-root position, margin, inset, and z-index utilities so `@apply` cannot
 hide external layout ownership. Other named utilities are validated and expanded
 by Tailwind. Its coverage and configuration may change before it is promoted to
 a stable declaration backend.

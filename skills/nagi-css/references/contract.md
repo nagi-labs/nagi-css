@@ -148,13 +148,15 @@ custom property, not a cascade trick.
 
 ## Stacking Order
 
-`z-index` on a surface's own rule is external layout: its order among its siblings
-is the parent's decision, and this is what removes the `z-index: 9999` race — every
-escalation targets something outside the component. A surface that owns its
-coordinate context (top-layer, anchor-positioned) may set it, and there the level
-must come from a token, since ordering modals against toasts is a system-wide
-decision. Layering a surface's own children against each other is a local
-structural choice and is unrestricted.
+`z-index` on a normal surface's own rule is external layout: its order among its
+siblings is the parent's decision. A selector that guarantees current top-layer
+state (`:modal` or `:popover-open`) owns placement but is ordered by top-layer
+insertion order, not by `z-index`; a root `z-index` there is reported. A dialog
+tag or `popover` attribute alone establishes capability, not current state. An
+anchor-positioned surface outside the top layer may use a stacking token.
+`position: relative` is allowed when the root only establishes a containing
+block for its own children. Layering a surface's own children against each other
+is a local structural choice and is unrestricted.
 
 ## Design Tokens
 
