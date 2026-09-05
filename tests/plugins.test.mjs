@@ -134,6 +134,45 @@ test("recommended config rejects unknown severity keys during config loading", (
   )
 })
 
+test("ESLint validates the ProfileCard example and reports three isolated structural violations", async () => {
+  const profileCard = (kind) => path.join(root, `fixtures/profile-card/${kind}/ProfileCard.vue`)
+  const [valid, wrongBase, stalePath, reachIn] = await Promise.all([
+    lintEslint(profileCard("valid")),
+    lintEslint(profileCard("wrong-base")),
+    lintEslint(profileCard("stale-path")),
+    lintEslint(profileCard("reach-in")),
+  ])
+
+  assert.equal(valid.errorCount, 0, JSON.stringify(valid.messages))
+  assert.deepEqual(
+    wrongBase.messages.map(({ ruleId, message }) => [ruleId, message]),
+    [
+      [
+        "nagi-css/surface-root-name",
+        'Surface root must be named ".test-profile-card" from the configured prefix and Vue file name.',
+      ],
+    ],
+  )
+  assert.deepEqual(
+    stalePath.messages.map(({ ruleId, message }) => [ruleId, message]),
+    [
+      [
+        "nagi-css/selector-mirrors-template",
+        'Selector "> .text" does not follow the template: no element matches this path.',
+      ],
+    ],
+  )
+  assert.deepEqual(
+    reachIn.messages.map(({ ruleId, message }) => [ruleId, message]),
+    [
+      [
+        "nagi-css/owned-surface-reach-in",
+        `Selector "> .image" reaches below ".test-user-avatar", the root of an owned child component; that DOM belongs to the child's surface, so style it there or pass a value in.`,
+      ],
+    ],
+  )
+})
+
 test("Tailwind apply is explicit while selector checks remain active", async () => {
   const source = `<template>
   <section class="test-apply-card">
@@ -197,7 +236,7 @@ test("Tailwind apply is explicit while selector checks remain active", async () 
     hiddenSurfaceLayout.messages.filter(
       ({ ruleId }) => ruleId === "nagi-css/surface-external-layout",
     ).length,
-    3,
+    2,
   )
 })
 
@@ -649,6 +688,9 @@ test("ESLint keeps external layout off surfaces except top-layer or anchored one
 
   const anchored = await lintStyles(path.join(root, "fixtures/layout/HintPopover.vue"), {})
   assert.equal(anchored.results[0].warnings.length, 0)
+
+  const relative = await lintStyles(path.join(root, "fixtures/layout/RelativeContext.vue"), {})
+  assert.equal(relative.results[0].warnings.length, 0)
 })
 
 test("ESLint rejects selector variants that shadow vocabulary names", async () => {
@@ -937,15 +979,24 @@ test("ESLint requires a token for lengths on scale properties only", async () =>
   )
 })
 
-test("ESLint returns a surface's stacking order to the parent, or to a token", async () => {
+test("ESLint distinguishes top-layer order from ordinary z-index stacking", async () => {
   const raw = await lintStyles(path.join(root, "fixtures/layout/RawStacking.vue"), {})
+  const nonModal = await lintStyles(path.join(root, "fixtures/layout/NonModal.vue"), {})
 
-  // A top-layer surface owns its own stacking order, so the value is checked
-  // rather than rejected; layering its own children stays a local decision.
+  // A top-layer surface cannot use z-index to reorder top-layer boxes. Layering
+  // its own children is still a local decision.
   assert.deepEqual(
     raw.results[0].warnings.map(({ line, rule }) => [line, rule]),
-    [[10, "nagi-css/stacking-token-required"]],
+    [[11, "nagi-css/top-layer-z-index"]],
     JSON.stringify(raw.results[0].warnings),
+  )
+
+  // The dialog tag is only top-layer-capable. The open attribute represents a
+  // non-modal dialog and must not make the linter claim that it is in the top layer.
+  assert.deepEqual(
+    nonModal.results[0].warnings.map(({ line, rule }) => [line, rule]),
+    [[9, "nagi-css/surface-external-layout"]],
+    JSON.stringify(nonModal.results[0].warnings),
   )
 })
 

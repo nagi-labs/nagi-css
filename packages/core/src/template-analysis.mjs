@@ -577,7 +577,11 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
   const violations = []
   const surfaceRoots = new Set()
   const roleNames = new Set()
-  const topLayerSurfaces = new Set()
+  // Template syntax can establish that a surface is capable of entering the top
+  // layer, but not that it is there at runtime. A dialog enters only through
+  // showModal(), while a popover enters only while shown. Style analysis combines
+  // these capabilities with selectors that guarantee the corresponding state.
+  const topLayerCapabilities = new Map()
   const { descriptor, framework } = parseTemplateDocument(source, filename)
   const styleBlocks = unreadableStyleBlocks(descriptor.styles)
   // A style rule never runs on a block that failed to parse, so this
@@ -600,7 +604,7 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
       roleNames,
       styleBlocks,
       surfaceRoots,
-      topLayerSurfaces,
+      topLayerCapabilities,
       tree: [],
       violations,
     }
@@ -774,7 +778,10 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
 
     if (isSurfaceRoot && (node.tag === "dialog" || hasStaticAttr(node, "popover"))) {
       for (const token of [...identityTokens, ...slotSurfaceTokens]) {
-        topLayerSurfaces.add(token)
+        const capabilities = topLayerCapabilities.get(token) ?? new Set()
+        if (node.tag === "dialog") capabilities.add(":modal")
+        if (hasStaticAttr(node, "popover")) capabilities.add(":popover-open")
+        topLayerCapabilities.set(token, capabilities)
       }
     }
 
@@ -1179,7 +1186,7 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
     styleBlocks,
     styles: descriptor.styles,
     surfaceRoots,
-    topLayerSurfaces,
+    topLayerCapabilities,
     tree,
     violations,
     sourceFile: path.resolve(filename),

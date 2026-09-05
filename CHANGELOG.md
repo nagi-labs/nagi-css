@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- Surface rules explicitly limited by `:modal` or `:popover-open` now reject
+  `z-index`, because matching top-layer boxes are ordered by insertion order
+  rather than the ordinary z-index stacking rules. A dialog tag or `popover`
+  attribute alone no longer produces a top-layer diagnosis; non-top-layer
+  anchor-positioned surfaces may still use a stacking token.
+- Surface roots may use `position: relative` to establish a containing block
+  for owned absolutely positioned children; root inset declarations remain
+  external-layout violations.
+
 ## 0.4.0 — 2026-09-04
 
 ### Changed

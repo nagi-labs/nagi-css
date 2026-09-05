@@ -113,10 +113,14 @@ Never a class. Native state first (`:disabled`, `:checked`, `[open]`), then ARIA
 - An owned child component: pass it no class. Its root already carries its own
   derived surface root, so style it as `> .app-user-avatar` and do not reach
   inside it.
-- No external layout on the surface's own rule — `position`, inset, `margin`,
-  `z-index` belong to the parent. Exception: a top-layer (`<dialog>`, popover) or
-  anchor-positioned surface owns its placement, and there `z-index` must be a
-  token.
+- No external layout on the surface's own rule — external `position`, inset,
+  `margin`, and `z-index` belong to the parent. `position: relative` is allowed
+  when the root only establishes a containing block for its own children.
+  A selector that guarantees top-layer state (`:modal` or `:popover-open`) and
+  an anchor-positioned surface own their placement. A capable element or
+  `popover` attribute alone does not prove current top-layer state. Top-layer
+  order follows insertion order rather than `z-index`; only a non-top-layer
+  anchored surface may use a stacking token.
 - No `@layer` inside a component. No `@keyframes` the component never animates
   with. A named container is `<surface-root>` or `<surface-root>-<element class>`,
   and a named `@container` query may only reference a container this file declares.

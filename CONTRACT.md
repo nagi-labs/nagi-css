@@ -693,7 +693,7 @@ attribute or an ancestor step (see the notes below), and one it cannot reach
 means the elements want different classes.
 
 Everything else self-maps: `<p>` → `p`, `<header>` → `header`, `<section>` → `section`,
-`<button>` → `button`, `<dialog>` → `dialog` (a top-layer surface, and a
+`<button>` → `button`, `<dialog>` → `dialog` (a top-layer-capable element, and a
 surface root when natural), `<details>` → `details`, `<form>` → `form`,
 `<select>` → `select`, `<thead>` → `thead`, `<tbody>` → `tbody`, and so on for
 every rendered element. Notes that survive the trimming:
@@ -1273,8 +1273,9 @@ Nesting should reinforce the owned structure of the surface.
 A styling surface should contain its own visual skin, but not external layout responsibility.
 
 This rule is machine-enforced (`surface-external-layout`): the linter reports
-`position`, inset, `margin`, and `z-index` declarations in a surface root's own
-rule, with the top-layer and anchored exception below.
+external `position`, inset, `margin`, and `z-index` declarations in a surface
+root's own rule, with the internal containing-block and placement exceptions
+below.
 
 ### Avoid on the surface element
 
@@ -1297,6 +1298,12 @@ local structural decision (`> .overlay` sits above `> .content`), the values are
 small integers, and no design system publishes a scale for them. That stays
 unrestricted.
 
+`position: relative` without a root inset is also internal: it establishes the
+containing block for an absolutely positioned child without removing or moving
+the surface in its parent's layout. The declaration is therefore allowed on a
+surface root. Other `position` values, and every root inset, remain external
+layout and are reported.
+
 ### Allowed on the surface element
 
 - `padding`
@@ -1308,9 +1315,13 @@ unrestricted.
 
 ### Exception: top-layer and anchored surfaces
 
-A surface rendered in the top layer (`<dialog>`, a `popover` element) has no
-parent layout that could own its placement. For such a surface, anchored
-placement is part of its own skin: `position-anchor`, `position-area`,
+A selector that guarantees a surface is currently rendered in the top layer
+(`dialog:modal`, or a popover matched by `:popover-open`) has no parent layout
+that could own its placement. The element or `popover` attribute alone establishes
+only that the surface is top-layer-capable: `<dialog open>` and `dialog.show()` are
+non-modal, and a popover is outside the top layer while hidden. For a selector
+that guarantees the top-layer state, anchored placement is part of its own skin:
+`position-anchor`, `position-area`,
 `position-try-*`, and the inset properties that resolve against its anchor are
 allowed on the surface element itself.
 
@@ -1318,16 +1329,31 @@ This preserves the rule's intent rather than weakening it: placement belongs
 to whoever owns the coordinate context. In normal flow that is the parent; in
 the top layer it is the surface itself.
 
-Such a surface also owns its stacking order, and that is the one place a stacking
-scale genuinely exists — the ordering of modals against toasts against popovers is
-a system-wide decision, which is what `--z-modal` style tokens are for. So
-`z-index` is allowed here but its value is checked
-(`stacking-token-required`): a raw level is a system decision written in one
-component.
+Top-layer stacking is not z-index stacking. Top-layer boxes are painted in the
+order they occur in the top layer, with the last one on top; each also creates a
+new stacking context. A `z-index` token therefore cannot order one top-layer
+dialog, popover, or backdrop against another. The linter reports root `z-index`
+as `top-layer-z-index` only when the selector itself guarantees a recognized
+top-layer state; coordinate the order in which the relevant platform APIs place
+the elements in the top layer instead. When static source cannot establish that
+state, the linter does not claim the surface is in the top layer. Other surface
+layout rules still apply independently.
+
+An anchor-positioned surface that is *not* in the top layer can still participate
+in ordinary stacking. Its root may use `z-index`, and a non-zero numeric value is
+reported as `stacking-token-required` so the cross-surface level comes from a
+`--z-*` token.
 
 ```css
-/* Correct, on a top-layer or anchored surface */
-.app-confirm-modal { z-index: var(--z-modal) }
+/* Correct top-layer placement; no z-index */
+.app-confirm-modal:modal { margin: auto; inset: 0 }
+
+/* Correct for an anchor-positioned surface outside the top layer */
+.app-help-popover {
+  position-anchor: --help;
+  position-area: block-end;
+  z-index: var(--z-dropdown);
+}
 ```
 
 In short:

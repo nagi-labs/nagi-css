@@ -46,6 +46,7 @@ const ruleDescriptions = {
   "state-not-class": "Represent runtime state with native, ARIA, or data attributes",
   "surface-root-name":
     "Derive component and page surface names from the configured prefix and component file",
+  "top-layer-z-index": "Keep top-layer ordering in the show/popover sequence, not z-index",
   "stn-floor": "Start each STN chain at unit or a coarser tier",
   "stn-order": "Keep adjacent STN tiers consecutive",
   "stn-peer-variant":
