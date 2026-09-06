@@ -13,10 +13,10 @@ import { typescriptParser } from "@nagi-labs/nagi-css-core"
 import vueParser from "vue-eslint-parser"
 
 const root = path.dirname(fileURLToPath(import.meta.url))
-const validFile = path.join(root, "fixtures/valid/Component.vue")
-const invalidFile = path.join(root, "fixtures/invalid/Component.vue")
-const styleFile = path.join(root, "fixtures/style/BoundarySurface.vue")
-const invalidStyleFile = path.join(root, "fixtures/style/InvalidBoundarySurface.vue")
+const validFile = path.join(root, "fixtures/valid/component.vue")
+const invalidFile = path.join(root, "fixtures/invalid/component.vue")
+const styleFile = path.join(root, "fixtures/style/boundary-surface.vue")
+const invalidStyleFile = path.join(root, "fixtures/style/invalid-boundary-surface.vue")
 
 const testSurface = { surfaceRootPrefixes: ["test-"] }
 
@@ -135,7 +135,7 @@ test("recommended config rejects unknown severity keys during config loading", (
 })
 
 test("ESLint validates the ProfileCard example and reports three isolated structural violations", async () => {
-  const profileCard = (kind) => path.join(root, `fixtures/profile-card/${kind}/ProfileCard.vue`)
+  const profileCard = (kind) => path.join(root, `fixtures/profile-card/${kind}/profile-card.vue`)
   const [valid, wrongBase, stalePath, reachIn] = await Promise.all([
     lintEslint(profileCard("valid")),
     lintEslint(profileCard("wrong-base")),
@@ -190,7 +190,7 @@ test("Tailwind apply is explicit while selector checks remain active", async () 
 </style>`
 
   const plain = await lintEslint(
-    path.join(root, "fixtures/style/ApplyCard.vue"),
+    path.join(root, "fixtures/style/apply-card.vue"),
     {},
     source,
   )
@@ -201,14 +201,14 @@ test("Tailwind apply is explicit while selector checks remain active", async () 
   )
 
   const tailwind = await lintEslint(
-    path.join(root, "fixtures/style/ApplyCard.vue"),
+    path.join(root, "fixtures/style/apply-card.vue"),
     { declarationMode: "tailwind-apply" },
     source,
   )
   assert.equal(tailwind.errorCount, 0, JSON.stringify(tailwind.messages))
 
   const brokenSelector = await lintEslint(
-    path.join(root, "fixtures/style/ApplyCard.vue"),
+    path.join(root, "fixtures/style/apply-card.vue"),
     { declarationMode: "tailwind-apply" },
     source.replace("> .button {", "> .missing {"),
   )
@@ -217,7 +217,7 @@ test("Tailwind apply is explicit while selector checks remain active", async () 
   )
 
   const arbitrary = await lintEslint(
-    path.join(root, "fixtures/style/ApplyCard.vue"),
+    path.join(root, "fixtures/style/apply-card.vue"),
     { declarationMode: "tailwind-apply" },
     source.replace("rounded-md", "font-[inherit]"),
   )
@@ -228,7 +228,7 @@ test("Tailwind apply is explicit while selector checks remain active", async () 
   )
 
   const hiddenSurfaceLayout = await lintEslint(
-    path.join(root, "fixtures/style/ApplyCard.vue"),
+    path.join(root, "fixtures/style/apply-card.vue"),
     { declarationMode: "tailwind-apply" },
     source.replace("@apply grid gap-4;", "@apply relative mt-4 z-10;"),
   )
@@ -241,7 +241,7 @@ test("Tailwind apply is explicit while selector checks remain active", async () 
 })
 
 test("template and style rules share an exact configured surface prefix", async () => {
-  const file = path.join(root, "fixtures/prefixed/Toggle.vue")
+  const file = path.join(root, "fixtures/prefixed/toggle.vue")
   const config = { surfaceRootPrefixes: ["n-"] }
   const eslint = await lintEslint(file, config)
   const styles = await lintStyles(file, config)
@@ -262,7 +262,7 @@ test("ESLint autofixes an unambiguous required static class", async () => {
   })
   const code = `<template><section class="test-fix-surface"><button>-</button></section></template>`
   const [result] = await eslint.lintText(code, {
-    filePath: path.join(root, "fixtures/FixSurface.vue"),
+    filePath: path.join(root, "fixtures/fix-surface.vue"),
   })
 
   assert.match(result.output, /<button class="button">/)
@@ -278,7 +278,7 @@ test("ESLint replaces an anatomy or STN fallback with an identifying role", asyn
   })
   const [result] = await eslint.lintText(
     `<template><section class="test-role-host"><div class="unit" role="group" /></section></template>`,
-    { filePath: path.join(root, "fixtures/RoleHost.vue") },
+    { filePath: path.join(root, "fixtures/role-host.vue") },
   )
 
   assert.match(result.output, /class="group" role="group"/)
@@ -287,7 +287,7 @@ test("ESLint replaces an anatomy or STN fallback with an identifying role", asyn
 
 test("ESLint reports a layout-only wrapper as a non-failing warning without a fix", async () => {
   const result = await lintEslint(
-    path.join(root, "fixtures/LayoutWrapper.vue"),
+    path.join(root, "fixtures/layout-wrapper.vue"),
     {},
   `<template>
   <section class="test-layout-wrapper">
@@ -323,7 +323,7 @@ test("ESLint reports a layout-only wrapper as a non-failing warning without a fi
 
 test("ESLint reports an indistinguishable sibling STN branch as a warning", async () => {
   const result = await lintEslint(
-    path.join(root, "fixtures/PeerVariants.vue"),
+    path.join(root, "fixtures/peer-variants.vue"),
     {},
   `<template>
   <section class="test-peer-variants">
@@ -350,7 +350,7 @@ test("ESLint reports an indistinguishable sibling STN branch as a warning", asyn
 
 test("ESLint rejects a non-STN variant without a same-base peer", async () => {
   const result = await lintEslint(
-    path.join(root, "fixtures/Carousel.vue"),
+    path.join(root, "fixtures/carousel.vue"),
     {},
     `<template>
   <section class="test-carousel">
@@ -371,7 +371,7 @@ test("ESLint rejects a non-STN variant without a same-base peer", async () => {
 })
 
 test("ESLint accepts Svelte and Astro component templates and styles", async () => {
-  for (const name of ["SvelteCard.svelte", "AstroCard.astro"]) {
+  for (const name of ["svelte-card.svelte", "astro-card.astro"]) {
     const file = path.join(root, "fixtures/framework", name)
     const eslint = await lintFrameworkEslint(file)
     const styles = await lintStyles(file, {})
@@ -386,7 +386,7 @@ test("ESLint accepts Svelte and Astro component templates and styles", async () 
 })
 
 test("ESLint mirrors selectors against Svelte and Astro templates", async () => {
-  for (const name of ["SvelteCard.svelte", "AstroCard.astro"]) {
+  for (const name of ["svelte-card.svelte", "astro-card.astro"]) {
     const file = path.join(root, "fixtures/framework", name)
     const code = (await fs.readFile(file, "utf8")).replace("> .button {}", "> .missing {}")
     const result = await lintStyles(file, testSurface, code)
@@ -399,8 +399,8 @@ test("ESLint mirrors selectors against Svelte and Astro templates", async () => 
 
 test("ESLint reports component-style violations at Svelte and Astro source lines", async () => {
   for (const [name, line] of [
-    ["SvelteCard.svelte", 13],
-    ["AstroCard.astro", 17],
+    ["svelte-card.svelte", 13],
+    ["astro-card.astro", 17],
   ]) {
     const file = path.join(root, "fixtures/framework", name)
     const code = (await fs.readFile(file, "utf8")).replace("> .button {}", "> .missing {}")
@@ -427,14 +427,14 @@ test("Svelte class directives and Astro class:list share dynamic class rules", a
   })
   const cases = [
     [
-      "DynamicSurface.svelte",
+      "dynamic-surface.svelte",
       `<script>let active = false</script>
 <section class="test-dynamic-surface">
   <button class="button" class:is-active={active} class:-lead={active}>x</button>
 </section>`,
     ],
     [
-      "DynamicSurface.astro",
+      "dynamic-surface.astro",
       `---
 const active = false
 ---
@@ -489,12 +489,12 @@ test("ESLint adds a static anchor beside Svelte and Astro class helpers", async 
   })
   const cases = [
     [
-      "AnchorSurface.svelte",
+      "anchor-surface.svelte",
       `<script>let active = false</script>
 <section class="test-anchor-surface"><button class:is-active={active}>x</button></section>`,
     ],
     [
-      "AnchorSurface.astro",
+      "anchor-surface.astro",
       `---
 const active = false
 ---
@@ -537,7 +537,7 @@ test("ESLint accepts nested UI boundaries and deep library internals", async () 
 })
 
 test("ESLint requires a declared slot surface before selectors resume below a UI boundary", async () => {
-  const file = path.join(root, "fixtures/TableSlotHost.vue")
+  const file = path.join(root, "fixtures/table-slot-host.vue")
   const template = `<template><section class="test-table-slot-host"><DataTable class="ui-data-table"><template #company><div class="ui-data-table-cell-company"><a class="link">Acme</a></div></template></DataTable></section></template>`
   const invalid = await lintStyles(
     file,
@@ -567,7 +567,7 @@ test("ESLint requires a declared slot surface before selectors resume below a UI
 })
 
 test("ESLint does not treat another public boundary or library internal class as a slot surface", async () => {
-  const file = path.join(root, "fixtures/BoundaryReachIn.vue")
+  const file = path.join(root, "fixtures/boundary-reach-in.vue")
   const template = `<template><section class="test-boundary-reach-in"><DataTable class="ui-data-table" /></section></template>`
   for (const selector of [".ui-column", ".third-party-node"]) {
     const result = await lintStyles(
@@ -592,7 +592,7 @@ test("ESLint does not treat another public boundary or library internal class as
 })
 
 test("ESLint treats an automatically derived pv class as a boundary", async () => {
-  const file = path.join(root, "fixtures/TableHost.vue")
+  const file = path.join(root, "fixtures/table-host.vue")
   const result = await lintStyles(file, { ...testSurface, componentClasses: ["DataTable"] }, `<template><section class="test-table-host"><DataTable class="pv-data-table" /></section></template>\n<style scoped>.test-table-host { > .pv-data-table { > .value {} } }</style>`)
 
   assert.equal(
@@ -602,7 +602,7 @@ test("ESLint treats an automatically derived pv class as a boundary", async () =
 })
 
 test("ESLint reserves body for the matching element", async () => {
-  const file = path.join(root, "fixtures/InvalidBody.vue")
+  const file = path.join(root, "fixtures/invalid-body.vue")
   const result = await lintStyles(file, testSurface, `<template><section class="test-invalid-body"><div class="body" /></section></template>\n<style scoped>.test-invalid-body { > .body { color: inherit; } }</style>`)
 
   assert.ok(
@@ -614,7 +614,7 @@ test("ESLint reserves body for the matching element", async () => {
 
 test("ESLint accepts table-first identity with ARIA attribute semantics", async () => {
   const result = await lintStyles(
-    path.join(root, "fixtures/roles/SeparatorList.vue"),
+    path.join(root, "fixtures/roles/separator-list.vue"),
     {},
   )
 
@@ -674,7 +674,7 @@ test("detached slot surfaces may anchor a top-level selector", async () => {
 })
 
 test("ESLint keeps external layout off surfaces except top-layer or anchored ones", async () => {
-  const bad = await lintStyles(path.join(root, "fixtures/layout/BadCard.vue"), {})
+  const bad = await lintStyles(path.join(root, "fixtures/layout/bad-card.vue"), {})
   const layoutWarnings = bad.results[0].warnings.filter(
     ({ rule }) => rule === "nagi-css/surface-external-layout",
   )
@@ -683,18 +683,18 @@ test("ESLint keeps external layout off surfaces except top-layer or anchored one
     ["margin", "position", "z-index", "top", "margin-inline"],
   )
 
-  const dialog = await lintStyles(path.join(root, "fixtures/layout/ConfirmModal.vue"), {})
+  const dialog = await lintStyles(path.join(root, "fixtures/layout/confirm-modal.vue"), {})
   assert.equal(dialog.results[0].warnings.length, 0)
 
-  const anchored = await lintStyles(path.join(root, "fixtures/layout/HintPopover.vue"), {})
+  const anchored = await lintStyles(path.join(root, "fixtures/layout/hint-popover.vue"), {})
   assert.equal(anchored.results[0].warnings.length, 0)
 
-  const relative = await lintStyles(path.join(root, "fixtures/layout/RelativeContext.vue"), {})
+  const relative = await lintStyles(path.join(root, "fixtures/layout/relative-context.vue"), {})
   assert.equal(relative.results[0].warnings.length, 0)
 })
 
 test("ESLint rejects selector variants that shadow vocabulary names", async () => {
-  const file = path.join(root, "fixtures/ShadowSurface.vue")
+  const file = path.join(root, "fixtures/shadow-surface.vue")
   const result = await lintStyles(file, testSurface,
     `<template><section class="test-shadow-surface"><p class="p -lead">x</p></section></template>
 <style scoped>.test-shadow-surface { > .p.-title {} > .p.-lead {} }</style>`)
@@ -714,7 +714,7 @@ test("ESLint rejects template variants that shadow vocabulary names", async () =
   })
   const [result] = await eslint.lintText(
     `<template><section class="test-shadow-surface"><p class="p -title">x</p></section></template>`,
-    { filePath: path.join(root, "fixtures/ShadowSurface.vue") },
+    { filePath: path.join(root, "fixtures/shadow-surface.vue") },
   )
 
   assert.ok(
@@ -731,7 +731,7 @@ test("ESLint rejects an Element Class Table identity on the wrong tag", async ()
   const [result] = await eslint.lintText(
     `<template><section class="test-text-surface"><p class="text">Paragraph</p><span class="title">Label</span></section></template>
 <style scoped>.test-text-surface { > .text {} > .title {} }</style>`,
-    { filePath: path.join(root, "fixtures/TextSurface.vue") },
+    { filePath: path.join(root, "fixtures/text-surface.vue") },
   )
 
   assert.equal(
@@ -749,7 +749,7 @@ test("ESLint rejects multiple base identities", async () => {
   })
   const [result] = await eslint.lintText(
     `<template><section class="test-separator-list"><li class="item separator" role="separator" /></section></template>`,
-    { filePath: path.join(root, "fixtures/SeparatorList.vue") },
+    { filePath: path.join(root, "fixtures/separator-list.vue") },
   )
 
   assert.ok(
@@ -758,7 +758,7 @@ test("ESLint rejects multiple base identities", async () => {
 })
 
 test("ESLint rejects multiple base identities in one compound", async () => {
-  const file = path.join(root, "fixtures/CompoundSurface.vue")
+  const file = path.join(root, "fixtures/compound-surface.vue")
   const result = await lintStyles(file, testSurface,
     `<template><section class="test-compound-surface"><li class="item unit" /></section></template>
 <style scoped>.test-compound-surface { > .item.unit {} }</style>`)
@@ -771,7 +771,7 @@ test("ESLint rejects multiple base identities in one compound", async () => {
 })
 
 test("ESLint rejects the legacy zone STN name", async () => {
-  const file = path.join(root, "fixtures/LegacyZoneSurface.vue")
+  const file = path.join(root, "fixtures/legacy-zone-surface.vue")
   const result = await lintStyles(file, testSurface,
     `<template><section class="test-legacy-zone-surface"><div class="zone" /></section></template>
 <style scoped>.test-legacy-zone-surface { > .zone {} }</style>`)
@@ -784,13 +784,13 @@ test("ESLint rejects the legacy zone STN name", async () => {
 })
 
 test("ESLint allows sibling combinators inside owned DOM", async () => {
-  const result = await lintStyles(path.join(root, "fixtures/style/SiblingList.vue"))
+  const result = await lintStyles(path.join(root, "fixtures/style/sibling-list.vue"))
 
   assert.equal(result.errored, false, JSON.stringify(result.results[0].warnings))
 })
 
 test("ESLint requires owned DOM depth to remain visibly nested", async () => {
-  const file = path.join(root, "fixtures/style/ReadableNesting.vue")
+  const file = path.join(root, "fixtures/style/readable-nesting.vue")
   const template = `<template><section class="test-readable-nesting"><header class="header"><h2 class="title">Title</h2></header></section></template>`
   const flat = await lintStyles(file, testSurface,
     `${template}<style scoped>.test-readable-nesting > .header > .title { color: var(--color-text); }</style>`)
@@ -811,7 +811,7 @@ test("ESLint requires owned DOM depth to remain visibly nested", async () => {
 })
 
 test("ESLint reports a dead path when its final class exists elsewhere in the template", async () => {
-  const file = path.join(root, "fixtures/style/RepeatedClassDeadPath.vue")
+  const file = path.join(root, "fixtures/style/repeated-class-dead-path.vue")
   const code = `<template><section class="test-repeated-class-dead-path"><div class="unit"><h2 class="title">Title</h2></div><div class="unit"><span class="value">42</span></div></section></template><style scoped>.test-repeated-class-dead-path { > .unit { > .title { > .value {} } } }</style>`
   const result = await lintStyles(file, testSurface, code)
 
@@ -824,8 +824,8 @@ test("ESLint reports a dead path when its final class exists elsewhere in the te
 })
 
 test("ESLint reports style blocks the toolchain cannot read", async () => {
-  const scss = await lintEslint(path.join(root, "fixtures/style/ScssBlock.vue"))
-  const external = await lintEslint(path.join(root, "fixtures/style/ExternalStyle.vue"))
+  const scss = await lintEslint(path.join(root, "fixtures/style/scss-block.vue"))
+  const external = await lintEslint(path.join(root, "fixtures/style/external-style.vue"))
 
   for (const [label, result] of [["scss", scss], ["src", external]]) {
     assert.ok(
@@ -847,7 +847,7 @@ test("ESLint reports invalid plain CSS", async () => {
   const [result] = await eslint.lintText(
     `<template><section class="test-broken-surface" /></template>
 <style>.test-broken-surface { color: var(--color-text);</style>`,
-    { filePath: path.join(root, "fixtures/BrokenSurface.vue") },
+    { filePath: path.join(root, "fixtures/broken-surface.vue") },
   )
 
   assert.ok(
@@ -859,9 +859,9 @@ test("ESLint reports invalid plain CSS", async () => {
 })
 
 test("ESLint allows styling an owned component root but not its inside", async () => {
-  const allowed = await lintStyles(path.join(root, "fixtures/style/OwnedBoundary.vue"))
+  const allowed = await lintStyles(path.join(root, "fixtures/style/owned-boundary.vue"))
   const reachIn = await lintStyles(
-    path.join(root, "fixtures/style/OwnedBoundaryReachIn.vue"),
+    path.join(root, "fixtures/style/owned-boundary-reach-in.vue"),
   )
 
   assert.equal(allowed.errored, false, JSON.stringify(allowed.results[0].warnings))
@@ -884,11 +884,11 @@ test("ESLint checks token references against the configured sources", async () =
       { file: path.join(root, "fixtures/tokens/tokens.css"), layer: "semantic" },
     ],
   }
-  const surface = await lintStyles(path.join(root, "fixtures/tokens/TokenSurface.vue"), {
+  const surface = await lintStyles(path.join(root, "fixtures/tokens/token-surface.vue"), {
     ...testSurface,
     tokens,
   })
-  const violations = await lintStyles(path.join(root, "fixtures/tokens/TokenViolations.vue"), {
+  const violations = await lintStyles(path.join(root, "fixtures/tokens/token-violations.vue"), {
     ...testSurface,
     tokens,
   })
@@ -928,14 +928,14 @@ test("ESLint shares component-local token declarations across style blocks", asy
     `<template><section class="test-multi-style" /></template>
 <style>.test-multi-style { --surface-color: var(--color-surface); }</style>
 <style>.test-multi-style { color: var(--surface-color); }</style>`,
-    { filePath: path.join(root, "fixtures/MultiStyle.vue") },
+    { filePath: path.join(root, "fixtures/multi-style.vue") },
   )
 
   assert.equal(result.errorCount, 0, JSON.stringify(result.messages))
 })
 
 test("ESLint leaves token references alone until a source is configured", async () => {
-  const result = await lintStyles(path.join(root, "fixtures/tokens/TokenViolations.vue"), {
+  const result = await lintStyles(path.join(root, "fixtures/tokens/token-violations.vue"), {
     ...testSurface,
   })
 
@@ -943,7 +943,7 @@ test("ESLint leaves token references alone until a source is configured", async 
 })
 
 test("ESLint requires a token for colors, with no configured source needed", async () => {
-  const result = await lintStyles(path.join(root, "fixtures/tokens/RawColors.vue"), {
+  const result = await lintStyles(path.join(root, "fixtures/tokens/raw-colors.vue"), {
     ...testSurface,
   })
 
@@ -962,7 +962,7 @@ test("ESLint requires a token for colors, with no configured source needed", asy
 })
 
 test("ESLint requires a token for lengths on scale properties only", async () => {
-  const result = await lintStyles(path.join(root, "fixtures/tokens/RawLengths.vue"), {
+  const result = await lintStyles(path.join(root, "fixtures/tokens/raw-lengths.vue"), {
     ...testSurface,
   })
 
@@ -980,8 +980,8 @@ test("ESLint requires a token for lengths on scale properties only", async () =>
 })
 
 test("ESLint distinguishes top-layer order from ordinary z-index stacking", async () => {
-  const raw = await lintStyles(path.join(root, "fixtures/layout/RawStacking.vue"), {})
-  const nonModal = await lintStyles(path.join(root, "fixtures/layout/NonModal.vue"), {})
+  const raw = await lintStyles(path.join(root, "fixtures/layout/raw-stacking.vue"), {})
+  const nonModal = await lintStyles(path.join(root, "fixtures/layout/non-modal.vue"), {})
 
   // A top-layer surface cannot use z-index to reorder top-layer boxes. Layering
   // its own children is still a local decision.
@@ -1001,9 +1001,9 @@ test("ESLint distinguishes top-layer order from ordinary z-index stacking", asyn
 })
 
 test("ESLint derives container names and keeps queries inside the file", async () => {
-  const valid = await lintStyles(path.join(root, "fixtures/style/ContainerSurface.vue"), {})
+  const valid = await lintStyles(path.join(root, "fixtures/style/container-surface.vue"), {})
   const invalid = await lintStyles(
-    path.join(root, "fixtures/style/ContainerViolations.vue"),
+    path.join(root, "fixtures/style/container-violations.vue"),
     {},
   )
 
@@ -1025,7 +1025,7 @@ test("ESLint derives container names and keeps queries inside the file", async (
 })
 
 test("ESLint reports unused keyframes and cascade layers inside a surface", async () => {
-  const result = await lintStyles(path.join(root, "fixtures/style/MotionSurface.vue"), {})
+  const result = await lintStyles(path.join(root, "fixtures/style/motion-surface.vue"), {})
 
   assert.deepEqual(
     result.results[0].warnings
@@ -1043,8 +1043,8 @@ test("ESLint reports unused keyframes and cascade layers inside a surface", asyn
 
 test("the new value and motion rules reach Svelte and Astro through the same analysis", async () => {
   for (const [name, offset] of [
-    ["SvelteCard.svelte", 13],
-    ["AstroCard.astro", 17],
+    ["svelte-card.svelte", 13],
+    ["astro-card.astro", 17],
   ]) {
     const file = path.join(root, "fixtures/framework", name)
     const code = (await fs.readFile(file, "utf8")).replace(
@@ -1075,7 +1075,7 @@ test("the new value and motion rules reach Svelte and Astro through the same ana
 })
 
 test("a diagnostic names the token family, and says so when no layer is declared", async () => {
-  const file = path.join(root, "fixtures/tokens/RawLengths.vue")
+  const file = path.join(root, "fixtures/tokens/raw-lengths.vue")
   const withoutLayer = await lintStyles(file, { ...testSurface })
   const withLayer = await lintStyles(file, {
     ...testSurface,

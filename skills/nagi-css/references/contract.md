@@ -53,11 +53,11 @@
 - Treat configured UI component roots as opaque boundaries.
 - List only third-party/UI-library components in `componentClasses`; owned components derive their own surfaces from `surfaceRootPrefixes` and filenames.
 - **Pass no class to an owned child component.** Its root already carries the surface
-  root derived from its own file, so style it by that name: `<UserAvatar />` in the
+  root derived from its own file, so style it by that name: `<user-avatar />` in the
   markup, `> .app-user-avatar` in the CSS. A base class on the tag is
   `owned-component-identity` (autofixable); placement variants may be passed only
   to distinguish multiple instances of the same owned component
-  (`<UserAvatar class="-lead" />` and `<UserAvatar class="-trail" />`).
+  (`<user-avatar class="-lead" />` and `<user-avatar class="-trail" />`).
 - Style that root — the parent's external layout — but never descend below it: the
   child's file owns its insides. Reported as `owned-surface-reach-in`. The accepted
   names are derived from the component tags in the template, so a typo or a stale

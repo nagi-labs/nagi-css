@@ -26,7 +26,7 @@ async function executeCli(args) {
 test("CLI applies only safe fixed-class fixes from an external config", async (context) => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "nagi-css-"))
   context.after(() => fs.rm(directory, { force: true, recursive: true }))
-  const component = path.join(directory, "FixSurface.vue")
+  const component = path.join(directory, "fix-surface.vue")
   const config = path.join(directory, "nagi.config.mjs")
   await fs.writeFile(
     component,
@@ -49,14 +49,14 @@ test("CLI discovers and fixes Svelte and Astro files by default", async (context
   context.after(() => fs.rm(directory, { force: true, recursive: true }))
   const config = path.join(directory, "nagi.config.mjs")
   const files = [
-    path.join(directory, "SvelteSurface.svelte"),
-    path.join(directory, "AstroSurface.astro"),
+    path.join(directory, "svelte-surface.svelte"),
+    path.join(directory, "astro-surface.astro"),
   ]
   for (const file of files) {
     await fs.writeFile(
       file,
-      `<section class="test-${path.basename(file).startsWith("Svelte") ? "svelte" : "astro"}-surface"><button>Save</button></section>
-<style>.test-${path.basename(file).startsWith("Svelte") ? "svelte" : "astro"}-surface { > .button {} }</style>`,
+      `<section class="test-${path.basename(file).startsWith("svelte") ? "svelte" : "astro"}-surface"><button>Save</button></section>
+<style>.test-${path.basename(file).startsWith("svelte") ? "svelte" : "astro"}-surface { > .button {} }</style>`,
     )
   }
   await fs.writeFile(
@@ -78,7 +78,7 @@ test("CLI honours per-rule severity, and warnings do not fail the run", async (c
   const config = path.join(directory, "nagi.config.mjs")
   // Two violations: a banned template class and a missing `>` in its style block.
   await fs.writeFile(
-    path.join(directory, "SeveritySurface.vue"),
+    path.join(directory, "severity-surface.vue"),
     `<template><section class="test-severity-surface"><div class="wrapper"><p class="p">x</p></div></section></template>
 <style>.test-severity-surface { .p {} }</style>`,
   )
@@ -142,7 +142,7 @@ test("CLI resolves token sources against the checked directory, not the config f
   const config = path.join(elsewhere, "nagi.config.mjs")
   await fs.writeFile(path.join(directory, "tokens.css"), ":root { --color-surface: #fff }")
   await fs.writeFile(
-    path.join(directory, "TokenSurface.vue"),
+    path.join(directory, "token-surface.vue"),
     `<template><section class="test-token-surface"/></template>
 <style>.test-token-surface { background: var(--color-surface); border-color: var(--color-edge) }</style>`,
   )

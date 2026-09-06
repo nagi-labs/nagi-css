@@ -77,7 +77,7 @@ test("maps intrinsic render proxies and transparent control components onto owne
   }
 }
 </style>`,
-    "/src/components/MotionCard.vue",
+    "/src/components/motion-card.vue",
     {
       intrinsicComponents: {
         "motion.article": "article",
@@ -122,18 +122,18 @@ test("validates intrinsic and transparent component mappings", () => {
 })
 
 test("keeps initialisms as one kebab-case word in derived surface names", () => {
-  assert.equal(deriveSurfaceRootName("/src/components/OTPField.vue"), "otp-field")
+  assert.equal(deriveSurfaceRootName("/src/components/otp-field.vue"), "otp-field")
 })
 
 test("requires an automatically derived UI library class", () => {
   const missing = analyzeVueTemplate(
     `<template><section class="table-host"><DataTable /></section></template><style>.table-host { > .pv-data-table {} }</style>`,
-    "/src/components/TableHost.vue",
+    "/src/components/table-host.vue",
     { componentClasses: ["DataTable"] },
   )
   const present = analyzeVueTemplate(
     `<template><section class="table-host"><DataTable class="pv-data-table" /></section></template><style>.table-host { > .pv-data-table {} }</style>`,
-    "/src/components/TableHost.vue",
+    "/src/components/table-host.vue",
     { componentClasses: ["DataTable"] },
   )
 
@@ -159,10 +159,10 @@ test("row groups self-map and cells share one class, distinguished by ancestor",
 </template>
 <style>.price-table { > .table { > .thead > .row > .cell {} > .tbody > .row > .cell {} } }</style>`
 
-  const valid = analyzeVueTemplate(source("thead"), "/src/components/PriceTable.vue")
+  const valid = analyzeVueTemplate(source("thead"), "/src/components/price-table.vue")
   assert.deepEqual(valid.violations, [])
 
-  const legacy = analyzeVueTemplate(source("rowgroup -head"), "/src/components/PriceTable.vue")
+  const legacy = analyzeVueTemplate(source("rowgroup -head"), "/src/components/price-table.vue")
   assert.ok(
     legacy.violations.some(
       ({ message, ruleId }) =>
@@ -204,15 +204,15 @@ test("rejects a mapping that tries to fix a variant alongside its base", () => {
 test("reserves body for the body element", () => {
   const valid = analyzeVueTemplate(
     `<template><body class="body" /></template>`,
-    "/src/App.vue",
+    "/src/app.vue",
   )
   const invalidDiv = analyzeVueTemplate(
     `<template><section class="invalid-body"><div class="body" /></section></template>`,
-    "/src/components/InvalidBody.vue",
+    "/src/components/invalid-body.vue",
   )
   const invalidSpan = analyzeVueTemplate(
     `<template><section class="invalid-body"><span class="body" /></section></template>`,
-    "/src/components/InvalidBody.vue",
+    "/src/components/invalid-body.vue",
   )
 
   assert.deepEqual(valid.violations, [])
@@ -226,7 +226,7 @@ test("reserves body for the body element", () => {
 
 test("accepts deliberate title and link element mappings", () => {
   const source = `<template><section class="mapped-elements"><h2 class="title" /><a class="link" /></section></template>`
-  const result = analyzeVueTemplate(source, "/src/components/MappedElements.vue")
+  const result = analyzeVueTemplate(source, "/src/components/mapped-elements.vue")
 
   assert.deepEqual(result.violations, [])
 })
@@ -234,7 +234,7 @@ test("accepts deliberate title and link element mappings", () => {
 test("does not grant a blanket document-only name exemption", () => {
   for (const name of ["html", "head", "base", "meta", "style"]) {
     const source = `<template><section class="invalid-name"><div class="${name}" /></section></template>`
-    const result = analyzeVueTemplate(source, "/src/components/InvalidName.vue")
+    const result = analyzeVueTemplate(source, "/src/components/invalid-name.vue")
     assert.equal(
       result.violations.some(({ ruleId }) => ruleId === "anatomy-allowed"),
       true,
@@ -256,15 +256,15 @@ test("uses unit as the STN floor without a legacy zone alias", () => {
 
   const shallow = analyzeVueTemplate(
     `<template><section class="stn-surface"><div class="unit"><div class="seg" /></div></section></template>`,
-    "/src/components/StnSurface.vue",
+    "/src/components/stn-surface.vue",
   )
   const deep = analyzeVueTemplate(
     `<template><section class="stn-surface"><div class="stratum"><div class="region"><div class="block"><div class="unit"><div class="seg"><div class="fr"><div class="g" /></div></div></div></div></div></div></section></template>`,
-    "/src/components/StnSurface.vue",
+    "/src/components/stn-surface.vue",
   )
   const legacy = analyzeVueTemplate(
     `<template><section class="stn-surface"><div class="zone" /></section></template>`,
-    "/src/components/StnSurface.vue",
+    "/src/components/stn-surface.vue",
   )
 
   assert.deepEqual(shallow.violations, [])
@@ -294,21 +294,21 @@ test("validates component-owned slot surface prefixes", () => {
 })
 
 test("derives component and routed page surface names", () => {
-  assert.equal(deriveSurfaceRootName("/src/components/UserMenu.vue"), "user-menu")
+  assert.equal(deriveSurfaceRootName("/src/components/user-menu.vue"), "user-menu")
   assert.equal(deriveSurfaceRootName("/src/pages/reports/index.vue"), "reports-page")
   assert.equal(deriveSurfaceRootName("/src/pages/users/[id].vue"), "users-page")
 })
 
 test("derives exact prefixed surface names and requires a configured prefix", () => {
   assert.deepEqual(
-    deriveAllowedSurfaceRootNames("/src/components/Toggle.vue", ["n-", "app-"]),
+    deriveAllowedSurfaceRootNames("/src/components/toggle.vue", ["n-", "app-"]),
     ["n-toggle", "app-toggle"],
   )
 
   for (const root of ["n-toggle", "app-toggle"]) {
     const result = analyzeVueTemplate(
       `<template><button class="${root}">Toggle</button></template><style>.${root} {}</style>`,
-      "/src/components/Toggle.vue",
+      "/src/components/toggle.vue",
       { surfaceRootPrefixes: ["n-", "app-"] },
     )
     assert.deepEqual(result.violations, [])
@@ -318,7 +318,7 @@ test("derives exact prefixed surface names and requires a configured prefix", ()
   for (const root of ["toggle", "n-control"]) {
     const result = analyzeVueTemplate(
       `<template><button class="${root}">Toggle</button></template><style>.${root} {}</style>`,
-      "/src/components/Toggle.vue",
+      "/src/components/toggle.vue",
       { surfaceRootPrefixes: ["n-"] },
     )
     assert.equal(
@@ -332,12 +332,12 @@ test("derives exact prefixed surface names and requires a configured prefix", ()
 test("prefix enforcement recognizes filename roots that overlap element vocabulary", () => {
   const valid = analyzeVueTemplate(
     `<template><button class="n-button">Save</button></template><style>.n-button {}</style>`,
-    "/src/components/Button.vue",
+    "/src/components/button.vue",
     { surfaceRootPrefixes: ["n-"] },
   )
   const missingPrefix = analyzeVueTemplate(
     `<template><button class="button">Save</button></template><style>.button {}</style>`,
-    "/src/components/Button.vue",
+    "/src/components/button.vue",
     { surfaceRootPrefixes: ["n-"] },
   )
 
@@ -392,7 +392,7 @@ test("template analysis covers every semantic template rule", () => {
 <style>
 .bad-surface { > .button {} > .ui-widget {} }
 </style>`
-  const result = analyzeVueTemplate(source, "/src/components/BadSurface.vue", {
+  const result = analyzeVueTemplate(source, "/src/components/bad-surface.vue", {
     componentClasses: { Widget: "ui-widget" },
     emitPolicy: "when-styled",
   })
@@ -423,10 +423,10 @@ test("when-styled emits only referenced classes while always emits every mapping
 <style>.policy-surface { color: black; }</style>`
   const whenStyled = analyzeVueTemplate(
     source,
-    "/src/components/PolicySurface.vue",
+    "/src/components/policy-surface.vue",
     { emitPolicy: "when-styled" },
   )
-  const always = analyzeVueTemplate(source, "/src/components/PolicySurface.vue", {
+  const always = analyzeVueTemplate(source, "/src/components/policy-surface.vue", {
     emitPolicy: "always",
   })
 
@@ -449,7 +449,7 @@ test("does not descend into SVG and MathML internals", () => {
   </section>
 </template>
 <style>.foreign-surface { > .svg {} }</style>`
-  const result = analyzeVueTemplate(source, "/src/components/ForeignSurface.vue")
+  const result = analyzeVueTemplate(source, "/src/components/foreign-surface.vue")
   assert.deepEqual(result.violations, [])
 })
 
@@ -457,7 +457,7 @@ test("accepts an anatomy name backed by a matching static role", () => {
   const source = `
 <template><section class="role-surface"><div class="toolbar" role="toolbar" /></section></template>
 <style>.role-surface { > .toolbar {} }</style>`
-  const result = analyzeVueTemplate(source, "/src/components/RoleSurface.vue")
+  const result = analyzeVueTemplate(source, "/src/components/role-surface.vue")
 
   assert.deepEqual(result.violations, [])
   assert.deepEqual([...result.roleNames], ["toolbar"])
@@ -467,24 +467,24 @@ test("keeps element-table identity ahead of additional ARIA semantics", () => {
   const valid = analyzeVueTemplate(
     `<template><section class="separator-list"><ul class="list"><li class="item" role="separator" /></ul><div class="separator" role="separator" /></section></template>
 <style>.separator-list { > .list { > .item[role="separator"] {} } > .separator {} }</style>`,
-    "/src/components/SeparatorList.vue",
+    "/src/components/separator-list.vue",
   )
   const roleInsteadOfElement = analyzeVueTemplate(
     `<template><section class="separator-list"><li class="separator" role="separator" /></section></template>
 <style>.separator-list { > .separator {} }</style>`,
-    "/src/components/SeparatorList.vue",
+    "/src/components/separator-list.vue",
   )
   const multipleBases = analyzeVueTemplate(
     `<template><section class="separator-list"><li class="item separator" role="separator" /></section></template>`,
-    "/src/components/SeparatorList.vue",
+    "/src/components/separator-list.vue",
   )
   const roleVariant = analyzeVueTemplate(
     `<template><section class="separator-list"><li class="item -separator" role="separator" /></section></template>`,
-    "/src/components/SeparatorList.vue",
+    "/src/components/separator-list.vue",
   )
   const mappedRoleVariant = analyzeVueTemplate(
     `<template><section class="separator-list"><li class="item -separator" role="separator" /></section></template>`,
-    "/src/components/SeparatorList.vue",
+    "/src/components/separator-list.vue",
     { elementClasses: { li: "item -separator" } },
   )
 
@@ -523,12 +523,12 @@ test("rejects variants that shadow vocabulary names", () => {
   const shadowed = analyzeVueTemplate(
     `<template><section class="shadow-surface"><p class="p -title">x</p></section></template>
 <style>.shadow-surface { > .p {} }</style>`,
-    "/src/components/ShadowSurface.vue",
+    "/src/components/shadow-surface.vue",
   )
   const modifier = analyzeVueTemplate(
     `<template><section class="shadow-surface"><p class="p -lead">x</p><p class="p -support">y</p></section></template>
 <style>.shadow-surface { > .p {} }</style>`,
-    "/src/components/ShadowSurface.vue",
+    "/src/components/shadow-surface.vue",
   )
 
   assert.equal(
@@ -541,19 +541,19 @@ test("rejects variants that shadow vocabulary names", () => {
 test("variant shadow check covers banned names, rendered elements, and dynamic literals", () => {
   const banned = analyzeVueTemplate(
     `<template><section class="shadow-surface"><div class="unit -wrapper" /></section></template>`,
-    "/src/components/ShadowSurface.vue",
+    "/src/components/shadow-surface.vue",
   )
   const rendered = analyzeVueTemplate(
     `<template><section class="shadow-surface"><div class="unit -span" /></section></template>`,
-    "/src/components/ShadowSurface.vue",
+    "/src/components/shadow-surface.vue",
   )
   const dynamic = analyzeVueTemplate(
     `<template><section class="shadow-surface"><div class="unit" :class="{ '-title': fancy }" /></section></template>`,
-    "/src/components/ShadowSurface.vue",
+    "/src/components/shadow-surface.vue",
   )
   const state = analyzeVueTemplate(
     `<template><section class="shadow-surface"><div class="unit -active" /></section></template>`,
-    "/src/components/ShadowSurface.vue",
+    "/src/components/shadow-surface.vue",
   )
 
   for (const result of [banned, rendered, dynamic]) {
@@ -577,7 +577,7 @@ test("keeps a role-name identity on div/span that shares an element spelling", (
     const result = analyzeVueTemplate(
       `<template><section class="role-host"><div class="${role}" role="${role}">x</div></section></template>
 <style>.role-host { > .${role} {} }</style>`,
-      "/src/components/RoleHost.vue",
+      "/src/components/role-host.vue",
     )
     assert.deepEqual(result.violations, [], role)
     assert.equal(result.roleNames.has(role), true, role)
@@ -585,7 +585,7 @@ test("keeps a role-name identity on div/span that shares an element spelling", (
 
   const mismatched = analyzeVueTemplate(
     `<template><section class="role-host"><div class="dialog">x</div></section></template>`,
-    "/src/components/RoleHost.vue",
+    "/src/components/role-host.vue",
   )
   assert.equal(
     mismatched.violations.some(({ ruleId }) => ruleId === "reserved-element-name"),
@@ -597,17 +597,17 @@ test("keeps Element Class Table identities on their owning tags", () => {
   const spanText = analyzeVueTemplate(
     `<template><section class="text-host"><span class="text">Label</span></section></template>
 <style>.text-host { > .text {} }</style>`,
-    "/src/components/TextHost.vue",
+    "/src/components/text-host.vue",
   )
   const spanTitle = analyzeVueTemplate(
     `<template><section class="text-host"><span class="title">Label</span></section></template>
 <style>.text-host { > .title {} }</style>`,
-    "/src/components/TextHost.vue",
+    "/src/components/text-host.vue",
   )
   const paragraphText = analyzeVueTemplate(
     `<template><section class="text-host"><p class="text">Paragraph</p></section></template>
 <style>.text-host { > .text {} }</style>`,
-    "/src/components/TextHost.vue",
+    "/src/components/text-host.vue",
   )
 
   assert.deepEqual(spanText.violations, [])
@@ -628,11 +628,11 @@ test("keeps Element Class Table identities on their owning tags", () => {
 test("requires an identifying ARIA role before anatomy or STN on div and span", () => {
   const stnFallback = analyzeVueTemplate(
     `<template><section class="role-host"><div class="unit -fields" role="group" /></section></template>`,
-    "/src/components/RoleHost.vue",
+    "/src/components/role-host.vue",
   )
   const anatomyFallback = analyzeVueTemplate(
     `<template><section class="role-host"><span class="field" role="status" /></section></template>`,
-    "/src/components/RoleHost.vue",
+    "/src/components/role-host.vue",
   )
 
   for (const result of [stnFallback, anatomyFallback]) {
@@ -654,7 +654,7 @@ test("requires an identifying ARIA role before anatomy or STN on div and span", 
     `<template><section class="role-host"><li class="item" role="separator" /></section></template>`,
     `<template><div class="role-host" role="group" /></template>`,
   ]) {
-    const result = analyzeVueTemplate(source, "/src/components/RoleHost.vue")
+    const result = analyzeVueTemplate(source, "/src/components/role-host.vue")
     assert.deepEqual(result.violations, [], source)
   }
 })
@@ -672,7 +672,7 @@ test("treats level-free wrappers as transparent so the surface root stays at the
   for (const wrap of wrappers) {
     const result = analyzeVueTemplate(
       `<template>${wrap(surface)}</template><style>.fade-panel { > .title {} }</style>`,
-      "/src/components/FadePanel.vue",
+      "/src/components/fade-panel.vue",
     )
     assert.deepEqual(result.violations, [], wrap(""))
     assert.deepEqual([...result.surfaceRoots], ["fade-panel"])
@@ -682,7 +682,7 @@ test("treats level-free wrappers as transparent so the surface root stays at the
 test("a transparent wrapper does not add an STN tier", () => {
   const result = analyzeVueTemplate(
     `<template><section class="stn-host"><div class="unit"><Transition><div class="seg" /></Transition></div></section></template>`,
-    "/src/components/StnHost.vue",
+    "/src/components/stn-host.vue",
   )
 
   assert.deepEqual(result.violations, [])
@@ -708,7 +708,7 @@ test("reports malformed element mappings as configuration errors", () => {
 
   const analysis = analyzeVueTemplate(
     `<template><section class="broken-config"><p>x</p></section></template>`,
-    "/src/components/BrokenConfig.vue",
+    "/src/components/broken-config.vue",
     { elementClasses: { p: null } },
   )
   assert.ok(Array.isArray(analysis.violations))
@@ -717,15 +717,15 @@ test("reports malformed element mappings as configuration errors", () => {
 test("reports unreadable style blocks", () => {
   const scss = analyzeVueTemplate(
     `<template><section class="scss-host" /></template><style lang="scss">.scss-host { .unit {} }</style>`,
-    "/src/components/ScssHost.vue",
+    "/src/components/scss-host.vue",
   )
   const external = analyzeVueTemplate(
     `<template><section class="src-host" /></template><style src="./SrcHost.css"></style>`,
-    "/src/components/SrcHost.vue",
+    "/src/components/src-host.vue",
   )
   const plain = analyzeVueTemplate(
     `<template><section class="plain-host" /></template><style>.plain-host {}</style>`,
-    "/src/components/PlainHost.vue",
+    "/src/components/plain-host.vue",
   )
 
   assert.deepEqual(scss.styleBlocks, [{ kind: "lang", line: 1, value: "scss" }])
@@ -751,7 +751,7 @@ test("checks a selector chain against the template it claims to mirror", () => {
         <ul class="list"><li class="item">a</li><li class="item">b</li></ul>
       </section>
     </template>`,
-    "/src/components/MirrorHost.vue",
+    "/src/components/mirror-host.vue",
   ).tree
 
   // "> title" / "+ item" / "  title" (descendant)
@@ -789,12 +789,12 @@ test("checks a selector chain against the template it claims to mirror", () => {
 test("gives up on chains the template cannot answer", () => {
   const opaque = analyzeVueTemplate(
     `<template><section class="opaque-host"><DataTable class="pv-data-table"><div class="unit" /></DataTable></section></template>`,
-    "/src/components/OpaqueHost.vue",
+    "/src/components/opaque-host.vue",
     { componentClasses: ["DataTable"] },
   ).tree
   const dynamic = analyzeVueTemplate(
     `<template><section class="dynamic-host"><div class="unit" :class="extra" /></section></template>`,
-    "/src/components/DynamicHost.vue",
+    "/src/components/dynamic-host.vue",
   ).tree
 
   // below a component root the structure is not ours to know
@@ -826,7 +826,7 @@ test("derives an owned child component's surface root from its tag", () => {
       </header>
     </template>
     <style>.app-boundary-host { > .app-user-avatar {} > .app-nav-sidebar {} > .pv-data-table {} }</style>`,
-    "/src/components/BoundaryHost.vue",
+    "/src/components/boundary-host.vue",
     config,
   )
 
@@ -838,7 +838,7 @@ test("derives an owned child component's surface root from its tag", () => {
 test("rejects a class passed to an owned child component, and removes it", () => {
   const config = { surfaceRootPrefixes: ["app-"] }
   const source = `<template><header class="app-boundary-host"><UserAvatar class="media" /></header></template>`
-  const result = analyzeVueTemplate(source, "/src/components/BoundaryHost.vue", config)
+  const result = analyzeVueTemplate(source, "/src/components/boundary-host.vue", config)
   const violation = result.violations.find(
     ({ ruleId }) => ruleId === "owned-component-identity",
   )
@@ -856,7 +856,7 @@ test("rejects a class passed to an owned child component, and removes it", () =>
   const variant = analyzeVueTemplate(
     `<template><header class="app-boundary-host"><UserAvatar class="-lead" /><UserAvatar class="-trail" /></header></template>
 <style>.app-boundary-host { > .app-user-avatar.-lead {} > .app-user-avatar.-trail {} }</style>`,
-    "/src/components/BoundaryHost.vue",
+    "/src/components/boundary-host.vue",
     config,
   )
   assert.deepEqual(variant.violations, [])
@@ -879,7 +879,7 @@ test("fixes every violation whose correct output the contract computes", () => {
   assert.match(
     fixed(
       `<template><section class="wrong-root" /></template><style>.n-right-root {}</style>`,
-      "/src/components/RightRoot.vue",
+      "/src/components/right-root.vue",
       { surfaceRootPrefixes: ["n-"] },
     ),
     /class="n-right-root"/,
@@ -887,7 +887,7 @@ test("fixes every violation whose correct output the contract computes", () => {
   assert.match(
     fixed(
       `<template><section class="n-order-host"><div class="unit -z -a" /></section></template>`,
-      "/src/components/OrderHost.vue",
+      "/src/components/order-host.vue",
       { surfaceRootPrefixes: ["n-"] },
     ),
     /class="unit -a -z"/,
@@ -895,7 +895,7 @@ test("fixes every violation whose correct output the contract computes", () => {
   assert.match(
     fixed(
       `<template><section class="n-stn-host"><div class="seg" /></section></template>`,
-      "/src/components/StnHost.vue",
+      "/src/components/stn-host.vue",
       { surfaceRootPrefixes: ["n-"] },
     ),
     /class="unit"/,
@@ -903,7 +903,7 @@ test("fixes every violation whose correct output the contract computes", () => {
   assert.match(
     fixed(
       `<template><section class="n-stn-host"><div class="unit"><div class="g" /></div></section></template>`,
-      "/src/components/StnHost.vue",
+      "/src/components/stn-host.vue",
       { surfaceRootPrefixes: ["n-"] },
     ),
     /class="seg"/,
@@ -914,17 +914,17 @@ test("a variant applied by a binding is runtime state", () => {
   const config = { surfaceRootPrefixes: ["app-"] }
   const dynamic = analyzeVueTemplate(
     `<template><section class="app-state-host"><div class="unit" :class="{ '-collapsed': !open }" /></section></template>`,
-    "/src/components/StateHost.vue",
+    "/src/components/state-host.vue",
     config,
   )
   const attribute = analyzeVueTemplate(
     `<template><section class="app-state-host"><div class="unit" :data-collapsed="!open" /></section></template>`,
-    "/src/components/StateHost.vue",
+    "/src/components/state-host.vue",
     config,
   )
   const staticVariant = analyzeVueTemplate(
     `<template><section class="app-state-host"><div class="unit -collapsed" /></section></template>`,
-    "/src/components/StateHost.vue",
+    "/src/components/state-host.vue",
     config,
   )
 
@@ -942,7 +942,7 @@ test("only role names that are also base identities are barred from variants", (
   const host = (markup) =>
     analyzeVueTemplate(
       `<template><section class="app-role-variant">${markup}</section></template>`,
-      "/src/components/RoleVariant.vue",
+      "/src/components/role-variant.vue",
       config,
     ).violations.map(({ ruleId }) => ruleId)
 
@@ -969,7 +969,7 @@ test("only role names that are also base identities are barred from variants", (
 test("a tone word is a variant, not a state class", () => {
   const result = analyzeVueTemplate(
     `<template><section class="app-tone-host"><div class="unit -success" /></section></template>`,
-    "/src/components/ToneHost.vue",
+    "/src/components/tone-host.vue",
     { surfaceRootPrefixes: ["app-"] },
   )
 
@@ -982,7 +982,7 @@ test("purely presentational elements get no class of their own", () => {
     analyzeVueTemplate(
       `<template><section class="app-visual-host">${markup}</section></template>
 <style>.app-visual-host { > .icon {} > .strong {} }</style>`,
-      "/src/components/VisualHost.vue",
+      "/src/components/visual-host.vue",
       config,
     ).violations
 
@@ -1014,7 +1014,7 @@ test("reports a class binding whose names cannot be read", () => {
     analyzeVueTemplate(
       `<template><section class="app-opaque-host"><span class="icon" ${binding} /></section></template>
 <style>.app-opaque-host { > .icon {} }</style>`,
-      "/src/components/OpaqueHost.vue",
+      "/src/components/opaque-host.vue",
       config,
     ).violations.filter(({ ruleId }) => ruleId === "unverifiable-dynamic-class")
 
@@ -1059,7 +1059,7 @@ test("reports a layout-only wrapper as a review candidate, not a proven violatio
   }
 }
 </style>`,
-      "/src/components/Carousel.vue",
+      "/src/components/carousel.vue",
       { surfaceRootPrefixes: ["app-"] },
     ).violations.filter(({ ruleId }) => ruleId === "layout-only-wrapper")
 
@@ -1099,7 +1099,7 @@ test("warns when static sibling STN branches cannot be distinguished", () => {
     ${children}
   </section>
 </template>`,
-      "/src/components/Toast.vue",
+      "/src/components/toast.vue",
       { emitPolicy: "always", surfaceRootPrefixes: ["app-"] },
     ).violations.filter(({ ruleId }) => ruleId === "stn-peer-variant")
 
@@ -1135,7 +1135,7 @@ test("requires a same-base peer for non-STN variants", () => {
     ${children}
   </section>
 </template>`,
-      "/src/components/Carousel.vue",
+      "/src/components/carousel.vue",
       { emitPolicy: "always", surfaceRootPrefixes: ["app-"] },
     ).violations.filter(({ ruleId }) => ruleId === "variant-requires-peer")
 
@@ -1174,7 +1174,7 @@ test("requires a same-base peer for non-STN variants", () => {
   const configuredComponent = (children) =>
     analyzeVueTemplate(
       `<template><section class="app-actions">${children}</section></template>`,
-      "/src/components/Actions.vue",
+      "/src/components/actions.vue",
       {
         componentClasses: { NButton: "n-button" },
         emitPolicy: "always",
@@ -1192,7 +1192,7 @@ test("requires a same-base peer for non-STN variants", () => {
 
   const transparent = analyzeVueTemplate(
     `<template><section class="app-nav"><RouterLink class="link -home" /></section></template>`,
-    "/src/components/Nav.vue",
+    "/src/components/nav.vue",
     {
       emitPolicy: "always",
       surfaceRootPrefixes: ["app-"],
@@ -1210,7 +1210,7 @@ test("does not require peer variants for repeated or mutually exclusive branches
     ${children}
   </section>
 </template>`,
-      "/src/components/List.vue",
+      "/src/components/list.vue",
       { emitPolicy: "always", surfaceRootPrefixes: ["app-"] },
     ).violations.filter(({ ruleId }) => ruleId === "stn-peer-variant")
 
@@ -1362,11 +1362,11 @@ test("Svelte and Astro use the same semantic template analysis", () => {
   const config = { surfaceRootPrefixes: ["test-"] }
   const cases = [
     [
-      "/src/components/SharedCard.svelte",
+      "/src/components/shared-card.svelte",
       `<section class="test-shared-card"><button class="button">Save</button></section>`,
     ],
     [
-      "/src/components/SharedCard.astro",
+      "/src/components/shared-card.astro",
       `<section class="test-shared-card"><button class="button">Save</button></section>`,
     ],
   ]
@@ -1383,13 +1383,13 @@ test("Svelte and Astro conditional branches do not become static STN peers", () 
   const config = { emitPolicy: "always", surfaceRootPrefixes: ["test-"] }
   const cases = [
     [
-      "/src/components/Conditional.svelte",
+      "/src/components/conditional.svelte",
       `<section class="test-conditional">
   {#if ready}<div class="unit" />{:else}<div class="unit" />{/if}
 </section>`,
     ],
     [
-      "/src/components/Conditional.astro",
+      "/src/components/conditional.astro",
       `<section class="test-conditional">
   {ready ? <div class="unit" /> : <div class="unit" />}
 </section>`,
@@ -1408,11 +1408,11 @@ test("dynamic HTML keeps selector-tree conclusions unknown", () => {
   const config = { surfaceRootPrefixes: ["test-"] }
   const cases = [
     [
-      "/src/components/RawSurface.svelte",
+      "/src/components/raw-surface.svelte",
       `<section class="test-raw-surface">{@html content}</section>`,
     ],
     [
-      "/src/components/RawSurface.astro",
+      "/src/components/raw-surface.astro",
       `<section class="test-raw-surface"><div set:html={content} /></section>`,
     ],
   ]

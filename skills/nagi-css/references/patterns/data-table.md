@@ -2,9 +2,9 @@
 
 Treat the library grid as opaque and resume owned structure only in a declared slot surface.
 
-<!-- nagi-check file=src/components/OrdersTable.vue components=DataTable slots=DataTable.body=pv-data-table-body -->
+<!-- nagi-check file=src/components/orders-table.vue components=DataTable slots=DataTable.body=pv-data-table-body -->
 ```vue
-<template><section class="app-orders-table"><DataTable class="pv-data-table"><template #body><div class="pv-data-table-body"><span class="value"/></div></template></DataTable></section></template>
+<template><section class="app-orders-table"><data-table class="pv-data-table"><template #body><div class="pv-data-table-body"><span class="value"/></div></template></data-table></section></template>
 <style scoped>.app-orders-table { > .pv-data-table { .pv-data-table-body { > .value {} } } }</style>
 ```
 

@@ -44,7 +44,7 @@ and Vue settings and append only the Nagi CSS entry.
 
 ## 3. Give the component a derived surface
 
-<!-- nagi-check file=src/components/UserCard.vue prefix=app- -->
+<!-- nagi-check file=src/components/user-card.vue prefix=app- -->
 ```vue
 <template>
   <article class="app-user-card" :data-active="active">
@@ -67,7 +67,7 @@ defineProps({
 </style>
 ```
 
-`UserCard.vue` derives `user-card`; the configured prefix produces
+`user-card.vue` derives `user-card`; the configured prefix produces
 `app-user-card`. Vue's `:class` may supplement a static owned class, while
 runtime state belongs in an attribute.
 

@@ -6,7 +6,7 @@
     <div class="unit">
       <span class="text">Ada Lovelace</span>
     </div>
-    <UserAvatar />
+    <user-avatar />
   </article>
 </template>
 

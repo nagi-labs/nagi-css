@@ -1,8 +1,8 @@
 # Nagi CSS
 
-**CSS, after the wind.** Nagi CSS is a lint-enforced semantic contract for
-component-owned CSS. Class names are derived from markup and project
-configuration, so humans and AI agents converge on the same answer.
+**CSS, after the wind.** Nagi CSS is a lint-enforced structural contract for
+component-owned CSS. It derives class identities and owned selector paths from
+source, keeping the remaining choices inside an explicit vocabulary.
 
 [Website](https://nagi-labs.github.io/nagi-css/) ·
 [Documentation](docs/getting-started/index.md) ·
@@ -24,8 +24,11 @@ Requirements:
 - component-owned `<style>` blocks whose selectors remain statically readable
 
 ```sh
-vp add -D @nagi-labs/eslint-plugin-nagi-css
+npm install --save-dev @nagi-labs/eslint-plugin-nagi-css
 ```
+
+Using pnpm or Vite+? Use the equivalent development-dependency command for
+your package manager.
 
 Append Nagi CSS after the framework's official flat config:
 

@@ -2,7 +2,7 @@
 
 Use native list semantics and fixed element classes for an owned tree branch.
 
-<!-- nagi-check file=src/components/ScenarioTree.vue -->
+<!-- nagi-check file=src/components/scenario-tree.vue -->
 ```vue
 <template><ul class="app-scenario-tree"><li class="item"><button class="button">Node</button><ul class="list"><li class="item"/></ul></li></ul></template>
 <style scoped>.app-scenario-tree { > .item { > .button {} > .list { > .item {} } } }</style>

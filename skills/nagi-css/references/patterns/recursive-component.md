@@ -2,9 +2,9 @@
 
 Keep each recursive instance as its own surface; style the parent-owned placement wrapper.
 
-<!-- nagi-check file=src/components/TreeBranch.vue -->
+<!-- nagi-check file=src/components/tree-branch.vue -->
 ```vue
-<template><li class="app-tree-branch"><button class="button">Node</button><ul class="list"><li class="item"><TreeBranch/></li></ul></li></template>
+<template><li class="app-tree-branch"><button class="button">Node</button><ul class="list"><li class="item"><tree-branch/></li></ul></li></template>
 <style scoped>.app-tree-branch { > .button {} > .list { > .item {} } }</style>
 ```
 
@@ -13,4 +13,4 @@ is application-owned.
 
 Invalid: registering `TreeBranch: "app-tree-branch"` makes the surface an opaque
 library boundary and can trigger `owned-dom-direct-child`. Correct by letting
-`TreeBranch.vue` derive `.app-tree-branch` and styling recursion through owned wrappers.
+`tree-branch.vue` derive `.app-tree-branch` and styling recursion through owned wrappers.

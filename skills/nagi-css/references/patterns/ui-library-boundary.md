@@ -2,9 +2,9 @@
 
 List only opaque dependency components; their class defaults to `pv-` plus kebab-case.
 
-<!-- nagi-check file=src/components/PickerPanel.vue components=DatePicker -->
+<!-- nagi-check file=src/components/picker-panel.vue components=DatePicker -->
 ```vue
-<template><section class="app-picker-panel"><DatePicker class="pv-date-picker"/></section></template>
+<template><section class="app-picker-panel"><date-picker class="pv-date-picker"/></section></template>
 <style scoped>.app-picker-panel { > .pv-date-picker {} }</style>
 ```
 

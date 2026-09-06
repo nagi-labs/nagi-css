@@ -135,7 +135,7 @@ surfaceRootPrefixes: ["n-", "app-"]
 ```
 
 The array must contain at least one prefix. The accepted roots are exact
-derivations. `Button.vue`, `Button.svelte`, and `Button.astro` accept
+derivations. `button.vue`, `button.svelte`, and `button.astro` accept
 `.n-button` or `.app-button`, but
 rejects both bare `.button` and unrelated `.n-control`. Prefixes must be
 lowercase kebab prefixes ending in `-`. Use one prefix for canonical new code;

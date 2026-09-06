@@ -5,7 +5,7 @@ Deterministic, table-first. Apply top to bottom, stop at the first match. Judgme
 ## Decision procedure
 
 ```
-1. Styling surface root?          → configured prefix + filename identity (`n-` + `OtpAuthPanel.svelte` → `n-otp-auth-panel`)
+1. Styling surface root?          → configured prefix + filename identity (`n-` + `otp-auth-panel.svelte` → `n-otp-auth-panel`)
 2. HTML element ≠ div/span?       → Element Class Table            (no judgment)
 3. Configured library component?  → Library Component Class Table  (no judgment)
 4. div / span?                    → Semantics: 4a → 4b → 4c
@@ -66,11 +66,11 @@ componentClasses: ["DataTable", "Column"]
 // DataTable -> pv-data-table; Column -> pv-column
 ```
 
-List only opaque third-party/UI-library components the project actually uses. Never add an application-owned component: **pass it no base class at all**. Its root already carries the surface root derived from its own file, so the parent writes `<UserAvatar />` and styles `> .app-user-avatar` (prefix from `surfaceRootPrefixes` + kebab-case tag). Placement variants may be passed only when multiple instances need distinct roles, such as `-lead` and `-trail` on two `UserAvatar` instances.
+List only opaque third-party/UI-library components the project actually uses. Never add an application-owned component: **pass it no base class at all**. Its root already carries the surface root derived from its own file, so the parent writes `<user-avatar />` and styles `> .app-user-avatar` (prefix from `surfaceRootPrefixes` + kebab-case tag). Placement variants may be passed only when multiple instances need distinct roles, such as `-lead` and `-trail` on two `UserAvatar` instances.
 
 This class is a boundary **anchor, not a `>` licence into internals**. Style library internals via props → pass-through APIs → CSS custom properties → `::part()`. Never descend from a boundary class into library-owned internals.
 
-**Owned content in a component's slot** uses a **sub-surface** from the `componentSlots` config: the wrapper inside `<Card><template #content>` is `card-content` (footer → `card-footer`), which starts its own `>` tree with no `:deep` into library internals. Each slot surface starts with its owning component's slot prefix. Multiple instances → variant (`card-content -address`).
+**Owned content in a component's slot** uses a **sub-surface** from the `componentSlots` config: the wrapper inside `<card><template #content>` is `card-content` (footer → `card-footer`), which starts its own `>` tree with no `:deep` into library internals. Each slot surface starts with its owning component's slot prefix. Multiple instances → variant (`card-content -address`).
 
 ## 4. div / span only — the Semantics model
 

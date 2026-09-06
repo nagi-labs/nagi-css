@@ -1,6 +1,6 @@
 <template>
   <header class="test-owned-boundary-reach-in">
-    <UserAvatar />
+    <user-avatar />
   </header>
 </template>
 

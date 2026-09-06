@@ -2,7 +2,7 @@
 
 Name the dialog surface by identity; use semantic content and attribute state.
 
-<!-- nagi-check file=src/components/ConfirmDialog.vue -->
+<!-- nagi-check file=src/components/confirm-dialog.vue -->
 ```vue
 <template><dialog class="app-confirm-dialog" :open="open"><header class="header"><h2 class="title">Delete?</h2></header><p class="p">This cannot be undone.</p><div class="actions"><button class="button">Cancel</button></div></dialog></template>
 <style scoped>.app-confirm-dialog { > .header { > .title {} } > .p {} > .actions { > .button {} } }</style>

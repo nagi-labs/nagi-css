@@ -1,6 +1,6 @@
 <template>
   <header class="test-owned-boundary">
-    <UserAvatar />
+    <user-avatar />
     <div class="unit"><span class="icon" /></div>
   </header>
 </template>

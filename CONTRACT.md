@@ -436,7 +436,7 @@ Each styling surface must have one class that identifies the surface.
 - a **page** (`…/pages/…`) → `<name>-page`, where `<name>` is the file basename, or — when the basename is `index` or a dynamic `[param]` — the nearest meaningful ancestor directory (`procedure/error.astro` → `.error-page`, `procedure/[key]/index.vue` → `.procedure-page`).
 
 `surfaceRootPrefixes` is required and must contain at least one namespace. With
-`surfaceRootPrefixes: ["n-"]`, `Button.vue`, `Button.svelte`, or `Button.astro`
+`surfaceRootPrefixes: ["n-"]`, `button.vue`, `button.svelte`, or `button.astro`
 must use `.n-button`: bare `.button`
 and unrelated `.n-control` both fail. Multiple prefixes are alternative exact
 derivations, not a general `startsWith` exemption.
@@ -749,7 +749,7 @@ There is no blanket exemption for document-only element names. `body` belongs to
 
 A UI library component root that you place in your own markup takes a fixed class from the project's configured table (declared in the linter config, enforced by the linter). A project table should list only opaque third-party/UI-library components the project actually uses. Application-owned components are not listed: each owns the surface root derived from its configured namespace prefix and filename.
 
-When a configured library component does not provide an explicit class value, its class is deterministic: the default `pv-` prefix plus the component name in kebab-case (`DataTable` → `pv-data-table`). `componentClassPrefix` changes the prefix, and an explicit `componentClasses` object value overrides the derived name.
+When a configured library component does not provide an explicit class value, its class is deterministic: the default `pv-` prefix plus the component name in kebab-case (`DataTable` → `pv-data-table`). Configuration names and template tags are matched through that same canonical spelling, so `DataTable` identifies `<data-table>`. `componentClassPrefix` changes the prefix, and an explicit `componentClasses` object value overrides the derived name.
 
 ```js
 componentClasses: ["DataTable", "Column"]
@@ -807,8 +807,8 @@ the tag and styles the child by that derived name:
 ```vue
 <template>
   <header class="app-profile-header">
-    <UserAvatar class="-author" />
-    <UserAvatar class="-reviewer" />
+    <user-avatar class="-author" />
+    <user-avatar class="-reviewer" />
   </header>
 </template>
 ```
@@ -1448,13 +1448,13 @@ Each slot surface class must start with its owning component's slot prefix; decl
 The owned wrapper inside each slot carries that class, and it is treated as its **own styling surface**: its children nest under it with `>` — no `:deep()` into library internals, so it is robust to the library's DOM. Multiple instances are distinguished with a variant.
 
 ```html
-<Card>                                <!-- library root: unstyled here → no class -->
+<card>                                <!-- library root: unstyled here → no class -->
   <template #content>
     <div class="card-content -address">   <!-- declared sub-surface + variant -->
       <div class="field"> … </div>
     </div>
   </template>
-</Card>
+</card>
 ```
 ```css
 .procedure-page {
@@ -1892,7 +1892,7 @@ Example, where `Calendar` comes from a UI library:
 
 ```html
 <div class="app-booking-form">
-  <Calendar class="pv-calendar" />
+  <calendar class="pv-calendar" />
 </div>
 ```
 

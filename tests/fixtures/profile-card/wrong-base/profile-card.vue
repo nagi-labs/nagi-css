@@ -1,25 +1,23 @@
 <template>
-  <article class="test-profile-card">
+  <article class="test-user-card">
     <header class="header">
       <h2 class="title">Profile</h2>
     </header>
     <div class="unit">
       <span class="text">Ada Lovelace</span>
     </div>
-    <UserAvatar />
+    <user-avatar />
   </article>
 </template>
 
 <style scoped>
-.test-profile-card {
+.test-user-card {
   > .header {
     > .title { margin: 0; }
   }
   > .unit {
     > .text { color: var(--color-text); }
   }
-  > .test-user-avatar {
-    > .image { border-radius: 50%; }
-  }
+  > .test-user-avatar { align-self: center; }
 }
 </style>

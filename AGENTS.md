@@ -23,7 +23,7 @@ runtime, no build step, no utility classes.
 Apply top to bottom, stop at the first match.
 
 1. **Surface root** — the component's outermost styled element takes the
-   configured prefix plus its own file name: `app-` + `UserCard.vue` →
+   configured prefix plus its own file name: `app-` + `user-card.vue` →
    `app-user-card`. Never invented.
 2. **An HTML element other than `div`/`span`** — takes its fixed class from the
    Element Class Table below. No judgment.

@@ -33,7 +33,7 @@ CSS does not supply or override the Svelte parser.
 
 ## 3. Give the component a derived surface
 
-<!-- nagi-check file=src/components/UserCard.svelte prefix=app- -->
+<!-- nagi-check file=src/components/user-card.svelte prefix=app- -->
 ```svelte
 <script>
   let active = false

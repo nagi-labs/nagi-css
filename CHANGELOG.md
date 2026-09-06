@@ -1,9 +1,12 @@
 # Changelog
 
-## Unreleased
+## 0.5.0 — 2026-09-07
 
 ### Changed
 
+- Configured component, intrinsic-component, and transparent-component names
+  now match their kebab-case template spelling, so a `DataTable` configuration
+  entry applies to `<data-table>`.
 - Surface rules explicitly limited by `:modal` or `:popover-open` now reject
   `z-index`, because matching top-layer boxes are ordered by insertion order
   rather than the ordinary z-index stacking rules. A dialog tag or `popover`
@@ -12,6 +15,10 @@
 - Surface roots may use `position: relative` to establish a containing block
   for owned absolutely positioned children; root inset declarations remain
   external-layout violations.
+
+### Migration
+
+See [Migrating to 0.5](docs/migrations/0.5.md).
 
 ## 0.4.0 — 2026-09-04
 

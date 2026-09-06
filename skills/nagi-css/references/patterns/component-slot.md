@@ -2,9 +2,9 @@
 
 Declare an owned wrapper for content inserted through a library slot.
 
-<!-- nagi-check file=src/components/CardHost.vue components=Card slots=Card.content=pv-card-content -->
+<!-- nagi-check file=src/components/card-host.vue components=Card slots=Card.content=pv-card-content -->
 ```vue
-<template><div class="app-card-host"><Card class="pv-card"><template #content><div class="pv-card-content"><p class="p"/></div></template></Card></div></template>
+<template><div class="app-card-host"><card class="pv-card"><template #content><div class="pv-card-content"><p class="p"/></div></template></card></div></template>
 <style scoped>.app-card-host { > .pv-card { .pv-card-content { > .p {} } } }</style>
 ```
 
