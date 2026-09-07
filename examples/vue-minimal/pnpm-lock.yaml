@@ -19,8 +19,8 @@ importers:
         version: 3.5.42(typescript@5.9.3)
     devDependencies:
       '@nagi-labs/eslint-plugin-nagi-css':
-        specifier: 0.4.0
-        version: 0.4.0(@typescript-eslint/types@8.69.0)(eslint@10.10.0)
+        specifier: 0.5.0
+        version: 0.5.0(@typescript-eslint/types@8.69.0)(eslint@10.10.0)
       eslint:
         specifier: 10.10.0
         version: 10.10.0
@@ -134,14 +134,14 @@ packages:
   '@keyv/serialize@1.1.1':
     resolution: {integrity: sha512-dXn3FZhPv0US+7dtJsIi2R+c7qWYiReoEh5zUntWCf4oSpMNib8FDhSoed6m3QyZdx5hK7iLFkYk3rNxwt8vTA==}
 
-  '@nagi-labs/eslint-plugin-nagi-css@0.4.0':
-    resolution: {integrity: sha512-Mj4k6ylW4sy4HOovEu7FmasExh0S5+f3TVGvREgp1fRs/Wp56MWh1piZGjAIzoIsinWryCuaI1EO0DmtW5IVvA==}
+  '@nagi-labs/eslint-plugin-nagi-css@0.5.0':
+    resolution: {integrity: sha512-v27atrZqIfilRbG6Vgh31uzhY2foeGpRDWA0tpuhlgejQtFDTR5Vt2Y1c29HFCrCIqo6XEz11GsR4UAytVCYkw==}
     engines: {node: '>=22.18.0'}
     peerDependencies:
       eslint: '>=9'
 
-  '@nagi-labs/nagi-css-core@0.4.0':
-    resolution: {integrity: sha512-UndjRd2JEHC8ubbdfOc/oEAIv+9E97PIPxGpfUVECS5IfLHXGfqN46eOrec2CGBksLvz79nNM6PAYspCOasnwg==}
+  '@nagi-labs/nagi-css-core@0.5.0':
+    resolution: {integrity: sha512-/35NIIxDf1XfIbnyvXiug1bhWktN108OhXXM08cbiZ9ZhRHdemt2CTzIYRsQS+kbm7BqqUABjmXpV+7KWf2xcA==}
     engines: {node: '>=22.18.0'}
 
   '@nodelib/fs.scandir@2.1.5':
@@ -1052,16 +1052,16 @@ snapshots:
 
   '@keyv/serialize@1.1.1': {}
 
-  '@nagi-labs/eslint-plugin-nagi-css@0.4.0(@typescript-eslint/types@8.69.0)(eslint@10.10.0)':
+  '@nagi-labs/eslint-plugin-nagi-css@0.5.0(@typescript-eslint/types@8.69.0)(eslint@10.10.0)':
     dependencies:
-      '@nagi-labs/nagi-css-core': 0.4.0(@typescript-eslint/types@8.69.0)(eslint@10.10.0)
+      '@nagi-labs/nagi-css-core': 0.5.0(@typescript-eslint/types@8.69.0)(eslint@10.10.0)
       eslint: 10.10.0
       vue-eslint-parser: 10.4.1(eslint@10.10.0)
     transitivePeerDependencies:
       - '@typescript-eslint/types'
       - supports-color
 
-  '@nagi-labs/nagi-css-core@0.4.0(@typescript-eslint/types@8.69.0)(eslint@10.10.0)':
+  '@nagi-labs/nagi-css-core@0.5.0(@typescript-eslint/types@8.69.0)(eslint@10.10.0)':
     dependencies:
       '@typescript-eslint/parser': 8.69.0(eslint@10.10.0)(typescript@5.9.3)
       '@vue/compiler-sfc': 3.5.42

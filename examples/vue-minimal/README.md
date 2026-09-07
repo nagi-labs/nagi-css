@@ -1,7 +1,7 @@
 # Nagi CSS Vue example
 
 This is an independent consumer workspace. It installs the published
-`@nagi-labs/eslint-plugin-nagi-css` 0.4.0 package from npm and does not resolve
+`@nagi-labs/eslint-plugin-nagi-css` 0.5.0 package from npm and does not resolve
 any package from the parent repository.
 
 [Open the example in StackBlitz](https://stackblitz.com/fork/github/nagi-labs/nagi-css/tree/main/examples/vue-minimal?startScript=dev)
