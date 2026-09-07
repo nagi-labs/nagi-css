@@ -59,12 +59,17 @@ Framework-specific setup:
 - [Svelte](docs/getting-started/svelte.md)
 - [Astro](docs/getting-started/astro.md)
 
-The [isolated Vue example](examples/vue-minimal) pins the published plugin and
-can be installed, linted, and built without resolving this monorepo's workspace
-packages.
-
 The [setup index](docs/getting-started/index.md) covers shared installation,
 design tokens, incremental adoption, and verification.
+
+## Try the example
+
+[Open the Vue example in StackBlitz](https://stackblitz.com/fork/github/nagi-labs/nagi-css/tree/main/examples/vue-minimal?startScript=dev),
+or clone this repository and change into [`examples/vue-minimal`](examples/vue-minimal).
+The example pins the published npm plugin and can be installed, linted, built,
+and run without resolving this repository's workspace packages. Detailed local
+commands and intentional breakage exercises are in the
+[example README](examples/vue-minimal/README.md).
 
 ## What it enforces
 

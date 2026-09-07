@@ -182,7 +182,7 @@
       <code class="code">profile-card.vue</code>, uses fixed element identities,
       and stops at the owned <code class="code">UserAvatar</code> boundary.
     </p>
-    <pre class="pre"><code>&lt;article class="test-profile-card"&gt;
+    <pre class="pre"><code>&lt;article class="app-profile-card"&gt;
   &lt;header class="header"&gt;
     &lt;h2 class="title"&gt;Profile&lt;/h2&gt;
   &lt;/header&gt;
@@ -192,23 +192,23 @@
   &lt;user-avatar /&gt;
 &lt;/article&gt;
 
-.test-profile-card {
+.app-profile-card {
   &gt; .header { &gt; .title { margin: 0; } }
   &gt; .unit { &gt; .text { color: var(--color-text); } }
-  &gt; .test-user-avatar { align-self: center; }
+  &gt; .app-user-avatar { align-self: center; }
 }</code></pre>
     <p class="p"><strong>Result:</strong> <code class="code">0 errors</code>.</p>
     <ol class="list -diagnostics">
       <li class="item">
         <h3 class="title">The base identity is guessed</h3>
         <p class="p"><strong>Violation</strong></p>
-        <pre class="pre -violation"><code>&lt;article class="test-user-card"&gt;</code></pre>
+        <pre class="pre -violation"><code>&lt;article class="app-user-card"&gt;</code></pre>
         <p class="p"><strong>Diagnostic</strong></p>
         <pre class="pre -diagnostic"><code>nagi-css/surface-root-name
-Surface root must be named ".test-profile-card" from the configured prefix and Vue file name.</code></pre>
-        <p class="p"><strong>Repair:</strong> use <code class="code">test-profile-card</code>,
+Surface root must be named ".app-profile-card" from the configured prefix and Vue file name.</code></pre>
+        <p class="p"><strong>Repair:</strong> use <code class="code">app-profile-card</code>,
         derived from <code class="code">profile-card.vue</code> and the configured
-        <code class="code">test-</code> prefix.</p>
+        <code class="code">app-</code> prefix.</p>
       </li>
       <li class="item">
         <h3 class="title">Markup moves but its old CSS path remains</h3>
@@ -227,17 +227,17 @@ Selector "&gt; .text" does not follow the template: no element matches this path
       <li class="item">
         <h3 class="title">A parent reaches into an owned child</h3>
         <p class="p"><strong>Violation</strong></p>
-        <pre class="pre -violation"><code>.test-profile-card {
-  &gt; .test-user-avatar {
+        <pre class="pre -violation"><code>.app-profile-card {
+  &gt; .app-user-avatar {
     &gt; .image { border-radius: 50%; }
   }
 }</code></pre>
         <p class="p"><strong>Diagnostic</strong></p>
         <pre class="pre -diagnostic"><code>nagi-css/owned-surface-reach-in
-Selector "&gt; .image" reaches below ".test-user-avatar", the root of an owned child component;
+Selector "&gt; .image" reaches below ".app-user-avatar", the root of an owned child component;
 that DOM belongs to the child's surface, so style it there or pass a value in.</code></pre>
         <p class="p"><strong>Repair:</strong> keep only external placement on
-        <code class="code">&gt; .test-user-avatar</code>; style the image in
+        <code class="code">&gt; .app-user-avatar</code>; style the image in
         <code class="code">user-avatar.vue</code> or expose an intentional input.</p>
       </li>
     </ol>
@@ -364,7 +364,7 @@ export default [
     </p>
     <p class="p">
       Follow a real application from
-      <a class="link" href="https://github.com/nagi-labs/nagi-ui-deep-sea/blob/main/src/views/dashboard-view.vue">Deep Sea's dashboard source</a>
+      <a class="link" href="https://github.com/nagi-labs/nagi-ui-deep-sea/blob/main/src/views/DashboardView.vue">Deep Sea's dashboard source</a>
       into its
       <a class="link" href="https://github.com/nagi-labs/nagi-ui-deep-sea/blob/main/eslint.config.mjs">lint configuration</a>.
       Deep Sea also uses Nagi UI, but Nagi CSS itself does not require it.

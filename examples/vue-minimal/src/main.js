@@ -1,5 +1,5 @@
 import { createApp } from "vue"
-import App from "./app.vue"
+import EditorPanel from "./editor-panel.vue"
 import "./tokens.css"
 
-createApp(App).mount("#app")
+createApp(EditorPanel).mount("#app")

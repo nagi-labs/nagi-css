@@ -136,11 +136,12 @@ test("recommended config rejects unknown severity keys during config loading", (
 
 test("ESLint validates the ProfileCard example and reports three isolated structural violations", async () => {
   const profileCard = (kind) => path.join(root, `fixtures/profile-card/${kind}/profile-card.vue`)
+  const profileCardConfig = { surfaceRootPrefixes: ["app-"] }
   const [valid, wrongBase, stalePath, reachIn] = await Promise.all([
-    lintEslint(profileCard("valid")),
-    lintEslint(profileCard("wrong-base")),
-    lintEslint(profileCard("stale-path")),
-    lintEslint(profileCard("reach-in")),
+    lintEslint(profileCard("valid"), profileCardConfig),
+    lintEslint(profileCard("wrong-base"), profileCardConfig),
+    lintEslint(profileCard("stale-path"), profileCardConfig),
+    lintEslint(profileCard("reach-in"), profileCardConfig),
   ])
 
   assert.equal(valid.errorCount, 0, JSON.stringify(valid.messages))
@@ -149,7 +150,7 @@ test("ESLint validates the ProfileCard example and reports three isolated struct
     [
       [
         "nagi-css/surface-root-name",
-        'Surface root must be named ".test-profile-card" from the configured prefix and Vue file name.',
+        'Surface root must be named ".app-profile-card" from the configured prefix and Vue file name.',
       ],
     ],
   )
@@ -167,7 +168,7 @@ test("ESLint validates the ProfileCard example and reports three isolated struct
     [
       [
         "nagi-css/owned-surface-reach-in",
-        `Selector "> .image" reaches below ".test-user-avatar", the root of an owned child component; that DOM belongs to the child's surface, so style it there or pass a value in.`,
+        `Selector "> .image" reaches below ".app-user-avatar", the root of an owned child component; that DOM belongs to the child's surface, so style it there or pass a value in.`,
       ],
     ],
   )

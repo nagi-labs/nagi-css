@@ -1,5 +1,5 @@
 <template>
-  <article class="test-profile-card">
+  <article class="app-profile-card">
     <header class="header">
       <h2 class="title">Profile</h2>
       <div class="unit">
@@ -10,7 +10,7 @@
 </template>
 
 <style scoped>
-.test-profile-card {
+.app-profile-card {
   > .header {
     > .title {
       > .text { color: var(--color-text); }

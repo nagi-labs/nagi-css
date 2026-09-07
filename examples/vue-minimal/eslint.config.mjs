@@ -4,6 +4,6 @@ import pluginVue from "eslint-plugin-vue"
 export default [
   ...pluginVue.configs["flat/essential"],
   ...nagiCss.configs.recommended({
-    surfaceRootPrefixes: ["demo-"],
+    surfaceRootPrefixes: ["app-"],
   }),
 ]
