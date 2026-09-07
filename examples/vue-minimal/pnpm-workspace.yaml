@@ -1,5 +1,5 @@
 packages:
   - "."
 minimumReleaseAgeExclude:
-  - '@nagi-labs/eslint-plugin-nagi-css@0.5.0'
-  - '@nagi-labs/nagi-css-core@0.5.0'
+  - '@nagi-labs/eslint-plugin-nagi-css@0.5.1'
+  - '@nagi-labs/nagi-css-core@0.5.1'
