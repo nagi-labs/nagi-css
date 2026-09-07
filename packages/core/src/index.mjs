@@ -529,6 +529,22 @@ export function buildNagiSets(input) {
 
 export function validateNagiConfig(config) {
   const errors = []
+  const reportCanonicalComponentNameConflicts = (option, entries) => {
+    const firstByCanonicalName = new Map()
+    for (const [name, value] of entries) {
+      if (typeof name !== "string" || name.length === 0) continue
+      const canonicalName = kebabCase(name)
+      const first = firstByCanonicalName.get(canonicalName)
+      if (first !== undefined && first.value !== value) {
+        errors.push(
+          `${option} contains conflicting component names ${JSON.stringify(first.name)} and ${JSON.stringify(name)}; both canonicalize to ${JSON.stringify(canonicalName)} but resolve to different values`,
+        )
+      } else if (first === undefined) {
+        firstByCanonicalName.set(canonicalName, { name, value })
+      }
+    }
+  }
+
   if (!["plain", "tailwind-apply"].includes(config.declarationMode)) {
     errors.push('declarationMode must be "plain" or "tailwind-apply"')
   }
@@ -563,6 +579,15 @@ export function validateNagiConfig(config) {
       errors.push(`elementClasses.${tag} must be a base class, not a variant; received "${value}"`)
     }
   }
+
+  reportCanonicalComponentNameConflicts(
+    "componentClasses",
+    Object.entries(config.componentClasses ?? {}),
+  )
+  reportCanonicalComponentNameConflicts(
+    "intrinsicComponents",
+    Object.entries(config.intrinsicComponents ?? {}),
+  )
 
   for (const [component, tag] of Object.entries(config.intrinsicComponents ?? {})) {
     if (typeof component !== "string" || component.length === 0) {

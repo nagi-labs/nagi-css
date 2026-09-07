@@ -16,3 +16,9 @@ jobs:
           cache: true
           run-install: true
       - run: vp run test
+      - name: Test isolated Vue example
+        working-directory: examples/vue-minimal
+        run: |
+          vp install --frozen-lockfile
+          vp run lint
+          vp run build

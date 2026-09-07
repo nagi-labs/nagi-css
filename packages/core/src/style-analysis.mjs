@@ -62,6 +62,7 @@ export const STYLE_RULE_IDS = [
   "single-base-identity",
   "slot-surface-top-level",
   "stacking-token-required",
+  "top-layer-z-index",
   "state-not-class",
   "surface-external-layout",
   "token-layer",
@@ -95,6 +96,7 @@ export const STYLE_RULE_DESCRIPTIONS = {
   "single-base-identity": "Allow exactly one base identity class per selector compound",
   "slot-surface-top-level": "Keep attached slot surfaces below their UI-library boundary",
   "stacking-token-required": "Require a token for the stacking level of a surface that owns its own",
+  "top-layer-z-index": "Reject z-index as a way to order top-layer surfaces",
   "state-not-class": "Represent runtime state with native, ARIA, or data attributes",
   "surface-external-layout": "Keep a surface's external layout in its parent",
   "token-layer": "Reference semantic tokens rather than primitive tokens",
@@ -121,6 +123,10 @@ function isExternalLayoutProp(prop) {
   )
 }
 
+function isInternalPositioningContext(decl) {
+  return decl.prop.toLowerCase() === "position" && decl.value.trim().toLowerCase() === "relative"
+}
+
 function isAnchorPlacementProp(prop) {
   const name = prop.toLowerCase()
   return (
@@ -133,7 +139,7 @@ function isAnchorPlacementProp(prop) {
 
 function externalLayoutUtility(token) {
   const utility = token.replace(/^(?:[a-z-]+:)+/u, "").replace(/^-/u, "")
-  if (new Set(["absolute", "fixed", "relative", "static", "sticky"]).has(utility)) {
+  if (new Set(["absolute", "fixed", "static", "sticky"]).has(utility)) {
     return true
   }
   return /^(?:m[trblxyse]?|inset(?:-[xy])?|top|right|bottom|left|start|end|z)-/u.test(
@@ -247,7 +253,7 @@ export const emptyTemplateContext = () => ({
   expectedClasses: new Set(),
   roleNames: new Set(),
   surfaceRoots: new Set(),
-  topLayerSurfaces: new Set(),
+  topLayerCapabilities: new Map(),
   tree: [],
 })
 
@@ -259,7 +265,7 @@ export function analyzeStyleRoot(root, inputConfig, templateContext = emptyTempl
     expectedClasses = new Set(),
     roleNames,
     surfaceRoots,
-    topLayerSurfaces = new Set(),
+    topLayerCapabilities = new Map(),
     tree = [],
   } = templateContext
 
@@ -667,11 +673,9 @@ export function analyzeStyleRoot(root, inputConfig, templateContext = emptyTempl
     })
   }
 
-  // A surface that owns its stacking order legitimately — a top-layer or
-  // anchor-positioned one — is the only place a cross-component stacking scale
-  // applies, and the only place `--z-modal` style tokens mean anything. Inside a
-  // surface, layering its own children is a local structural decision with no
-  // scale behind it, the same reason `max-inline-size` is not a scale property.
+  // An anchor-positioned surface outside the top layer may need a system stacking
+  // token. Top-layer boxes are different: their order is the order in the top
+  // layer, so z-index cannot order a modal against a popover or toast there.
   function checkStackingToken(decl) {
     if (decl.prop.toLowerCase() !== "z-index") return
     const value = decl.value.trim()
@@ -684,13 +688,47 @@ export function analyzeStyleRoot(root, inputConfig, templateContext = emptyTempl
     )
   }
 
-  function checkSurfaceLayout(rule, token) {
+  function compoundGuaranteesTopLayer(compound, token) {
+    const capabilities = topLayerCapabilities.get(token)
+    if (!capabilities) return false
+    return compound.some(
+      (node) => node.type === "pseudo" && capabilities.has(node.value.toLowerCase()),
+    )
+  }
+
+  function topLevelGuaranteesTopLayer(alternatives, token) {
+    if (!token || alternatives.length === 0) return false
+    return alternatives.every((nodes) => {
+      const { compounds } = splitCompounds(nodes)
+      const subject = compounds.at(-1) ?? []
+      return surfaceSubjectToken(compounds) === token && compoundGuaranteesTopLayer(subject, token)
+    })
+  }
+
+  function nestedGuaranteesTopLayer(alternatives, token, parentGuaranteesTopLayer) {
+    if (!token || alternatives.length === 0) return false
+    return alternatives.every((nodes) => {
+      const { mode, rest } = resolveNesting(nodes)
+      const { compounds } = splitCompounds(rest)
+      if (mode !== "merge" || compounds.length !== 1) return false
+      return parentGuaranteesTopLayer || compoundGuaranteesTopLayer(compounds[0], token)
+    })
+  }
+
+  function checkSurfaceLayout(rule, token, isTopLayer = false) {
     if (!token) return
-    const ownsPlacement = topLayerSurfaces.has(token) || ownDeclsAnchored(rule)
+    const ownsPlacement = isTopLayer || ownDeclsAnchored(rule)
     eachOwnDecl(rule, (node) => {
-      if (ownsPlacement) {
+      if (isTopLayer && node.prop.toLowerCase() === "z-index") {
+        report(
+          node,
+          "top-layer-z-index",
+          `Selector "${rule.selector}" matches the top-layer state of surface ".${token}", whose boxes are ordered by top-layer insertion order rather than z-index; remove this declaration and coordinate show/popover order instead.`,
+          node.prop,
+        )
+      } else if (ownsPlacement) {
         checkStackingToken(node)
-      } else if (isExternalLayoutProp(node.prop)) {
+      } else if (isExternalLayoutProp(node.prop) && !isInternalPositioningContext(node)) {
         report(
           node,
           "surface-external-layout",
@@ -867,7 +905,8 @@ export function analyzeStyleRoot(root, inputConfig, templateContext = emptyTempl
         checkAnatomy(rule, compounds[index])
       }
     }
-    checkSurfaceLayout(rule, surfaceSubject)
+    const guaranteesTopLayer = topLevelGuaranteesTopLayer(alternatives, surfaceSubject)
+    checkSurfaceLayout(rule, surfaceSubject, guaranteesTopLayer)
     checkContainerName(rule, ruleChain)
     walkNested(
       rule,
@@ -875,6 +914,7 @@ export function analyzeStyleRoot(root, inputConfig, templateContext = emptyTempl
       surfaceSubject,
       ruleChain,
       alternativesBoundaryToken(alternatives),
+      guaranteesTopLayer,
     )
   }
 
@@ -884,6 +924,7 @@ export function analyzeStyleRoot(root, inputConfig, templateContext = emptyTempl
     parentSurfaceToken = null,
     parentChain = null,
     parentBoundaryToken = null,
+    parentGuaranteesTopLayer = false,
   ) {
     let alternatives
     try {
@@ -895,6 +936,7 @@ export function analyzeStyleRoot(root, inputConfig, templateContext = emptyTempl
         parentSurfaceToken,
         parentChain,
         parentBoundaryToken,
+        parentGuaranteesTopLayer,
       )
       return
     }
@@ -946,7 +988,12 @@ export function analyzeStyleRoot(root, inputConfig, templateContext = emptyTempl
         checkAnatomy(rule, compounds[index])
       }
     }
-    checkSurfaceLayout(rule, surfaceSubject)
+    const guaranteesTopLayer = nestedGuaranteesTopLayer(
+      alternatives,
+      surfaceSubject,
+      parentGuaranteesTopLayer,
+    )
+    checkSurfaceLayout(rule, surfaceSubject, guaranteesTopLayer)
     checkContainerName(rule, ruleChain)
     walkNested(
       rule,
@@ -954,6 +1001,7 @@ export function analyzeStyleRoot(root, inputConfig, templateContext = emptyTempl
       surfaceSubject,
       ruleChain,
       alternativesBoundaryToken(alternatives, parentBoundaryToken, true),
+      guaranteesTopLayer,
     )
   }
 
@@ -963,6 +1011,7 @@ export function analyzeStyleRoot(root, inputConfig, templateContext = emptyTempl
     parentSurfaceToken = null,
     parentChain = null,
     parentBoundaryToken = null,
+    parentGuaranteesTopLayer = false,
   ) {
     container.each?.((node) => {
       if (node.type === "rule") {
@@ -972,6 +1021,7 @@ export function analyzeStyleRoot(root, inputConfig, templateContext = emptyTempl
           parentSurfaceToken,
           parentChain,
           parentBoundaryToken,
+          parentGuaranteesTopLayer,
         )
       } else if (node.type === "atrule") {
         walkNested(
@@ -980,6 +1030,7 @@ export function analyzeStyleRoot(root, inputConfig, templateContext = emptyTempl
           parentSurfaceToken,
           parentChain,
           parentBoundaryToken,
+          parentGuaranteesTopLayer,
         )
       }
     })

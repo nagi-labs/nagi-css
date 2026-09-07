@@ -1,0 +1,25 @@
+{
+  "name": "nagi-css-vue-minimal",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "eslint ."
+  },
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "packageManager": "pnpm@11.1.3",
+  "dependencies": {
+    "@vitejs/plugin-vue": "6.0.8",
+    "vite": "8.2.2",
+    "vue": "3.5.42"
+  },
+  "devDependencies": {
+    "@nagi-labs/eslint-plugin-nagi-css": "0.4.0",
+    "eslint": "10.10.0",
+    "eslint-plugin-vue": "10.10.0",
+    "vue-eslint-parser": "10.4.1"
+  }
+}

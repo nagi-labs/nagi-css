@@ -1,8 +1,8 @@
 # Nagi CSS
 
-**CSS, after the wind.** Nagi CSS is a lint-enforced semantic contract for
-component-owned CSS. Class names are derived from markup and project
-configuration, so humans and AI agents converge on the same answer.
+**CSS, after the wind.** Nagi CSS is a lint-enforced structural contract for
+component-owned CSS. It derives class identities and owned selector paths from
+source, keeping the remaining choices inside an explicit vocabulary.
 
 [Website](https://nagi-labs.github.io/nagi-css/) ·
 [Documentation](docs/getting-started/index.md) ·
@@ -24,8 +24,11 @@ Requirements:
 - component-owned `<style>` blocks whose selectors remain statically readable
 
 ```sh
-vp add -D @nagi-labs/eslint-plugin-nagi-css
+npm install --save-dev @nagi-labs/eslint-plugin-nagi-css
 ```
+
+Using pnpm or Vite+? Use the equivalent development-dependency command for
+your package manager.
 
 Append Nagi CSS after the framework's official flat config:
 
@@ -58,6 +61,15 @@ Framework-specific setup:
 
 The [setup index](docs/getting-started/index.md) covers shared installation,
 design tokens, incremental adoption, and verification.
+
+## Try the example
+
+[Open the Vue example in StackBlitz](https://stackblitz.com/fork/github/nagi-labs/nagi-css/tree/main/examples/vue-minimal?startScript=dev),
+or clone this repository and change into [`examples/vue-minimal`](examples/vue-minimal).
+The example pins the published npm plugin and can be installed, linted, built,
+and run without resolving this repository's workspace packages. Detailed local
+commands and intentional breakage exercises are in the
+[example README](examples/vue-minimal/README.md).
 
 ## What it enforces
 
@@ -114,6 +126,7 @@ selector rather than an `-assistive` or `-sr-only` class. See
 - [Configuration reference](skills/nagi-css/references/configuration.md) — UI libraries, slots, severity, emit policy, and tokens
 - [Agent instructions](AGENTS.md) — portable rules for agents editing components
 - [Agent skill](skills/nagi-css) — the complete generate-and-verify workflow
+- [Migrating to 0.5](docs/migrations/0.5.md) — component-name matching and stacking diagnostics
 - [Migrating to 0.4](docs/migrations/0.4.md) — peer-based variant rules
 - [Migrating to 0.3](docs/migrations/0.3.md) — lint behavior and configuration changes
 
@@ -132,7 +145,7 @@ Nagi CSS checks Vue, Svelte, and Astro component templates together with their
 CSS `<style>` blocks. Nuxt is supported through Vue's parser and Nuxt's generated
 ESLint config. The default `plain` declaration mode needs no additional CSS
 compiler. `tailwind-apply` requires the application to provide Tailwind's build
-integration and remains experimental in 0.3.x; its coverage and API may change
+integration and remains experimental; its coverage and API may change
 before it is promoted to a stable backend.
 
 Preprocessor syntax and standalone `.css` files are outside the component-owned

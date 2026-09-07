@@ -52,7 +52,7 @@ authored:
 
 Arbitrary syntax such as `font-[inherit]` or `[mask-type:luminance]` is rejected
 inside `@apply`; keep that property visible as plain CSS. Nagi CSS also recognizes
-surface-root position, margin, inset, and z-index utilities so `@apply` cannot
+external surface-root position, margin, inset, and z-index utilities so `@apply` cannot
 hide external layout ownership. Other named utilities are validated and expanded
 by Tailwind. Its coverage and configuration may change before it is promoted to
 a stable declaration backend.
@@ -99,6 +99,12 @@ componentClasses: {
 }
 ```
 
+Configuration names match template tags through their canonical kebab-case
+spelling. List only one spelling in new configuration. Identical aliases remain
+accepted for migration compatibility, but mappings such as
+`DataTable: "ui-data-table"` and `"data-table": "legacy-data-table"` are a
+configuration error because the same canonical tag would have two meanings.
+
 Do not register application-owned components here. Their surface root is
 derived from their own filename and the required `surfaceRootPrefixes`.
 
@@ -135,7 +141,7 @@ surfaceRootPrefixes: ["n-", "app-"]
 ```
 
 The array must contain at least one prefix. The accepted roots are exact
-derivations. `Button.vue`, `Button.svelte`, and `Button.astro` accept
+derivations. `button.vue`, `button.svelte`, and `button.astro` accept
 `.n-button` or `.app-button`, but
 rejects both bare `.button` and unrelated `.n-control`. Prefixes must be
 lowercase kebab prefixes ending in `-`. Use one prefix for canonical new code;

@@ -84,7 +84,7 @@ configuration file is not required.
 Keep application-owned component tags aligned with their file names:
 
 ```text
-app/components/UserAvatar.vue -> <UserAvatar /> -> .app-user-avatar
+app/components/user-avatar.vue -> <user-avatar /> -> .app-user-avatar
 ```
 
 Continue with the [shared configuration reference](https://github.com/nagi-labs/nagi-css/blob/main/skills/nagi-css/references/configuration.md).

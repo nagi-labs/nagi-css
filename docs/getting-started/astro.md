@@ -33,7 +33,7 @@ only its rules.
 
 ## 3. Give the component a derived surface
 
-<!-- nagi-check file=src/components/UserCard.astro prefix=app- -->
+<!-- nagi-check file=src/components/user-card.astro prefix=app- -->
 ```astro
 ---
 const { active = false } = Astro.props

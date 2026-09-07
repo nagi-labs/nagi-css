@@ -1,12 +1,12 @@
 <template>
   <section class="test-invalid-boundary-surface">
-    <DataTable class="ui-data-table">
-      <Column class="ui-column">
+    <data-table class="ui-data-table">
+      <column class="ui-column">
         <template #body>
           <div class="ui-table-column-body" />
         </template>
-      </Column>
-    </DataTable>
+      </column>
+    </data-table>
   </section>
 </template>
 

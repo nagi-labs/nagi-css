@@ -18,6 +18,12 @@ vp exec node packages/cli/src/cli.mjs check \
 
 ## Ground rules
 
+- Name ordinary source files in `kebab-case` (`profile-card.vue`,
+  `dialog-contract.ts`). Keep component tags in templates in `kebab-case`
+  (`<user-avatar>`), while JavaScript and TypeScript class declarations use
+  `UpperCamelCase` (`class DialogController`). Standard HTML and SVG element
+  spellings, and conventional repository files such as `README.md`, keep their
+  established names.
 - **CONTRACT.md is normative.** The skill and the linter are projections of
   it; when they disagree, the contract wins. A behavior change lands as one
   change to code, tests, and the affected documents together.
@@ -26,7 +32,7 @@ vp exec node packages/cli/src/cli.mjs check \
   the suite:
 
   ```
-  <!-- nagi-check file=src/components/UserCard.vue -->
+  <!-- nagi-check file=src/components/user-card.vue -->
   ```
 
   Optional keys: `prefix=` (default `app-`), `components=DataTable,Column`,

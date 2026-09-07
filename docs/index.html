@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nagi CSS — CSS, after the wind</title>
-<meta name="description" content="Nagi CSS is a lint-enforced semantic CSS contract. Every class name has exactly one correct answer — CSS, after the wind.">
+<meta name="description" content="Nagi CSS is a structural contract that derives class identities and owned selector paths from component source — CSS, after the wind.">
 <link rel="icon" href="nagi-css.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -19,30 +19,71 @@
     <h1 class="title">Nagi CSS</h1>
     <p class="p -tagline">CSS, after the wind.</p>
     <p class="p -lead">
-      A lint-enforced semantic contract — every class name has exactly one
-      correct answer.
+      A structural contract for component CSS that derives class identities
+      and owned selector paths from source, then checks that they stay aligned.
+      It lets class names follow from the source, rather than gather around it.
     </p>
     <p class="p -meaning">
-      <em>Nagi</em> (“NAH-ghee”) is Japanese for the calm when the wind dies
-      down — the state a codebase reaches when naming entropy stops.
-      <small class="note">(Yes, the linter is a bit naggy. That’s the point.)</small>
+      <em>Nagi</em> (“NAH-ghee”) is Japanese for the calm after the wind.
+      In a component, that calm begins when naming, structure, and ownership
+      stop drifting apart.
     </p>
     <nav class="nav">
       <ul class="list">
-        <li class="item"><a class="link" href="#usage">Get started</a></li>
-        <li class="item"><a class="link" href="https://github.com/nagi-labs/nagi-css">GitHub</a></li>
+        <li class="item"><a class="link" href="#idea">The idea</a></li>
+        <li class="item"><a class="link" href="#naming">Naming</a></li>
+        <li class="item"><a class="link" href="#example">A checked example</a></li>
+        <li class="item"><a class="link" href="#usage">Use it</a></li>
+        <li class="item"><a class="link" href="#evaluation">Evaluation</a></li>
         <li class="item"><a class="link" href="https://github.com/nagi-labs/nagi-css/blob/main/CONTRACT.md">Contract</a></li>
-        <li class="item"><a class="link" href="https://github.com/nagi-labs/nagi-css/blob/main/FAQ.md">FAQ</a></li>
+        <li class="item"><a class="link" href="https://github.com/nagi-labs/nagi-css">GitHub</a></li>
       </ul>
     </nav>
   </header>
 
-  <section class="section -naming">
-    <h2 class="title">Every name is derived</h2>
+  <section class="section -why" id="idea">
+    <span class="text -eyebrow">The idea</span>
+    <h2 class="title">Let naming settle</h2>
     <p class="p">
-      One component, named entirely by rule. Nothing below was invented — each
-      class comes from a lookup, and the linter enforces every derivation.
-      The result reads as plain, unforced semantics.
+      Nagi CSS begins with a <strong>bounded canonical form</strong>: given the
+      same component source and project configuration, authors and agents
+      derive the same root, element identities, and owned selector paths. The
+      remaining anatomy and variant choices stay inside an explicit,
+      reviewable vocabulary.
+    </p>
+    <ul class="list">
+      <li class="item">
+        <h3 class="title">Derived, not remembered</h3>
+        <p class="p">
+          A file name, an element, or a small structural table supplies the
+          identity. The linter checks the result, so consistency does not rest
+          on shared memory.
+        </p>
+      </li>
+      <li class="item">
+        <h3 class="title">Structure remains visible</h3>
+        <p class="p">
+          Owned selector paths follow the component tree. When markup moves,
+          the corresponding CSS path moves with it—or the contract speaks.
+        </p>
+      </li>
+      <li class="item">
+        <h3 class="title">Ownership has an edge</h3>
+        <p class="p">
+          A component may place another owned surface, but it does not reach
+          through that surface and style the child’s private DOM.
+        </p>
+      </li>
+    </ul>
+  </section>
+
+  <section class="section -naming" id="naming">
+    <span class="text -eyebrow">Naming</span>
+    <h2 class="title">One component, named by rule</h2>
+    <p class="p">
+      Little below needs to be invented. Each base identity follows from a
+      lookup or a bounded structural choice, and the linter keeps that
+      derivation attached to the markup.
     </p>
     <div class="unit">
       <figure class="figure -sample">
@@ -85,12 +126,13 @@
           component file's name, kebab-cased. Never chosen.</p>
         </li>
         <li class="item -element">
-          <h3 class="title">Elements — from the tag</h3>
-          <p class="p"><code class="code">header</code>, <code class="code">title</code>,
-          <code class="code">image</code>, <code class="code">list</code>,
-          <code class="code">term</code>, <code class="code">definition</code>,
-          <code class="code">note</code>, <code class="code">footer</code>,
-          <code class="code">button</code> — each HTML element has one fixed class.</p>
+          <h3 class="title">Elements — from a fixed table</h3>
+          <p class="p">Common HTML elements map to one fixed identity: headings
+          become <code class="code">title</code>, <code class="code">img</code>
+          becomes <code class="code">image</code>, <code class="code">dt</code>
+          becomes <code class="code">term</code>, and <code class="code">dd</code>
+          becomes <code class="code">definition</code>. These names are looked up,
+          not invented.</p>
         </li>
         <li class="item -anatomy">
           <h3 class="title">UI anatomy — a tiny allowlist</h3>
@@ -126,47 +168,100 @@
     </div>
   </section>
 
-  <section class="section -why">
-    <h2 class="title">Why</h2>
+  <section class="section -test" id="example">
+    <span class="text -eyebrow">A checked example</span>
+    <h2 class="title">A checked example, kept executable</h2>
     <p class="p">
-      The property everything else falls out of is <strong>canonical form</strong>:
-      given the markup, the correct class for a node is unique — derived from the
-      file name, the element and component tables, and a structural ladder,
-      rather than chosen.
+      Nagi CSS is for teams that keep CSS beside component markup and want names,
+      DOM paths, and ownership boundaries to remain reviewable as that markup
+      changes. It is an ESLint contract for Vue, Nuxt, Svelte, and Astro—not a UI
+      library, runtime, or required dependency on Nagi UI.
     </p>
-    <ul class="list">
+    <p class="p">
+      This checked Vue fixture derives its root from
+      <code class="code">profile-card.vue</code>, uses fixed element identities,
+      and stops at the owned <code class="code">UserAvatar</code> boundary.
+    </p>
+    <pre class="pre"><code>&lt;article class="app-profile-card"&gt;
+  &lt;header class="header"&gt;
+    &lt;h2 class="title"&gt;Profile&lt;/h2&gt;
+  &lt;/header&gt;
+  &lt;div class="unit"&gt;
+    &lt;span class="text"&gt;Ada Lovelace&lt;/span&gt;
+  &lt;/div&gt;
+  &lt;user-avatar /&gt;
+&lt;/article&gt;
+
+.app-profile-card {
+  &gt; .header { &gt; .title { margin: 0; } }
+  &gt; .unit { &gt; .text { color: var(--color-text); } }
+  &gt; .app-user-avatar { align-self: center; }
+}</code></pre>
+    <p class="p"><strong>Result:</strong> <code class="code">0 errors</code>.</p>
+    <ol class="list -diagnostics">
       <li class="item">
-        <h3 class="title">Machine-checkable</h3>
-        <p class="p">
-          A linter can verify every derivation: template classes, selector
-          structure, ownership edges, UI-library boundaries. Consistency stops
-          being a discipline problem.
-        </p>
+        <h3 class="title">The base identity is guessed</h3>
+        <p class="p"><strong>Violation</strong></p>
+        <pre class="pre -violation"><code>&lt;article class="app-user-card"&gt;</code></pre>
+        <p class="p"><strong>Diagnostic</strong></p>
+        <pre class="pre -diagnostic"><code>nagi-css/surface-root-name
+Surface root must be named ".app-profile-card" from the configured prefix and Vue file name.</code></pre>
+        <p class="p"><strong>Repair:</strong> use <code class="code">app-profile-card</code>,
+        derived from <code class="code">profile-card.vue</code> and the configured
+        <code class="code">app-</code> prefix.</p>
       </li>
       <li class="item">
-        <h3 class="title">Convergent</h3>
-        <p class="p">
-          Two authors — or an AI agent — arrive at the same class names for the
-          same markup. Generated CSS stops drifting.
-        </p>
+        <h3 class="title">Markup moves but its old CSS path remains</h3>
+        <p class="p"><strong>Violation</strong></p>
+        <pre class="pre -violation"><code>&gt; .header {
+  &gt; .title {
+    &gt; .text { color: var(--color-text); }
+  }
+}</code></pre>
+        <p class="p"><strong>Diagnostic</strong></p>
+        <pre class="pre -diagnostic"><code>nagi-css/selector-mirrors-template
+Selector "&gt; .text" does not follow the template: no element matches this path.</code></pre>
+        <p class="p"><strong>Repair:</strong> follow the new owned path through
+        <code class="code">&gt; .header &gt; .unit &gt; .text</code>.</p>
       </li>
       <li class="item">
-        <h3 class="title">Meaning in the source</h3>
-        <p class="p">
-          <code class="code">class="user-card"</code> self-documents. Diffs
-          are a changed property in a named rule, not a mutated utility string.
-        </p>
+        <h3 class="title">A parent reaches into an owned child</h3>
+        <p class="p"><strong>Violation</strong></p>
+        <pre class="pre -violation"><code>.app-profile-card {
+  &gt; .app-user-avatar {
+    &gt; .image { border-radius: 50%; }
+  }
+}</code></pre>
+        <p class="p"><strong>Diagnostic</strong></p>
+        <pre class="pre -diagnostic"><code>nagi-css/owned-surface-reach-in
+Selector "&gt; .image" reaches below ".app-user-avatar", the root of an owned child component;
+that DOM belongs to the child's surface, so style it there or pass a value in.</code></pre>
+        <p class="p"><strong>Repair:</strong> keep only external placement on
+        <code class="code">&gt; .app-user-avatar</code>; style the image in
+        <code class="code">user-avatar.vue</code> or expose an intentional input.</p>
       </li>
-    </ul>
+    </ol>
+    <p class="p">
+      Each diagnostic is asserted by an executable fixture using the real
+      ESLint plugin.
+      <a class="link" href="https://github.com/nagi-labs/nagi-css/tree/main/tests/fixtures/profile-card">Read all four fixtures</a>
+      or run <code class="code">vp run test</code> and look for
+      <code class="code">ESLint validates the ProfileCard example and reports three isolated structural violations</code>.
+    </p>
   </section>
 
   <section class="section -usage" id="usage">
-    <h2 class="title">Usage</h2>
+    <span class="text -eyebrow">Use it</span>
+    <h2 class="title">Bring the contract into a component</h2>
     <p class="p">
       Install the ESLint plugin, then add it after the framework's official flat
       config. The framework keeps ownership of its parser and generated settings.
     </p>
-    <pre class="pre"><code>vp add -D @nagi-labs/eslint-plugin-nagi-css</code></pre>
+    <pre class="pre"><code>npm install --save-dev @nagi-labs/eslint-plugin-nagi-css</code></pre>
+    <p class="p">
+      Using pnpm or Vite+? Use the equivalent development-dependency command
+      for your package manager.
+    </p>
     <pre class="pre"><code>import nagiCss from "@nagi-labs/eslint-plugin-nagi-css"
 
 export default [
@@ -187,16 +282,117 @@ export default [
       <a class="link" href="https://github.com/nagi-labs/nagi-css/blob/main/docs/getting-started/svelte.md">Svelte</a>, or
       <a class="link" href="https://github.com/nagi-labs/nagi-css/blob/main/docs/getting-started/astro.md">Astro</a>.
     </p>
+    <p class="p">
+      For a complete isolated Vite project pinned to Node 22.18+, ESLint 10.10,
+      Vue 3.5.42, and published npm dependencies, use the
+      <a class="link" href="https://github.com/nagi-labs/nagi-css/tree/main/examples/vue-minimal">Vue minimal example</a>.
+      Run <code class="code">vp install --frozen-lockfile</code>,
+      <code class="code">vp run lint</code>, and <code class="code">vp run build</code>.
+    </p>
+  </section>
+
+  <section class="section -evaluation" id="evaluation">
+    <span class="text -eyebrow">Evaluation</span>
+    <h2 class="title">Tested beyond a toy component</h2>
+    <p class="p">
+      To see how the contract behaves beyond a small fixture, we measured
+      <a class="link" href="https://github.com/nagi-labs/nagi-ui">Nagi UI</a>,
+      a larger set of Vue components built with Nagi CSS. Its executable
+      evaluation counts every literal class token, then separates names that
+      are determined or bounded from the local words an author still chooses:
+    </p>
+    <ul class="list -metrics">
+      <li class="item">
+        <strong class="strong">76.8%</strong>
+        <span>contract-determined explicit bases</span>
+        <p class="p">
+          Of 555 explicit base identities, 426 follow directly from the surface,
+          component boundary or slot, ARIA role, STN position, or native element
+          mapping.
+        </p>
+      </li>
+      <li class="item">
+        <strong class="strong">100%</strong>
+        <span>explicit bases need no new vocabulary</span>
+        <p class="p">
+          The other 129 of 555 explicit bases (23.2%) select from four bounded
+          anatomy words. They require a choice and are not counted as
+          contract-determined; together the two categories cover 555 / 555 bases.
+        </p>
+      </li>
+      <li class="item">
+        <strong class="strong">82.4%</strong>
+        <span>determined with implicit components</span>
+        <p class="p">
+          Including 176 component tags whose identities are implicit, 602 / 731
+          identities are contract-determined. All 731 / 731 require no new
+          vocabulary after bounded anatomy is included.
+        </p>
+      </li>
+      <li class="item">
+        <strong class="strong">17.2%</strong>
+        <span>author-named variants</span>
+        <p class="p">
+          Of all 670 explicit class tokens, 115 are variant occurrences whose
+          local word is chosen by the author. Nagi CSS checks their form,
+          ordering, placement, and peer relationship; it does not derive the
+          word.
+        </p>
+      </li>
+    </ul>
+    <p class="p">
+      The 100% base result and the 17.2% variant result use different populations:
+      555 base identities versus all 670 explicit class tokens. An occurrence is
+      a use in markup, not a separate invention. The source set includes
+      documentation and preview fixtures, where the variant rate is higher, and
+      excludes package Blueprints. This is one self-hosted repository, not a
+      benchmark or a universal Nagi CSS rate. Read the
+      <a class="link" href="https://github.com/nagi-labs/nagi-ui/blob/main/docs/evaluations/naming-derivation.md">method and limitations</a>,
+      inspect the
+      <a class="link" href="https://github.com/nagi-labs/nagi-ui/blob/main/docs/evaluations/naming-derivation.json">JSON result</a>,
+      or reproduce it with <code class="code">vp run evaluate:naming</code>.
+      The command is checked in Nagi UI's CI. These counts locate the remaining
+      naming choices; they do not measure human cognitive load.
+    </p>
+  </section>
+
+  <section class="section -tradeoffs">
+    <span class="text -eyebrow">Scope</span>
+    <h2 class="title">A narrow guarantee, with visible tradeoffs</h2>
+    <p class="p">
+      Tailwind puts presentational utilities in markup; StyleX provides typed,
+      deterministic property composition; Panda generates typed atomic styles
+      and recipes; CSS Modules provide local class scope. Nagi CSS does not
+      replace those guarantees. It keeps ordinary component CSS and instead
+      checks that semantic identities, selectors, and owned DOM paths agree.
+      Its experimental Tailwind <code class="code">@apply</code> backend is
+      separate from the stable plain-CSS mode.
+    </p>
+    <p class="p">
+      It does not prove that the DOM semantics, accessibility, visual result, or
+      maintenance cost are correct. It cannot completely analyze dynamic class
+      names or DOM outside the owned boundary. The question is narrower: when
+      component-owned CSS is your chosen medium, does making these structural
+      decisions executable help your real changes?
+    </p>
+    <p class="p">
+      Follow a real application from
+      <a class="link" href="https://github.com/nagi-labs/nagi-ui-deep-sea/blob/main/src/views/DashboardView.vue">Deep Sea's dashboard source</a>
+      into its
+      <a class="link" href="https://github.com/nagi-labs/nagi-ui-deep-sea/blob/main/eslint.config.mjs">lint configuration</a>.
+      Deep Sea also uses Nagi UI, but Nagi CSS itself does not require it.
+    </p>
   </section>
 
   <section class="section -agents">
+    <span class="text -eyebrow">For agents</span>
     <h2 class="title">Built for AI agents</h2>
     <p class="p">
       The repository ships an agent skill that packages the contract as a
       workflow: what to derive, in what order, and how to verify the result.
-      An agent applies the skill; the linter proves the output conforms.
-      Generate against a deterministic contract, then machine-check it — that
-      loop is how AI-written CSS stays consistent at scale.
+      An agent generates against a deterministic contract; the linter checks
+      the result. That loop keeps AI-written CSS inside the same rules applied
+      to human-written code.
     </p>
   </section>
 

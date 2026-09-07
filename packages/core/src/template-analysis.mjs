@@ -82,8 +82,25 @@ function isTransparentWrapper(node, config = {}) {
     node?.type === ELEMENT &&
     (node.tagType === TEMPLATE ||
       TRANSPARENT_TAGS.has(node.tag) ||
-      config.transparentComponents?.includes(node.tag))
+      config.transparentComponents?.some(
+        (component) => kebabCase(component) === kebabCase(node.tag),
+      ))
   )
+}
+
+function configuredComponentEntry(table = {}, tag = "") {
+  const canonicalTag = kebabCase(tag)
+  return Object.entries(table).find(
+    ([component]) => kebabCase(component) === canonicalTag,
+  )
+}
+
+function configuredComponentValue(table = {}, tag = "") {
+  return configuredComponentEntry(table, tag)?.[1]
+}
+
+function hasConfiguredComponent(table = {}, tag = "") {
+  return configuredComponentEntry(table, tag) !== undefined
 }
 
 // Walking the owned tree that the template describes, so a selector chain can be
@@ -577,7 +594,11 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
   const violations = []
   const surfaceRoots = new Set()
   const roleNames = new Set()
-  const topLayerSurfaces = new Set()
+  // Template syntax can establish that a surface is capable of entering the top
+  // layer, but not that it is there at runtime. A dialog enters only through
+  // showModal(), while a popover enters only while shown. Style analysis combines
+  // these capabilities with selectors that guarantee the corresponding state.
+  const topLayerCapabilities = new Map()
   const { descriptor, framework } = parseTemplateDocument(source, filename)
   const styleBlocks = unreadableStyleBlocks(descriptor.styles)
   // A style rule never runs on a block that failed to parse, so this
@@ -600,7 +621,7 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
       roleNames,
       styleBlocks,
       surfaceRoots,
-      topLayerSurfaces,
+      topLayerCapabilities,
       tree: [],
       violations,
     }
@@ -624,9 +645,9 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
   const isOwnedComponent = (node) =>
     node.tagType === COMPONENT &&
     !node.nagiOpaqueComponent &&
-    !Object.hasOwn(config.componentClasses, node.tag) &&
+    !hasConfiguredComponent(config.componentClasses, node.tag) &&
     !isTransparentWrapper(node, config) &&
-    !Object.hasOwn(config.intrinsicComponents, node.tag)
+    !hasConfiguredComponent(config.intrinsicComponents, node.tag)
   const childSurfaceRoots = new Set()
   const variantUsages = []
   // Classes the tables would put on elements this template already has. A rule
@@ -641,8 +662,8 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
     const variants = info.staticTokens.filter(isVariant)
 
     const configuredComponentBase =
-      node.tagType === COMPONENT && Object.hasOwn(config.componentClasses, node.tag)
-        ? config.componentClasses[node.tag]
+      node.tagType === COMPONENT
+        ? configuredComponentValue(config.componentClasses, node.tag)
         : null
     const derivedRoots = isOwnedComponent(node) ? childSurfaceRoot(node.tag) : []
     const baseTokens = [
@@ -677,11 +698,13 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
     collectVariantUsage(node)
 
     const intrinsicTag =
-      node.tagType === COMPONENT ? config.intrinsicComponents?.[node.tag] : undefined
+      node.tagType === COMPONENT
+        ? configuredComponentValue(config.intrinsicComponents, node.tag)
+        : undefined
     if (intrinsicTag) node = { ...node, tag: intrinsicTag, tagType: NATIVE }
     const configuredComponentBase =
-      node.tagType === COMPONENT && Object.hasOwn(config.componentClasses, node.tag)
-        ? config.componentClasses[node.tag]
+      node.tagType === COMPONENT
+        ? configuredComponentValue(config.componentClasses, node.tag)
         : null
 
     const info = extractClassInfo(node)
@@ -774,7 +797,10 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
 
     if (isSurfaceRoot && (node.tag === "dialog" || hasStaticAttr(node, "popover"))) {
       for (const token of [...identityTokens, ...slotSurfaceTokens]) {
-        topLayerSurfaces.add(token)
+        const capabilities = topLayerCapabilities.get(token) ?? new Set()
+        if (node.tag === "dialog") capabilities.add(":modal")
+        if (hasStaticAttr(node, "popover")) capabilities.add(":popover-open")
+        topLayerCapabilities.set(token, capabilities)
       }
     }
 
@@ -965,9 +991,9 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
     if (
       !isSurfaceRoot &&
       node.tagType === COMPONENT &&
-      Object.hasOwn(config.componentClasses, node.tag)
+      hasConfiguredComponent(config.componentClasses, node.tag)
     ) {
-      const required = config.componentClasses[node.tag]
+      const required = configuredComponentValue(config.componentClasses, node.tag)
       expectedClasses.add(required)
       if (classRequired(required) && !staticTokens.has(required)) {
         const fix = hasOwnedBaseClass(info.staticTokens, config)
@@ -997,7 +1023,9 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
           node.tagType === NATIVE && Object.hasOwn(config.elementClasses, node.tag)
             ? mappingBase(config.elementClasses[node.tag])
             : ""
-        const borrowsMappedIdentity = owners && !owners.has(node.tag)
+        const borrowsMappedIdentity =
+          owners &&
+          ![...owners].some((owner) => kebabCase(owner) === kebabCase(node.tag))
         const replacesMappedIdentity =
           requiredForTag &&
           token !== requiredForTag &&
@@ -1179,7 +1207,7 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
     styleBlocks,
     styles: descriptor.styles,
     surfaceRoots,
-    topLayerSurfaces,
+    topLayerCapabilities,
     tree,
     violations,
     sourceFile: path.resolve(filename),

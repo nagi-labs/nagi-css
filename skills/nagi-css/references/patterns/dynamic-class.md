@@ -4,7 +4,7 @@ Keep a static owned anchor and add dynamic library tokens only beside it. A
 variant may never be applied by a binding: something a binding switches on and
 off is runtime state, so it belongs in an attribute.
 
-<!-- nagi-check file=src/components/IconLabel.vue -->
+<!-- nagi-check file=src/components/icon-label.vue -->
 ```vue
 <template><section class="app-icon-label"><span class="icon" :class="iconName"><svg/></span><span class="value" :data-muted="muted"/></section></template>
 <style scoped>.app-icon-label { > .icon {} > .value[data-muted="true"] {} }</style>

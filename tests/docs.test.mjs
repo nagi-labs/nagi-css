@@ -22,7 +22,7 @@ const repository = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".
 // application code is. An example opts in with a comment naming the file it
 // stands for, so the surface root can be derived:
 //
-//   <!-- nagi-check file=src/components/UserCard.vue prefix=app- -->
+//   <!-- nagi-check file=src/components/user-card.vue prefix=app- -->
 //
 // Optional keys: prefix (default app-), components (comma-separated library
 // components), slots (Component.slot=class, comma-separated), emit (emitPolicy).

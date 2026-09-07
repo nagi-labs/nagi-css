@@ -19,13 +19,13 @@ Classify each layer first:
 Bad:
 
 ```vue
-<Card class="procedure-section">
+<card class="procedure-section">
   <template #title>
     <header class="header">
       <h2 class="title">Procedure</h2>
     </header>
   </template>
-</Card>
+</card>
 
 <style scoped>
 .procedure-section {
@@ -46,7 +46,7 @@ Problems:
 Good:
 
 ```vue
-<Card>
+<card>
   <template #title>
     <header class="card-title">
       <h2 class="title">Procedure</h2>
@@ -64,7 +64,7 @@ Good:
       ...
     </footer>
   </template>
-</Card>
+</card>
 ```
 
 Each styled slot receives the **declared sub-surface class** from the
@@ -97,9 +97,9 @@ Also valid when an outer owned layout element is needed:
 
 ```vue
 <section class="section -procedure">
-  <Card>
+  <card>
     ...
-  </Card>
+  </card>
 </section>
 ```
 

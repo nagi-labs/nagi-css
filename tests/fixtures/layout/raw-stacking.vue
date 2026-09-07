@@ -5,9 +5,11 @@
 </template>
 <style scoped>
 .test-raw-stacking {
-  margin: auto;
-  inset: 0;
-  z-index: 100;
+  &:modal {
+    margin: auto;
+    inset: 0;
+    z-index: 100;
+  }
   > .p { color: inherit; z-index: 2; }
 }
 </style>

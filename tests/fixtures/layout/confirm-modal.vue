@@ -5,9 +5,10 @@
 </template>
 <style scoped>
 .test-confirm-modal {
-  margin: auto;
-  inset: 0;
-  z-index: var(--z-modal);
+  &:modal {
+    margin: auto;
+    inset: 0;
+  }
   > .p { color: inherit; }
 }
 </style>
