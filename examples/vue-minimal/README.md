@@ -6,6 +6,18 @@ any package from the parent repository.
 
 [Open the example in StackBlitz](https://stackblitz.com/fork/github/nagi-labs/nagi-css/tree/main/examples/vue-minimal?startScript=dev)
 
+## Run the linter in StackBlitz
+
+The StackBlitz link starts only the Vite development server. It does not lint
+on save or add Nagi CSS diagnostics to the editor. Open another terminal and
+run:
+
+```sh
+npm run lint
+```
+
+The example does not install the global `vp` command inside StackBlitz.
+
 ## Run locally
 
 Requirements: Node.js 22.18 or newer and Vite+.
