@@ -19,6 +19,7 @@ const NATIVE = 0
 const COMPONENT = 1
 const TEMPLATE = 3
 const NON_IDENTIFYING_ROLES = new Set(["generic", "none", "presentation"])
+const PRESENTATIONAL_ELEMENTS = new Set(["b", "i", "s", "u"])
 const DYNAMIC_BRANCH_DIRECTIVES = new Set(["for", "if", "else-if", "else"])
 const LAYOUT_WRAPPER_DISPLAY_VALUES = new Set(["flex", "grid", "inline-flex", "inline-grid"])
 const LAYOUT_WRAPPER_PROPERTIES = new Set([
@@ -553,10 +554,6 @@ function replaceToken(info, from, to) {
   )
 }
 
-function hasOwnedBaseClass(tokens, config) {
-  return tokens.some((token) => !isVariant(token) && !isLibraryInternal(token, config))
-}
-
 function ownedBaseTokens(tokens, config, sets) {
   return tokens.filter(
     (token) =>
@@ -812,19 +809,72 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
       role &&
       sets.roleVocabulary.has(role) &&
       !NON_IDENTIFYING_ROLES.has(role)
+    const ownedComponent = isOwnedComponent(node)
+    const derivedRoots = ownedComponent ? childSurfaceRoot(node.tag) : []
+    for (const token of derivedRoots) childSurfaceRoots.add(token)
+    const passedThroughOwnedClasses = ownedComponent
+      ? info.staticTokens.filter(
+          (token) => !isVariant(token) && !derivedRoots.includes(token),
+        )
+      : []
+    const staticBaseTokens = ownedBaseTokens(info.staticTokens, config, sets)
+    const requiredElementIdentity =
+      !isSurfaceRoot &&
+      node.tagType === NATIVE &&
+      node.tag !== "div" &&
+      node.tag !== "span" &&
+      Object.hasOwn(config.elementClasses, node.tag)
+        ? mappingBase(config.elementClasses[node.tag])
+        : ""
+    const requiredComponentIdentity =
+      !isSurfaceRoot &&
+      node.tagType === COMPONENT &&
+      hasConfiguredComponent(config.componentClasses, node.tag)
+        ? configuredComponentValue(config.componentClasses, node.tag)
+        : ""
+    const elementStyledTrigger =
+      requiredElementIdentity &&
+      (classRequired(requiredElementIdentity) ||
+        [...allTokens].some((token) => styledClasses.has(token)))
+    const componentStyledTrigger =
+      requiredComponentIdentity &&
+      (classRequired(requiredComponentIdentity) ||
+        [...allTokens].some((token) => styledClasses.has(token)))
+    const roleStyledTrigger =
+      identifyingRole &&
+      (config.emitPolicy === "always" ||
+        styledClasses.has(role) ||
+        info.staticTokens.some((token) => styledClasses.has(token)))
+    const roleIdentityMismatch =
+      identifyingRole &&
+      !isSurfaceRoot &&
+      (roleStyledTrigger || staticBaseTokens.length > 0) &&
+      !staticTokens.has(role)
+    const elementIdentityMismatch =
+      requiredElementIdentity &&
+      elementStyledTrigger &&
+      !staticTokens.has(requiredElementIdentity)
+    const componentIdentityMismatch =
+      requiredComponentIdentity &&
+      componentStyledTrigger &&
+      !staticTokens.has(requiredComponentIdentity)
+    const isUnmappedPresentationalElement =
+      !isSurfaceRoot &&
+      node.tagType === NATIVE &&
+      PRESENTATIONAL_ELEMENTS.has(node.tag) &&
+      !Object.hasOwn(config.elementClasses, node.tag)
+    const presentationalIdentityMismatch =
+      isUnmappedPresentationalElement && staticBaseTokens.length > 0
+    const deterministicIdentityMismatch =
+      roleIdentityMismatch ||
+      elementIdentityMismatch ||
+      componentIdentityMismatch ||
+      presentationalIdentityMismatch ||
+      passedThroughOwnedClasses.length > 0
 
     if (identifyingRole && !isSurfaceRoot) {
-      const staticBaseTokens = ownedBaseTokens(info.staticTokens, config, sets)
-      const styledTrigger =
-        config.emitPolicy === "always" ||
-        styledClasses.has(role) ||
-        info.staticTokens.some((token) => styledClasses.has(token))
-
-      if (styledTrigger || staticBaseTokens.length > 0) expectedClasses.add(role)
-      if (
-        (styledTrigger || staticBaseTokens.length > 0) &&
-        !staticTokens.has(role)
-      ) {
+      if (roleStyledTrigger || staticBaseTokens.length > 0) expectedClasses.add(role)
+      if (roleIdentityMismatch) {
         const fix =
           staticBaseTokens.length === 1
             ? replaceToken(info, staticBaseTokens[0], role)
@@ -837,7 +887,7 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
           violations,
           node,
           "role-identity-required",
-          `<${node.tag}> with role="${role}" must use "${role}" as its table-first base identity instead of anatomy or STN.`,
+          `<${node.tag}> with role="${role}" must use "${role}" as its table-first base identity${staticBaseTokens.length > 0 ? `; found "${staticBaseTokens.join(" ")}"` : ""}.`,
           fix,
         )
       }
@@ -911,6 +961,7 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
 
     for (const token of allTokens) {
       if (!sets.banned.has(token)) continue
+      if (!acceptsRoleIdentity || deterministicIdentityMismatch) continue
       push(
         violations,
         node,
@@ -919,23 +970,6 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
           ? `Class "${token}" names a rendering rather than a meaning; use a semantic element such as <strong> or <em>, or a variant on the surrounding element.`
           : `Class "${token}" is a banned generic anatomy name.`,
       )
-    }
-
-    for (const token of allTokens) {
-      if (isVariant(token) || isLibraryInternal(token, config)) continue
-      if (!sets.anatomy.has(token) && !sets.stn.has(token)) continue
-      if (
-        node.tagType === NATIVE &&
-        node.tag !== "div" &&
-        node.tag !== "span"
-      ) {
-        push(
-          violations,
-          node,
-          "anatomy-allowed",
-          `Class "${token}" is ${sets.anatomy.has(token) ? "UI Anatomy" : "an STN tier"}; only <div> and <span> use the Semantics model. <${node.tag}> keeps its Element Class Table identity.`,
-        )
-      }
     }
 
     for (const token of allTokens) {
@@ -951,6 +985,8 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
           !sets.slotSurfaces.has(token)
         if (
           arbitrary &&
+          acceptsRoleIdentity &&
+          !deterministicIdentityMismatch &&
           !(acceptsRoleIdentity && token === role && staticTokens.has(token))
         ) {
           push(
@@ -963,56 +999,64 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
       }
     }
 
-    if (
-      !isSurfaceRoot &&
-      node.tagType === NATIVE &&
-      node.tag !== "div" &&
-      node.tag !== "span" &&
-      Object.hasOwn(config.elementClasses, node.tag)
-    ) {
-      const required = mappingBase(config.elementClasses[node.tag])
-      if (required) expectedClasses.add(required)
-      const styledTrigger =
-        classRequired(required) || [...allTokens].some((token) => styledClasses.has(token))
-      if (required && !staticTokens.has(required) && styledTrigger) {
-        const fix = hasOwnedBaseClass(info.staticTokens, config)
-          ? undefined
-          : buildClassFix(node, info, required)
+    if (requiredElementIdentity) {
+      expectedClasses.add(requiredElementIdentity)
+      if (elementIdentityMismatch) {
+        const wrong = staticBaseTokens.filter(
+          (token) => token !== requiredElementIdentity,
+        )
+        const fix =
+          wrong.length === 1 && staticBaseTokens.length === 1
+            ? replaceToken(info, wrong[0], requiredElementIdentity)
+            : staticBaseTokens.length === 0
+              ? buildClassFix(node, info, requiredElementIdentity)
+              : undefined
         push(
           violations,
           node,
           "element-class-required",
-          `<${node.tag}> requires the static class "${required}"${config.emitPolicy === "when-styled" ? " because it is styled" : ""}.`,
+          `<${node.tag}> must use the static Element Class Table identity "${requiredElementIdentity}"${wrong.length > 0 ? `; found "${wrong.join(" ")}"` : config.emitPolicy === "when-styled" ? " because it is styled" : ""}.`,
           fix,
         )
       }
     }
 
-    if (
-      !isSurfaceRoot &&
-      node.tagType === COMPONENT &&
-      hasConfiguredComponent(config.componentClasses, node.tag)
-    ) {
-      const required = configuredComponentValue(config.componentClasses, node.tag)
-      expectedClasses.add(required)
-      if (classRequired(required) && !staticTokens.has(required)) {
-        const fix = hasOwnedBaseClass(info.staticTokens, config)
-          ? undefined
-          : buildClassFix(node, info, required)
+    if (requiredComponentIdentity) {
+      expectedClasses.add(requiredComponentIdentity)
+      if (componentIdentityMismatch) {
+        const wrong = staticBaseTokens.filter(
+          (token) => token !== requiredComponentIdentity,
+        )
+        const fix =
+          wrong.length === 1 && staticBaseTokens.length === 1
+            ? replaceToken(info, wrong[0], requiredComponentIdentity)
+            : staticBaseTokens.length === 0
+              ? buildClassFix(node, info, requiredComponentIdentity)
+              : undefined
         push(
           violations,
           node,
           "component-class-required",
-          `<${node.tag}> requires the static class "${required}"${config.emitPolicy === "when-styled" ? " because it is styled" : ""}.`,
+          `<${node.tag}> must use the configured static component identity "${requiredComponentIdentity}"${wrong.length > 0 ? `; found "${wrong.join(" ")}"` : config.emitPolicy === "when-styled" ? " because it is styled" : ""}.`,
           fix,
         )
       }
+    }
+
+    if (presentationalIdentityMismatch) {
+      push(
+        violations,
+        node,
+        "element-class-required",
+        `<${node.tag}> has no Element Class Table identity because it names a rendering; leave it unstyled, use a semantic element such as <strong> or <em>, or put a variant on the surrounding element.`,
+      )
     }
 
     if (!isSurfaceRoot) {
       for (const token of allTokens) {
         if (isVariant(token) || isLibraryInternal(token, config)) continue
-        // Already reported as a banned name, with a message that explains why.
+        // Already reported by the Semantics model or the deterministic identity
+        // owner, with a message that explains the replacement.
         if (sets.banned.has(token)) continue
         // A div/span carrying the matching role keeps the role name as its base
         // identity, even when an element shares that spelling (dialog, menu, …).
@@ -1033,7 +1077,10 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
           !sets.anatomy.has(token) &&
           !sets.stn.has(token)
 
-        if (borrowsMappedIdentity || replacesMappedIdentity) {
+        if (
+          !deterministicIdentityMismatch &&
+          (borrowsMappedIdentity || replacesMappedIdentity)
+        ) {
           push(
             violations,
             node,
@@ -1046,23 +1093,18 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
       }
     }
 
-    const ownedComponent = isOwnedComponent(node)
-    const derivedRoots = ownedComponent ? childSurfaceRoot(node.tag) : []
-    for (const token of derivedRoots) childSurfaceRoots.add(token)
-
     if (ownedComponent) {
-      const passedThrough = info.staticTokens.filter(
-        (token) => !isVariant(token) && !derivedRoots.includes(token),
-      )
-      if (passedThrough.length > 0) {
+      if (passedThroughOwnedClasses.length > 0) {
         push(
           violations,
           node,
           "owned-component-identity",
-          `<${node.tag}> is an owned component: its root already carries "${derivedRoots[0]}", so style it with that class from this surface and remove "${passedThrough.join(" ")}".`,
+          `<${node.tag}> is an owned component: its root already carries "${derivedRoots[0]}", so style it with that class from this surface and remove "${passedThroughOwnedClasses.join(" ")}".`,
           rewriteClassFix(
             info,
-            info.staticTokens.filter((token) => !passedThrough.includes(token)),
+            info.staticTokens.filter(
+              (token) => !passedThroughOwnedClasses.includes(token),
+            ),
           ),
         )
       }

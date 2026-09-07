@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Template diagnostics now follow the table-first identity owner. A mistyped
+  class on a native element reports `element-class-required`; configured UI
+  components, owned components, and identifying `div`/`span` roles report their
+  corresponding identity rule without an additional `anatomy-allowed` error.
+  The `anatomy-allowed` rule is limited to the Semantics model used by `div` and
+  `span`; selector-only mistakes remain covered by structural selector
+  diagnostics such as `dead-rule`.
+- The MathML `<math>` root now self-maps to the `math` class like the SVG root;
+  MathML internals remain outside owned class analysis.
+
 ## 0.5.0 — 2026-09-07
 
 ### Changed

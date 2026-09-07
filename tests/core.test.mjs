@@ -4,6 +4,7 @@ import test from "node:test"
 import {
   analyzeTemplate,
   analyzeVueTemplate,
+  buildNagiSets,
   deriveAllowedSurfaceRootNames,
   defineNagiConfig,
   deriveSurfaceRootName,
@@ -226,13 +227,9 @@ test("row groups self-map and cells share one class, distinguished by ancestor",
         ruleId === "element-class-required" && message.includes('"thead"'),
     ),
   )
-  // `rowgroup` is no longer an element-table value, so it is only available to a
-  // div/span carrying the matching role.
-  assert.ok(
-    legacy.violations.some(
-      ({ message, ruleId }) =>
-        ruleId === "anatomy-allowed" && message.includes('"rowgroup"'),
-    ),
+  assert.equal(
+    legacy.violations.some(({ ruleId }) => ruleId === "anatomy-allowed"),
+    false,
   )
 })
 
@@ -510,6 +507,24 @@ test("does not descend into SVG and MathML internals", () => {
   assert.deepEqual(result.violations, [])
 })
 
+test("keeps a class identity on the MathML root while excluding its internals", () => {
+  const valid = analyzeVueTemplate(
+    `<template><section class="formula-host"><math class="math"><mrow><mi>x</mi></mrow></math></section></template><style>.formula-host { > .math {} }</style>`,
+    "/src/components/formula-host.vue",
+  )
+  const invalid = analyzeVueTemplate(
+    `<template><section class="formula-host"><math class="misspelled"><mrow><mi>x</mi></mrow></math></section></template><style>.formula-host { > .math {} }</style>`,
+    "/src/components/formula-host.vue",
+  )
+
+  assert.deepEqual(valid.violations, [])
+  assert.deepEqual(
+    invalid.violations.map(({ ruleId }) => ruleId),
+    ["element-class-required"],
+  )
+  assert.equal(invalid.violations[0].fix?.text, '"math"')
+})
+
 test("accepts an anatomy name backed by a matching static role", () => {
   const source = `
 <template><section class="role-surface"><div class="toolbar" role="toolbar" /></section></template>
@@ -555,7 +570,7 @@ test("keeps element-table identity ahead of additional ARIA semantics", () => {
   )
   assert.equal(
     roleInsteadOfElement.violations.some(({ ruleId }) => ruleId === "anatomy-allowed"),
-    true,
+    false,
   )
   assert.deepEqual([...roleInsteadOfElement.roleNames], [])
   assert.equal(
@@ -674,7 +689,7 @@ test("keeps Element Class Table identities on their owning tags", () => {
   )
   assert.equal(
     paragraphText.violations.some(({ ruleId }) => ruleId === "anatomy-allowed"),
-    true,
+    false,
   )
   assert.equal(
     paragraphText.violations.some(({ ruleId }) => ruleId === "element-class-required"),
@@ -901,6 +916,10 @@ test("rejects a class passed to an owned child component, and removes it", () =>
   )
 
   assert.ok(violation, JSON.stringify(result.violations))
+  assert.deepEqual(
+    result.violations.map(({ ruleId }) => ruleId),
+    ["owned-component-identity"],
+  )
   assert.match(violation.message, /already carries "app-user-avatar"/)
   assert.equal(
     source.slice(0, violation.fix.range[0]) +
@@ -1048,12 +1067,15 @@ test("purely presentational elements get no class of their own", () => {
     assert.ok(
       violations.some(
         ({ message, ruleId }) =>
-          ruleId === "anatomy-allowed" && message.includes("names a rendering"),
+          ruleId === "element-class-required" && message.includes("names a rendering"),
       ),
       tag,
     )
-    // one message, not also reserved-element-name
-    assert.deepEqual(violations.map(({ ruleId }) => ruleId), ["anatomy-allowed"], tag)
+    assert.deepEqual(
+      violations.map(({ ruleId }) => ruleId),
+      ["element-class-required"],
+      tag,
+    )
     // an unstyled one in prose needs no class at all
     assert.deepEqual(host(`<${tag}>x</${tag}>`), [], tag)
   }
@@ -1061,8 +1083,113 @@ test("purely presentational elements get no class of their own", () => {
   // the semantic elements the author should reach for keep their self-map
   assert.deepEqual(host(`<strong class="strong">x</strong>`), [])
   // Anatomy belongs only to div/span, including an icon wrapper.
-  assert.ok(host(`<i class="icon" />`).some(({ ruleId }) => ruleId === "anatomy-allowed"))
+  assert.ok(
+    host(`<i class="icon" />`).some(
+      ({ ruleId }) => ruleId === "element-class-required",
+    ),
+  )
   assert.deepEqual(host(`<span class="icon" />`), [])
+})
+
+test("table-first identity owners report mismatches without anatomy diagnostics", () => {
+  const analyze = (markup, style, config = {}) =>
+    analyzeVueTemplate(
+      `<template><section class="identity-host">${markup}</section></template><style>.identity-host { ${style} }</style>`,
+      "/src/components/identity-host.vue",
+      config,
+    ).violations
+
+  const cases = [
+    {
+      expected: "header",
+      markup: `<header class="heda" />`,
+      ruleId: "element-class-required",
+      style: `> .header {}`,
+    },
+    {
+      expected: "title",
+      markup: `<h2 class="heda" />`,
+      ruleId: "element-class-required",
+      style: `> .title {}`,
+    },
+    {
+      expected: "p",
+      markup: `<p class="text" />`,
+      ruleId: "element-class-required",
+      style: `> .p {}`,
+    },
+    {
+      expected: "item",
+      markup: `<li class="separator" role="separator" />`,
+      ruleId: "element-class-required",
+      style: `> .item {}`,
+    },
+    {
+      config: { componentClasses: ["DataTable"] },
+      expected: "pv-data-table",
+      markup: `<DataTable class="heda" />`,
+      ruleId: "component-class-required",
+      style: `> .pv-data-table {}`,
+    },
+    {
+      expected: "group",
+      markup: `<div class="heda" role="group" />`,
+      ruleId: "role-identity-required",
+      style: `> .group {}`,
+    },
+  ]
+
+  for (const entry of cases) {
+    const violations = analyze(entry.markup, entry.style, entry.config)
+    assert.deepEqual(violations.map(({ ruleId }) => ruleId), [entry.ruleId], entry.markup)
+    assert.match(violations[0].message, new RegExp(`"${entry.expected}"`))
+    assert.match(violations[0].message, /found "heda"|found "text"|found "separator"/)
+    assert.equal(violations[0].fix?.text, `"${entry.expected}"`)
+  }
+})
+
+test("every rendered Element Class Table entry owns its mismatch diagnostic", () => {
+  const config = defineNagiConfig()
+
+  for (const [tag, expected] of Object.entries(config.elementClasses)) {
+    // A framework <slot> outlet adds no rendered DOM level. Native Web Component
+    // shadow trees are outside the Vue/Svelte/Astro component parsers here.
+    if (tag === "slot") continue
+    const result = analyzeVueTemplate(
+      `<template><section class="identity-host"><${tag} class="misspelled" /></section></template><style>.identity-host { > .${expected} {} }</style>`,
+      "/src/components/identity-host.vue",
+      config,
+    )
+
+    assert.deepEqual(
+      result.violations.map(({ ruleId }) => ruleId),
+      ["element-class-required"],
+      tag,
+    )
+    assert.match(result.violations[0].message, new RegExp(`"${expected}"`), tag)
+    assert.equal(result.violations[0].fix?.text, `"${expected}"`, tag)
+  }
+})
+
+test("every identifying ARIA role owns its div mismatch diagnostic", () => {
+  const config = defineNagiConfig()
+  const roles = buildNagiSets(config).roleVocabulary
+
+  for (const role of roles) {
+    if (["generic", "none", "presentation"].includes(role)) continue
+    const result = analyzeVueTemplate(
+      `<template><section class="identity-host"><div class="misspelled" role="${role}" /></section></template><style>.identity-host { > .${role} {} }</style>`,
+      "/src/components/identity-host.vue",
+      config,
+    )
+
+    assert.deepEqual(
+      result.violations.map(({ ruleId }) => ruleId),
+      ["role-identity-required"],
+      role,
+    )
+    assert.equal(result.violations[0].fix?.text, `"${role}"`, role)
+  }
 })
 
 test("reports a class binding whose names cannot be read", () => {

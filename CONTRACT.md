@@ -121,6 +121,15 @@ ever made reproducible, and that this contract removes.
 11. Keep `-variant` names outside the protocol vocabulary; variants modify an
     anchor, they never name what an element is.
 
+Diagnostics follow the same first-match order. A wrong class on a native
+element is an Element Class Table error, a wrong configured component class is
+a component-identity error, and a mismatched identifying role on `div` or
+`span` is a role-identity error. `anatomy-allowed` applies only after the first
+three naming steps have fallen through to the `div`/`span` Semantics model.
+When a class exists only in CSS, selector structure rules such as `dead-rule`
+report that it has no corresponding owned template target; they do not guess
+which naming-table step would have owned an absent element.
+
 The rest of this document defines each rule precisely and explains the
 reasoning behind it.
 
@@ -257,7 +266,7 @@ Example of controllable DOM:
 </div>
 ```
 
-Here, `dialog-panel` owns `header`, `title`, and `text` because their structure and class names are part of the surface implementation.
+Here, `dialog-panel` owns `header`, `title`, and `p` because their structure and class names are part of the surface implementation.
 
 Example of uncontrollable DOM:
 

@@ -629,7 +629,6 @@ test("ESLint reports every selector contract family", async () => {
   assert.deepEqual(
     [...rules].sort(),
     [
-      "nagi-css/anatomy-allowed",
       "nagi-css/bare-element-selector",
       "nagi-css/boundary-nesting",
       "nagi-css/boundary-slot-surface-required",
@@ -648,7 +647,6 @@ test("ESLint reports every selector and value contract family", async () => {
   const ruleIds = new Set(result.messages.map(({ ruleId }) => ruleId))
 
   for (const ruleId of [
-    "anatomy-allowed",
     "bare-element-selector",
     "boundary-nesting",
     "boundary-slot-surface-required",
@@ -739,7 +737,60 @@ test("ESLint rejects an Element Class Table identity on the wrong tag", async ()
     result.messages.filter(({ ruleId }) => ruleId === "nagi-css/reserved-element-name").length,
     1,
   )
-  assert.ok(result.messages.some(({ ruleId }) => ruleId === "nagi-css/anatomy-allowed"))
+  assert.equal(
+    result.messages.some(({ ruleId }) => ruleId === "nagi-css/anatomy-allowed"),
+    false,
+  )
+  assert.equal(
+    result.messages.filter(
+      ({ ruleId }) => ruleId === "nagi-css/element-class-required",
+    ).length,
+    1,
+  )
+})
+
+test("ESLint reports a mistyped native identity under the Element Class Table rule", async () => {
+  const eslint = new ESLint({
+    cwd: root,
+    overrideConfigFile: true,
+    overrideConfig: createNagiStandaloneEslintConfigs(testSurface),
+  })
+  const [result] = await eslint.lintText(
+    `<template><section class="test-header-host"><header class="heda" /></section></template>
+<style scoped>.test-header-host { > .header {} }</style>`,
+    { filePath: path.join(root, "fixtures/header-host.vue") },
+  )
+
+  assert.deepEqual(
+    result.messages.map(({ ruleId }) => ruleId),
+    ["nagi-css/element-class-required"],
+  )
+  assert.match(result.messages[0].message, /<header>.*"header".*found "heda"/)
+})
+
+test("ESLint limits anatomy diagnostics to div and span", async () => {
+  const eslint = new ESLint({
+    cwd: root,
+    overrideConfigFile: true,
+    overrideConfig: createNagiStandaloneEslintConfigs(testSurface),
+  })
+  const [result] = await eslint.lintText(
+    `<template><section class="test-identity-host"><header class="heda" /><div class="mystery" /></section></template>
+<style scoped>.test-identity-host { > .header {} > .mystery {} > .ghost {} }</style>`,
+    { filePath: path.join(root, "fixtures/identity-host.vue") },
+  )
+
+  const anatomy = result.messages.filter(
+    ({ ruleId }) => ruleId === "nagi-css/anatomy-allowed",
+  )
+  assert.equal(anatomy.length, 1)
+  assert.match(anatomy[0].message, /Class "mystery"/)
+  assert.ok(
+    result.messages.some(
+      ({ ruleId, message }) =>
+        ruleId === "nagi-css/dead-rule" && message.includes('".ghost"'),
+    ),
+  )
 })
 
 test("ESLint rejects multiple base identities", async () => {

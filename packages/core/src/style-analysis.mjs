@@ -43,7 +43,6 @@ function loadTokenLayers(sources = []) {
 }
 
 export const STYLE_RULE_IDS = [
-  "anatomy-allowed",
   "bare-element-selector",
   "boundary-nesting",
   "boundary-slot-surface-required",
@@ -73,8 +72,6 @@ export const STYLE_RULE_IDS = [
 ]
 
 export const STYLE_RULE_DESCRIPTIONS = {
-  "anatomy-allowed":
-    "Allow only contract anatomy, role, element, component, and STN names in selectors",
   "bare-element-selector": "Require class selectors for styled elements inside owned DOM",
   "boundary-nesting": "Keep slot surfaces nested below their UI-library boundary",
   "boundary-slot-surface-required":
@@ -447,40 +444,13 @@ export function analyzeStyleRoot(root, inputConfig, templateContext = emptyTempl
     )
   }
 
-  function checkAnatomy(rule, nodes) {
+  function checkClassTokens(rule, nodes) {
     if (hasDeepPseudo(nodes)) return
     checkSingleBaseIdentity(rule, nodes)
     for (const node of classNodesDeep(nodes)) {
       const token = node.value
       if (checkState(rule, token)) continue
-      if (token.startsWith("-")) {
-        checkVariantShadow(rule, token)
-        continue
-      }
-      if (isLibraryInternal(token, config)) continue
-      if (sets.banned.has(token)) {
-        report(rule, "anatomy-allowed", `Class ".${token}" is a banned generic anatomy name.`, `.${token}`)
-        continue
-      }
-      const allowed =
-        sets.elementValues.has(token) ||
-        sets.anatomy.has(token) ||
-        sets.stn.has(token) ||
-        sets.componentValues.has(token) ||
-        sets.slotSurfaces.has(token) ||
-        surfaceRoots.has(token) ||
-        // An owned child component placed in this template: derived from its tag,
-        // so a typo or a stale name after a rename is rejected here.
-        childSurfaceRoots.has(token) ||
-        roleNames.has(token)
-      if (!allowed) {
-        report(
-          rule,
-          "anatomy-allowed",
-          `Class ".${token}" is not an element, component, anatomy, STN, slot-surface, or matching role name.`,
-          `.${token}`,
-        )
-      }
+      if (token.startsWith("-")) checkVariantShadow(rule, token)
     }
   }
 
@@ -865,10 +835,6 @@ export function analyzeStyleRoot(root, inputConfig, templateContext = emptyTempl
           checkVariantShadow(rule, token)
           continue
         }
-        if (sets.banned.has(token)) {
-          report(rule, "anatomy-allowed", `Class ".${token}" is a banned generic anatomy name.`, `.${token}`)
-          continue
-        }
         if (sets.slotSurfaces.has(token) && !sets.detachedSlotSurfaces.has(token)) {
           report(
             rule,
@@ -902,7 +868,7 @@ export function analyzeStyleRoot(root, inputConfig, templateContext = emptyTempl
       for (let index = 1; index < compounds.length; index += 1) {
         checkEdge(rule, combinators[index - 1], compounds[index - 1], compounds[index])
         checkBareElements(rule, compounds[index])
-        checkAnatomy(rule, compounds[index])
+        checkClassTokens(rule, compounds[index])
       }
     }
     const guaranteesTopLayer = topLevelGuaranteesTopLayer(alternatives, surfaceSubject)
@@ -969,7 +935,7 @@ export function analyzeStyleRoot(root, inputConfig, templateContext = emptyTempl
       checkFlatBoundaryContinuations(rule, compounds)
       if (mode === "merge") {
         if (compounds.length === 1) surfaceSubject ??= parentSurfaceToken
-        checkAnatomy(rule, compounds[0])
+        checkClassTokens(rule, compounds[0])
       } else {
         checkEdge(
           rule,
@@ -980,12 +946,12 @@ export function analyzeStyleRoot(root, inputConfig, templateContext = emptyTempl
           endsInOwnedComponentRoot(parentChain),
         )
         checkBareElements(rule, compounds[0])
-        checkAnatomy(rule, compounds[0])
+        checkClassTokens(rule, compounds[0])
       }
       for (let index = 1; index < compounds.length; index += 1) {
         checkEdge(rule, combinators[index - 1], compounds[index - 1], compounds[index])
         checkBareElements(rule, compounds[index])
-        checkAnatomy(rule, compounds[index])
+        checkClassTokens(rule, compounds[index])
       }
     }
     const guaranteesTopLayer = nestedGuaranteesTopLayer(

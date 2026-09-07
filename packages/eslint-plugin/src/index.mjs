@@ -30,11 +30,11 @@ const FIXABLE_RULES = new Set([
 
 const ruleDescriptions = {
   ...STYLE_RULE_DESCRIPTIONS,
-  "anatomy-allowed": "Allow only contract anatomy, role, element, component, and STN names",
+  "anatomy-allowed": "Allow only contract anatomy, role, and STN names on div and span",
   "component-class-required": "Require configured static component classes when styled",
   "dynamic-class-requires-static-anchor":
     "Require a static owned class beside every dynamic class binding",
-  "element-class-required": "Require configured static element classes when styled",
+  "element-class-required": "Enforce the Element Class Table identity when styled",
   "layout-only-wrapper":
     "Review sole-child div or span wrappers that only establish flex or grid layout around one child branch",
   "reserved-element-name": "Keep Element Class Table identities on their owning elements",
