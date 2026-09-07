@@ -6,7 +6,9 @@
 
 - Configured component, intrinsic-component, and transparent-component names
   now match their kebab-case template spelling, so a `DataTable` configuration
-  entry applies to `<data-table>`.
+  entry applies to `<data-table>`. Entries that canonicalize to the same
+  spelling but resolve to conflicting values are rejected as configuration
+  errors; identical aliases remain accepted for migration compatibility.
 - Surface rules explicitly limited by `:modal` or `:popover-open` now reject
   `z-index`, because matching top-layer boxes are ordered by insertion order
   rather than the ordinary z-index stacking rules. A dialog tag or `popover`

@@ -99,6 +99,12 @@ componentClasses: {
 }
 ```
 
+Configuration names match template tags through their canonical kebab-case
+spelling. List only one spelling in new configuration. Identical aliases remain
+accepted for migration compatibility, but mappings such as
+`DataTable: "ui-data-table"` and `"data-table": "legacy-data-table"` are a
+configuration error because the same canonical tag would have two meanings.
+
 Do not register application-owned components here. Their surface root is
 derived from their own filename and the required `surfaceRootPrefixes`.
 

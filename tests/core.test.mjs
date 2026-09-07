@@ -127,12 +127,12 @@ test("keeps initialisms as one kebab-case word in derived surface names", () => 
 
 test("requires an automatically derived UI library class", () => {
   const missing = analyzeVueTemplate(
-    `<template><section class="table-host"><DataTable /></section></template><style>.table-host { > .pv-data-table {} }</style>`,
+    `<template><section class="table-host"><data-table /></section></template><style>.table-host { > .pv-data-table {} }</style>`,
     "/src/components/table-host.vue",
     { componentClasses: ["DataTable"] },
   )
   const present = analyzeVueTemplate(
-    `<template><section class="table-host"><DataTable class="pv-data-table" /></section></template><style>.table-host { > .pv-data-table {} }</style>`,
+    `<template><section class="table-host"><data-table class="pv-data-table" /></section></template><style>.table-host { > .pv-data-table {} }</style>`,
     "/src/components/table-host.vue",
     { componentClasses: ["DataTable"] },
   )
@@ -142,6 +142,63 @@ test("requires an automatically derived UI library class", () => {
     true,
   )
   assert.deepEqual(present.violations, [])
+})
+
+test("matches intrinsic and transparent component config against kebab-case tags", () => {
+  const result = analyzeVueTemplate(
+    `<template>
+  <section class="motion-card">
+    <render-only>
+      <motion-box class="unit">
+        <span class="text">Ready</span>
+      </motion-box>
+    </render-only>
+  </section>
+</template>
+<style>
+.motion-card {
+  > .unit {
+    > .text {}
+  }
+}
+</style>`,
+    "/src/components/motion-card.vue",
+    {
+      intrinsicComponents: { MotionBox: "div" },
+      transparentComponents: ["RenderOnly"],
+    },
+  )
+
+  assert.deepEqual(result.violations, [])
+  assert.equal(result.tree[0].children[0].tag, "div")
+  assert.equal(result.tree[0].children[0].children[0].tag, "span")
+})
+
+test("rejects conflicting component config entries with the same canonical name", () => {
+  const aliases = validateNagiConfig(
+    defineNagiConfig({
+      componentClasses: ["DataTable", "data-table"],
+      intrinsicComponents: { MotionBox: "div", "motion-box": "div" },
+      surfaceRootPrefixes: ["app-"],
+      transparentComponents: ["RenderOnly", "render-only"],
+    }),
+  )
+  const errors = validateNagiConfig(
+    defineNagiConfig({
+      componentClasses: {
+        DataTable: "ui-data-table",
+        "data-table": "legacy-data-table",
+      },
+      intrinsicComponents: { MotionBox: "div", "motion-box": "span" },
+      surfaceRootPrefixes: ["app-"],
+    }),
+  )
+
+  assert.deepEqual(aliases, [])
+  assert.deepEqual(errors, [
+    'componentClasses contains conflicting component names "DataTable" and "data-table"; both canonicalize to "data-table" but resolve to different values',
+    'intrinsicComponents contains conflicting component names "MotionBox" and "motion-box"; both canonicalize to "motion-box" but resolve to different values',
+  ])
 })
 
 test("row groups self-map and cells share one class, distinguished by ancestor", () => {

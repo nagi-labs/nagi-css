@@ -751,6 +751,11 @@ A UI library component root that you place in your own markup takes a fixed clas
 
 When a configured library component does not provide an explicit class value, its class is deterministic: the default `pv-` prefix plus the component name in kebab-case (`DataTable` → `pv-data-table`). Configuration names and template tags are matched through that same canonical spelling, so `DataTable` identifies `<data-table>`. `componentClassPrefix` changes the prefix, and an explicit `componentClasses` object value overrides the derived name.
 
+Duplicate spellings of one canonical component name are unnecessary. Identical
+aliases remain accepted for migration compatibility, but `componentClasses`
+or `intrinsicComponents` entries that canonicalize to the same tag and resolve
+to different values are rejected instead of choosing by insertion order.
+
 ```js
 componentClasses: ["DataTable", "Column"]
 // pv-data-table, pv-column

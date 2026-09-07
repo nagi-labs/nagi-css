@@ -284,7 +284,7 @@ export default [
     </p>
     <p class="p">
       For a complete isolated Vite project pinned to Node 22.18+, ESLint 10.10,
-      Vue 3.5.42, and the published Nagi CSS plugin 0.4.0, use the
+      Vue 3.5.42, and published npm dependencies, use the
       <a class="link" href="https://github.com/nagi-labs/nagi-css/tree/main/examples/vue-minimal">Vue minimal example</a>.
       Run <code class="code">vp install --frozen-lockfile</code>,
       <code class="code">vp run lint</code>, and <code class="code">vp run build</code>.
@@ -303,37 +303,50 @@ export default [
     </p>
     <ul class="list -metrics">
       <li class="item">
-        <strong class="strong">82.8%</strong>
-        <span>names determined or bounded</span>
+        <strong class="strong">76.8%</strong>
+        <span>contract-determined explicit bases</span>
         <p class="p">
-          Of 670 explicit class tokens, 555 are base identities: 426 are derived
-          directly and 129 are selected from four bounded anatomy words. All 670
-          tokens fall into a recognized contract category and receive its
-          mechanical checks; that 100% coverage does not prove every class is
-          necessary.
+          Of 555 explicit base identities, 426 follow directly from the surface,
+          component boundary or slot, ARIA role, STN position, or native element
+          mapping.
+        </p>
+      </li>
+      <li class="item">
+        <strong class="strong">100%</strong>
+        <span>explicit bases need no new vocabulary</span>
+        <p class="p">
+          The other 129 of 555 explicit bases (23.2%) select from four bounded
+          anatomy words. They require a choice and are not counted as
+          contract-determined; together the two categories cover 555 / 555 bases.
+        </p>
+      </li>
+      <li class="item">
+        <strong class="strong">82.4%</strong>
+        <span>determined with implicit components</span>
+        <p class="p">
+          Including 176 component tags whose identities are implicit, 602 / 731
+          identities are contract-determined. All 731 / 731 require no new
+          vocabulary after bounded anatomy is included.
         </p>
       </li>
       <li class="item">
         <strong class="strong">17.2%</strong>
         <span>author-named variants</span>
         <p class="p">
-          The remaining 115 of 670 tokens are variant occurrences. They use 64
-          repository-wide stems and 77 file-local names, including
-          <code class="code">-primary</code>, <code class="code">-compact</code>,
-          <code class="code">-preview</code>, and <code class="code">-status</code>.
-          Nagi CSS checks their form, ordering, placement, and peer relationship;
-          it does not derive the local word.
+          Of all 670 explicit class tokens, 115 are variant occurrences whose
+          local word is chosen by the author. Nagi CSS checks their form,
+          ordering, placement, and peer relationship; it does not derive the
+          word.
         </p>
       </li>
     </ul>
     <p class="p">
-      An occurrence is a use in markup, not a separate invention. A
-      repository-wide stem counts repeated spellings once, while a file-local
-      name better locates where a component author meets the decision. The
-      source set includes documentation and preview fixtures, where the variant
-      rate is higher, and excludes package Blueprints. This is one self-hosted
-      repository, not a benchmark or a universal Nagi CSS rate. The source set
-      is measured with Nagi CSS 0.4.0. Read the
+      The 100% base result and the 17.2% variant result use different populations:
+      555 base identities versus all 670 explicit class tokens. An occurrence is
+      a use in markup, not a separate invention. The source set includes
+      documentation and preview fixtures, where the variant rate is higher, and
+      excludes package Blueprints. This is one self-hosted repository, not a
+      benchmark or a universal Nagi CSS rate. Read the
       <a class="link" href="https://github.com/nagi-labs/nagi-ui/blob/main/docs/evaluations/naming-derivation.md">method and limitations</a>,
       inspect the
       <a class="link" href="https://github.com/nagi-labs/nagi-ui/blob/main/docs/evaluations/naming-derivation.json">JSON result</a>,

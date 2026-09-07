@@ -126,6 +126,7 @@ selector rather than an `-assistive` or `-sr-only` class. See
 - [Configuration reference](skills/nagi-css/references/configuration.md) — UI libraries, slots, severity, emit policy, and tokens
 - [Agent instructions](AGENTS.md) — portable rules for agents editing components
 - [Agent skill](skills/nagi-css) — the complete generate-and-verify workflow
+- [Migrating to 0.5](docs/migrations/0.5.md) — component-name matching and stacking diagnostics
 - [Migrating to 0.4](docs/migrations/0.4.md) — peer-based variant rules
 - [Migrating to 0.3](docs/migrations/0.3.md) — lint behavior and configuration changes
 
@@ -144,7 +145,7 @@ Nagi CSS checks Vue, Svelte, and Astro component templates together with their
 CSS `<style>` blocks. Nuxt is supported through Vue's parser and Nuxt's generated
 ESLint config. The default `plain` declaration mode needs no additional CSS
 compiler. `tailwind-apply` requires the application to provide Tailwind's build
-integration and remains experimental in 0.3.x; its coverage and API may change
+integration and remains experimental; its coverage and API may change
 before it is promoted to a stable backend.
 
 Preprocessor syntax and standalone `.css` files are outside the component-owned
