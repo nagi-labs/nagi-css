@@ -113,7 +113,7 @@ The shallowest STN tier is `unit` or coarser. Descendant STN tiers are
 consecutive. A surface that starts above `unit` reaches `g` before the
 structural ladder ends.
 
-`unit` is a hierarchy name, not a measurement unit; `fr` means `fraction`.
+`unit` is a hierarchy name, not a measurement unit; `fr` means `fragment`.
 Use `.unit` / `class="unit"` for code search and “STN unit” when prose is
 ambiguous. The canonical contract records why `pane`, `area`, `space`, and
 `tract` were rejected.

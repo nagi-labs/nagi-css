@@ -999,8 +999,9 @@ be verified in the rendered component and its browser tests.
 `unit` is a hierarchy name, not a measurement unit. In source it appears as a
 class token (`class="unit"`, `.unit`), so search for that code form or say “STN
 unit” when prose needs to distinguish it from a unit test. Two tiers below it,
-`fr` is short for **fraction**. In a class token it is an STN tier; in a CSS
-declaration value it retains the standard CSS Grid fractional-unit meaning.
+`fr` is short for **fragment**. In a class token it is an STN tier; in a CSS
+declaration value the same spelling independently retains the standard CSS Grid
+fractional-unit meaning.
 The leaf remains `g` rather than `u`, because `u` collides with the rendered
 `<u>` element and its fixed class.
 

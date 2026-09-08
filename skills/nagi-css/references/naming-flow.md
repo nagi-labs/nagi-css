@@ -81,7 +81,7 @@ This class is a boundary **anchor, not a `>` licence into internals**. Style lib
   - **Floor**: the shallowest STN in a surface (no STN ancestor) is `unit` or coarser — never `seg`/`fr`/`g` at the top. So an isolated STN div is `unit`.
   - **Reach-g**: if a surface uses a tier coarser than `unit` (`block`/`region`/`stratum`) it must also use `g` ("`block` without `g`" is illegal).
 
-  Effect: coarse names appear only in genuinely deep surfaces (a "this is deep → maybe split" signal). Past `g` → split the surface. Local meaning via a non-vocabulary variant (`unit -filters`), never by changing the tier. Static sibling STN branches at the same tier each need a variant unique among those peers (`unit -announcements` and `unit -stack`); repeated collection instances and mutually exclusive conditional branches are excluded. `unit` is a hierarchy name, not a measurement unit; `fr` is short for `fraction`.
+  Effect: coarse names appear only in genuinely deep surfaces (a "this is deep → maybe split" signal). Past `g` → split the surface. Local meaning via a non-vocabulary variant (`unit -filters`), never by changing the tier. Static sibling STN branches at the same tier each need a variant unique among those peers (`unit -announcements` and `unit -stack`); repeated collection instances and mutually exclusive conditional branches are excluded. `unit` is a hierarchy name, not a measurement unit; `fr` is short for `fragment`.
 
 ## Reserved-element-name rule
 
