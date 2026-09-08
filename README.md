@@ -153,6 +153,23 @@ contract. Global resets, token declarations, and cross-surface exceptions remain
 the application's responsibility. See the [contract](CONTRACT.md) for the exact
 boundary.
 
+## Acknowledgements
+
+Nagi CSS would not exist in its current form without
+[RSCSS](https://ricostacruz.com/rscss/) by
+[Rico Sta. Cruz](https://ricostacruz.com/).
+
+RSCSS showed me that a small set of conventions—thinking in components, naming
+elements locally, and using direct-child selectors to protect component
+boundaries—could make CSS dramatically easier to reason about.
+
+Nagi CSS takes those ideas in a more mechanically enforceable direction,
+deriving names from HTML and checking ownership boundaries statically. But its
+starting point is unmistakably RSCSS.
+
+Thank you, Rico, for publishing an approach that has shaped how I think about
+CSS for years.
+
 ## Development
 
 Install dependencies and run the test suite through Vite Plus:
