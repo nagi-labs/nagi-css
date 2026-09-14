@@ -18,6 +18,11 @@ test("release staging replaces workspace ranges and includes public documents", 
   })
 
   const packageDirectories = ["core", "eslint-plugin", "cli"]
+  const stagedCore = path.join(repository, ".release/packages/core")
+  const coreManifest = JSON.parse(await fs.readFile(path.join(stagedCore, "package.json"), "utf8"))
+  for (const entry of ["./role-definition.schema.json", "./anatomy-definitions.json"]) {
+    await fs.access(path.join(stagedCore, coreManifest.exports[entry]))
+  }
   for (const directory of packageDirectories) {
     const root = path.join(repository, ".release/packages", directory)
     const manifest = JSON.parse(await fs.readFile(path.join(root, "package.json"), "utf8"))

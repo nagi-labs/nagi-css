@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import path from "node:path"
+import fs from "node:fs/promises"
 import { pathToFileURL } from "node:url"
 
 import { ESLint } from "eslint"
@@ -13,6 +14,8 @@ import {
   defineNagiConfig,
   validateNagiConfig,
   validateSeverity,
+  analyzeComponent,
+  createIdentityReport,
 } from "@nagi-labs/nagi-css-core"
 
 const knownRuleIds = Object.keys(eslintRules)
@@ -27,6 +30,7 @@ function parseArgs(argv) {
     if (value === "--config") args.config = values.shift() ?? null
     else if (value === "--cwd") args.cwd = path.resolve(values.shift() ?? ".")
     else if (value === "--fix") args.fix = true
+    else if (value === "--json") args.json = true
     else if (value === "--help" || value === "-h") args.command = "help"
     else throw new Error(`Unknown argument: ${value}`)
   }
@@ -37,9 +41,13 @@ function parseArgs(argv) {
 function usage() {
   return `Usage:
   nagi-css check --config <external-config.mjs> --cwd <target-directory> [--fix]
+  nagi-css measure --config <external-config.mjs> --cwd <target-directory> [--json]
 
 The configuration file may live outside the target repository. --fix only
-applies fixes whose correct output the contract can derive.`
+applies fixes whose correct output the contract can derive without stale CSS.
+measure counts static styled internal declarations: Predefined, Defined,
+Unregistered, Structural.
+Surfaces, boundaries, invalid and unknown nodes are separate. Zero denominator is N/A.`
 }
 
 async function loadConfig(configPath) {
@@ -65,6 +73,7 @@ async function runEslint(cwd, config, fix) {
   })
   const results = await eslint.lintFiles(files)
   if (fix) await ESLint.outputFixes(results)
+  if (config.measure) return results
   return results.flatMap((result) =>
     result.messages.map((message) => ({
       column: message.column ?? 1,
@@ -123,10 +132,15 @@ export async function run(
     output.stdout.write(`${usage()}\n`)
     return 0
   }
-  if (args.command !== "check") throw new Error(`Unknown command: ${args.command}`)
+  if (!["check", "measure"].includes(args.command))
+    throw new Error(`Unknown command: ${args.command}`)
+  if (args.command === "measure" && args.fix) throw new Error("measure does not support --fix")
+  if (args.command !== "measure" && args.json)
+    throw new Error("--json is supported by measure only")
 
   const loaded = await loadConfig(args.config)
   const semantic = defineNagiConfig(loaded.semantic)
+  semantic.definitionsBaseDir ??= path.dirname(path.resolve(args.config))
   // Token sources are written relative to the application being checked, not to
   // wherever the external config file happens to live.
   semantic.tokens = {
@@ -146,7 +160,59 @@ export async function run(
     return 2
   }
 
-  const config = { ...loaded, semantic, severity }
+  const config = { ...loaded, semantic, severity, measure: args.command === "measure" }
+  if (config.measure) {
+    const results = await runEslint(args.cwd, config, false)
+    const analyses = []
+    for (const result of results) {
+      if (result.fatalErrorCount > 0) {
+        analyses.push({
+          sourceFile: result.filePath,
+          violations: result.messages
+            .filter((message) => message.fatal)
+            .map(({ message, line, column }) => ({
+              ruleId: "template-parse-error",
+              message,
+              line,
+              column,
+            })),
+        })
+        continue
+      }
+      try {
+        analyses.push(
+          analyzeComponent(await fs.readFile(result.filePath, "utf8"), result.filePath, semantic),
+        )
+      } catch (error) {
+        analyses.push({
+          sourceFile: result.filePath,
+          violations: [{ ruleId: "parse-error", message: error.message, line: 1, column: 1 }],
+        })
+      }
+    }
+    const report = createIdentityReport(analyses)
+    const percentage = (rate) =>
+      rate.percentage === null ? "N/A" : `${rate.count} / ${rate.total} = ${rate.percentage}%`
+    output.stdout.write(
+      args.json
+        ? `${JSON.stringify(report, null, 2)}\n`
+        : [
+            `Predefined: ${percentage(report.predefinedRate)}`,
+            `Defined: ${percentage(report.definedRate)}`,
+            `Definition coverage: ${percentage(report.definitionCoverage)}`,
+            `Unregistered: ${percentage(report.unregisteredRate)}`,
+            `Structural: ${percentage(report.structuralRate)}`,
+            `Definition sources: ${Object.entries(report.providers)
+              .map(([provider, count]) => `${provider}=${count}`)
+              .join("; ")}`,
+            `Surfaces: ${report.surfaces}; boundaries: ${report.componentBoundaries}; unstyled internal: ${report.unstyledInternal}`,
+            `Invalid internal: ${report.invalid}; unknown internal: ${report.unknown}; parse failures: ${report.parseFailures}`,
+            `All unverifiable nodes: ${report.unverifiableNodes}; unverified scopes: ${report.unverifiedScopes}`,
+            "",
+          ].join("\n"),
+    )
+    return results.some((result) => result.errorCount > 0) || report.parseFailures ? 1 : 0
+  }
   const diagnostics = await runEslint(args.cwd, config, args.fix)
   const report = formatReport(diagnostics, args.cwd)
   if (report) output.stdout.write(`${report}\n`)

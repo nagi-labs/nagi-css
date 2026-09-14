@@ -92,6 +92,70 @@ While versions remain below 1.0, a new rule, configuration key, default
 diagnostic, or derived-name change increments the minor version. Reserve a patch
 release for corrections that preserve the existing contract.
 
+## Local candidate verification
+
+Run these commands in the checkout's Node environment (on the host for a host
+checkout, or inside the sandbox for a sandbox checkout). They do not publish.
+Run tests before packing: release tests and `release:prepare` recreate the
+generated `.release` directory, including its consumer installation.
+
+```sh
+vp run test
+vp run docs:check
+vp run release:prepare
+```
+
+From each of `.release/packages/core`, `.release/packages/eslint-plugin`, and
+`.release/packages/cli`, run:
+
+```sh
+vp exec npm pack --pack-destination ../../tarballs --json
+```
+
+Inspect the file lists, synchronized versions, internal dependency versions,
+schema and definition exports, and public documents. From `.release/smoke`, run:
+
+```sh
+vp exec npm install --ignore-scripts --prefix .
+vp exec node --input-type=module -e 'await import("@nagi-labs/nagi-css-core"); await import("@nagi-labs/eslint-plugin-nagi-css")'
+vp exec node node_modules/@nagi-labs/nagi-css/src/cli.mjs --help
+```
+
+Copy `examples/vue-minimal` and the relevant Nagi UI working tree to fresh
+temporary directories, excluding `node_modules` and generated reports. Preserve
+uncommitted source when it is part of the candidate; a Git archive alone is not
+sufficient. Replace Nagi CSS dependencies in these isolated copies with the
+packed tarballs. Override transitive core/plugin dependencies to those same
+tarballs, so no registry or workspace copy substitutes for the candidate.
+Install afresh, then run the Vue example's lint and build.
+
+For the scoped-role integration, check the Button, Checkbox, Disclosure, and
+RangeSlider Blueprints, plus alternate owned RangeSlider and CLI-owned Checkbox
+implementations. Load the public aggregate CSS definition for the standard
+implementations and the selected aggregate for owned implementations. Keep
+owned files outside the consumer component-boundary map. Run actual ESLint
+against these files as well as the definition audits and related browser tests;
+core API probes alone do not exercise the packaged plugin.
+
+Also run the consumer's normal integration and unit checks. Record their results
+separately from the focused checks: passing the pilot scopes is not a passing
+result for all Blueprints. In particular, migrate deprecated vocabulary
+configuration and review newly visible uncertainty diagnostics in integrations
+that promote every rule to an error. Do not lower severities or skip existing
+tests merely to qualify a candidate.
+
+Consumer migration completion is not a Nagi CSS release gate by itself. Classify
+each remaining finding against the documented contract and a reproducible
+source example. A false positive, broken package integration, or unresolved
+decision requiring a Nagi CSS schema, API, or resolver change blocks release.
+An expected uncertainty diagnostic promoted to an error by a consumer's stricter
+policy does not, provided its migration implications are documented and the
+declared conformance scopes and Nagi CSS checks pass. Keep the consumer's failing
+result visible; do not relabel it as passing or require a behavior-library
+redesign merely to release the analyzer.
+
+## Approving publication
+
 When the workflow succeeds, review the staged packages on npmjs.com and approve
 them in dependency order: core, ESLint plugin, then CLI. Approval makes each
 version public. Reject a staged package instead if its contents are not the

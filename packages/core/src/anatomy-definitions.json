@@ -1,0 +1,41 @@
+[
+  {
+    "canonicalName": "text",
+    "description": "A short textual run or UI copy without a more specific native identity.",
+    "examples": ["A label's visible text", "A short hint"],
+    "excludes": ["An authored prose paragraph uses p", "A heading uses its native mapping"]
+  },
+  {
+    "canonicalName": "icon",
+    "description": "A wrapper for a glyph-sized pictogram.",
+    "examples": ["An icon font glyph", "A slot containing an icon"],
+    "excludes": ["A native svg keeps svg", "A content image keeps image"]
+  },
+  {
+    "canonicalName": "media",
+    "description": "A region grouping visual or audiovisual content.",
+    "examples": ["Image and video content wrapper"],
+    "excludes": ["A native figure keeps figure", "A generic layout wrapper"]
+  },
+  {
+    "canonicalName": "value",
+    "description": "A read-only datum displayed as part of a UI.",
+    "examples": ["A metric value", "A selected value's text"],
+    "excludes": ["An editable input", "A native output keeps output"]
+  },
+  {
+    "canonicalName": "field",
+    "description": "A visible form-field or composite-control frame.",
+    "examples": [
+      "An input with affixes",
+      "A composite input frame with an externally associated label"
+    ],
+    "excludes": ["An arbitrary page region", "A native fieldset keeps fieldset"]
+  },
+  {
+    "canonicalName": "actions",
+    "description": "A group of related action controls.",
+    "examples": ["Dialog action buttons", "Card actions"],
+    "excludes": ["A single button keeps button", "Navigation links with a native nav identity"]
+  }
+]

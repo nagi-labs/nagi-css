@@ -44,6 +44,32 @@ vp exec eslint .
 
 `eslint --fix` applies only answers the contract can derive unambiguously.
 
+## Add component-scoped roles
+
+Plain Nagi CSS needs no role-definition file. Add one only when a component has
+stable semantic roles that HTML and WAI-ARIA do not provide. Load the definition
+through the same semantic config:
+
+```sh
+vp add -D @nagi-labs/nagi-css-core
+```
+
+```js
+import { loadRoleDefinition } from "@nagi-labs/nagi-css-core"
+
+const roles = loadRoleDefinition(new URL("./definitions/range.json", import.meta.url))
+
+...nagiCss.configs.recommended({
+  surfaceRootPrefixes: ["app-"],
+  roleDefinitions: [roles],
+})
+```
+
+Each instance uses a static `data-role="scope/root"` marker. Custom roles use
+static `data-role="scope/role"`; roles backed by HTML or WAI-ARIA keep their
+standard representation. See [Scoped role definitions](../definitions.md) for
+the schema, package composition, ownership boundaries, and required-role checks.
+
 ## Declare a token layer
 
 Colors and scale lengths must come from tokens, so a project needs somewhere for
@@ -160,7 +186,7 @@ assistive technology but does not hide it visually. When text must be visually
 concealed while remaining available to assistive technology, apply the
 visually-hidden declarations directly to its derived base selector instead of
 adding an `-assistive`, `-sr-only`, or standalone utility class. See the
-[complete contract](../../CONTRACT.md#visual-hiding-and-the-accessibility-tree)
+[CSS reference](../css-reference.md#visual-hiding-and-the-accessibility-tree)
 for the canonical pattern.
 
 See the [configuration reference](https://github.com/nagi-labs/nagi-css/blob/main/skills/nagi-css/references/configuration.md)

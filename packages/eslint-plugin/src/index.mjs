@@ -1,8 +1,8 @@
 import vueParser from "vue-eslint-parser"
 
 import {
-  analyzeComponentStyles,
-  analyzeTemplate,
+  analyzeComponent,
+  IDENTITY_RULES,
   astroParser,
   defineNagiConfig,
   resolveSeverity,
@@ -30,18 +30,19 @@ const FIXABLE_RULES = new Set([
 
 const ruleDescriptions = {
   ...STYLE_RULE_DESCRIPTIONS,
-  "anatomy-allowed": "Allow only contract anatomy, role, and STN names on div and span",
+  ...IDENTITY_RULES,
+  "anatomy-allowed": "Reject explicitly configured banned classes",
   "component-class-required": "Require configured static component classes when styled",
   "dynamic-class-requires-static-anchor":
     "Require a static owned class beside every dynamic class binding",
   "element-class-required": "Enforce the Element Class Table identity when styled",
   "layout-only-wrapper":
     "Review sole-child div or span wrappers that only establish flex or grid layout around one child branch",
-  "reserved-element-name": "Keep Element Class Table identities on their owning elements",
+  "reserved-element-name": "Require an applicable definition for a platform identity name",
   "owned-component-identity":
     "Style an owned child component by its own derived surface root, not a passed class",
   "role-identity-required":
-    "Prefer a div or span's identifying ARIA role over anatomy and structural fallback names",
+    "Require a div or span's Predefined identity from its explicit identifying ARIA role",
   "single-base-identity": "Allow exactly one base identity class per element",
   "state-not-class": "Represent runtime state with native, ARIA, or data attributes",
   "surface-root-name":
@@ -50,7 +51,7 @@ const ruleDescriptions = {
   "stn-floor": "Start each STN chain at unit or a coarser tier",
   "stn-order": "Keep adjacent STN tiers consecutive",
   "stn-peer-variant":
-    "Distinguish static sibling STN branches at the same tier with unique variants",
+    "Deprecated no-op: sibling structural identities may share styles without variants",
   "stn-reach-g": "Make surfaces above unit reach the g tier",
   "unsupported-style-syntax":
     "Report style blocks the toolchain cannot read instead of skipping them",
@@ -60,9 +61,9 @@ const ruleDescriptions = {
     "Keep variants out of class bindings, so a variant cannot express runtime state",
   "variant-order": "Keep static variant classes in alphabetical order",
   "variant-requires-peer":
-    "Use non-STN variants only to distinguish multiple occurrences of the same base identity",
+    "Deprecated no-op: a static modifier does not require a peer",
   "variant-shadows-vocabulary":
-    "Keep variant names outside the element, component, anatomy, STN, slot, and ARIA role vocabulary",
+    "Report variants naming identities applicable to the same node and context",
 }
 
 function cachedAnalysis(context, config) {
@@ -74,19 +75,7 @@ function cachedAnalysis(context, config) {
   }
   const key = JSON.stringify(config)
   if (!analyses.has(key)) {
-    const template = analyzeTemplate(sourceCode.text, context.filename, config)
-    analyses.set(key, {
-      ...template,
-      violations: [
-        ...template.violations,
-        ...analyzeComponentStyles(
-          sourceCode.text,
-          context.filename,
-          config,
-          template,
-        ),
-      ],
-    })
+    analyses.set(key, analyzeComponent(sourceCode.text, context.filename, config))
   }
   return analyses.get(key)
 }
@@ -116,6 +105,7 @@ function createAnalysisRule(ruleId) {
             ? "suggestion"
             : "problem",
       docs: { description: ruleDescriptions[ruleId] },
+      deprecated: ["stn-peer-variant", "variant-requires-peer"].includes(ruleId),
       fixable: FIXABLE_RULES.has(ruleId) ? "code" : undefined,
       schema: [{ type: "object" }],
       messages: { violation: "{{message}}" },
@@ -166,7 +156,7 @@ rules["valid-config"] = {
 }
 
 const plugin = {
-  meta: { name: "@nagi-labs/eslint-plugin-nagi-css", version: "0.5.1" },
+  meta: { name: "@nagi-labs/eslint-plugin-nagi-css", version: "0.6.0" },
   rules,
 }
 

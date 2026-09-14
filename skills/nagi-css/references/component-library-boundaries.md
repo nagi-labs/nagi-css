@@ -103,7 +103,7 @@ Also valid when an outer owned layout element is needed:
 </section>
 ```
 
-Use the outer element for owned external layout only, and name it by the normal naming flow (element table, anatomy, or STN — or the surface root when it is the template root). Do not write CSS that assumes the outer element owns the component library internals or slot insertion structure.
+Use the outer element for owned external layout only, and name it by the shared resolution (applicable definitions, unregistered identity, or STN — with Surface identity at the root). Do not write CSS that assumes the outer element owns the component library internals or slot insertion structure.
 
 ## Naming
 

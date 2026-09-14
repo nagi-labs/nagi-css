@@ -3,6 +3,7 @@ import fs from "node:fs/promises"
 import path from "node:path"
 import test from "node:test"
 import { fileURLToPath } from "node:url"
+import { execFileSync } from "node:child_process"
 
 import {
   analyzeComponentStyles,
@@ -10,6 +11,7 @@ import {
   defineNagiConfig,
   parseTokenDeclarations,
   resolveSeverity,
+  ANATOMY_DEFINITIONS,
 } from "@nagi-labs/nagi-css-core"
 
 // An example has to be free of violations; a coverage warning is not one. The
@@ -108,20 +110,36 @@ test("the documentation site uses the Nagi CSS logo as its favicon and header ma
   assert.match(logo, /<svg[^>]+viewBox="0 0 64 64"/)
 })
 
+test("the documentation site describes scoped roots and links to existing local content", async () => {
+  const html = await fs.readFile(path.join(repository, "docs/index.html"), "utf8")
+  assert.ok(html.includes('data-role="scope/root"'))
+  assert.ok(html.includes('data-role="scope/role"'))
+  assert.ok(html.includes("0.6.0 definition and measure APIs"))
+  const ids = new Set([...html.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]))
+  // Inspect real start tags, not escaped markup displayed in code examples.
+  const tags = html.match(/<[a-z][^>]*>/gi) ?? []
+  for (const [, target] of tags.join("\n").matchAll(/\b(?:href|src)="([^"]+)"/g)) {
+    if (target.startsWith("#")) {
+      assert.ok(ids.has(target.slice(1)), `Missing site anchor ${target}`)
+    } else if (!/^(?:[a-z]+:|\/\/)/i.test(target)) {
+      await fs.access(path.resolve(repository, "docs", target.split(/[?#]/)[0]))
+    }
+  }
+})
+
 // The starter block is the only place a value ships, and only as a placeholder.
 // If it drifts from the table, a project that pastes it gets unknown-token on a
 // name the contract told it to use.
 test("the getting-started token file declares exactly the names the table promises", async () => {
-  const guide = await fs.readFile(
-    path.join(repository, "docs/getting-started/index.md"),
-    "utf8",
-  )
+  const guide = await fs.readFile(path.join(repository, "docs/getting-started/index.md"), "utf8")
   const block = guide.match(/into `src\/tokens\/semantic\.css`[\s\S]*?```css\n([\s\S]*?)```/)
 
   assert.ok(block, "getting-started no longer contains the starter token file")
 
   const declared = parseTokenDeclarations(block[1])
-  const promised = Object.values(defineNagiConfig({ surfaceRootPrefixes: ["app-"] }).tokens.semantic)
+  const promised = Object.values(
+    defineNagiConfig({ surfaceRootPrefixes: ["app-"] }).tokens.semantic,
+  )
     .flat()
     .sort()
 
@@ -142,8 +160,21 @@ test("portable agent guidance matches the paragraph and text identities", async 
   assert.equal(config.elementClasses.p, "p")
   assert.ok(config.anatomyClasses.includes("text"))
   assert.match(agents, /`p` → `p`/)
-  assert.match(agents, /`actions` `field` `icon` `media` `text` `value`/)
+  const anatomy = await fs.readFile(path.join(repository, "docs/anatomy-definitions.md"), "utf8")
+  assert.deepEqual(
+    config.anatomyClasses,
+    ANATOMY_DEFINITIONS.map((entry) => entry.canonicalName),
+  )
+  for (const definition of ANATOMY_DEFINITIONS) {
+    assert.ok(anatomy.includes(definition.description))
+  }
   assert.doesNotMatch(agents, /\| `p` \| `text` \|/)
   assert.match(naming, /A prose paragraph is `<p class="p">`/)
   assert.match(pattern, /self-mapped `p` identity/)
+})
+
+test("Skill and built-in anatomy guidance are generated from canonical sources", () => {
+  execFileSync(process.execPath, ["scripts/generate-definition-docs.mjs", "--check"], {
+    cwd: repository,
+  })
 })

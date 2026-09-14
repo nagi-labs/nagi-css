@@ -1,8 +1,10 @@
 # Nagi CSS
 
 **CSS, after the wind.** Nagi CSS is a lint-enforced structural contract for
-component-owned CSS. It derives class identities and owned selector paths from
-source, keeping the remaining choices inside an explicit vocabulary.
+component-owned CSS. It derives names from explicit evidence, validates applicable
+definitions, and makes Predefined, Defined, Unregistered, and Structural names
+visible. Lint and
+measurement use the same analysis.
 
 [Website](https://nagi-labs.github.io/nagi-css/) ·
 [Documentation](docs/getting-started/index.md) ·
@@ -73,18 +75,16 @@ commands and intentional breakage exercises are in the
 
 ## What it enforces
 
-Given the component and configuration, Nagi CSS derives one canonical form:
+Surface ownership, base identity, variants/state and CSS structure form one contract:
 
 - the surface root from the configured prefix and component filename;
 - fixed classes from HTML elements and configured UI components;
-- a small anatomy vocabulary and structural fallback for `div` and `span`;
-- identifying ARIA roles before anatomy or structural fallback names;
-- a non-failing review warning for `div`/`span` wrappers that appear to exist only for flex/grid layout;
-- a non-failing review warning when static sibling STN branches share a tier
-  without unique variants;
-- non-STN variants only when they distinguish repeated instances of the same
-  base identity, STN variants for structural role, and attribute-based runtime
-  state;
+- internal identities classified as Predefined, Defined, Unregistered, or Structural;
+- native/ARIA Predefined names and described Built-in Anatomy/Custom definitions;
+- scoped JSON role definitions with optional role descriptions, selected by static `data-role="scope/role"`
+  markers, with required declaration checks;
+- unregistered semantic names allowed with warnings while CSS validation continues;
+- static modifiers, attribute state, and legitimate shared STN sibling selectors;
 - selectors that mirror owned DOM with `>` and stop at component boundaries;
 - semantic token references for colors and repeated design-system scale values,
   while component geometry stays plain CSS and genuine one-off optical
@@ -117,9 +117,33 @@ may be selected when they already describe real component state, but ARIA must
 not be invented as a styling hook. Content that is visually concealed while
 remaining available to assistive technology is styled through its derived base
 selector rather than an `-assistive` or `-sr-only` class. See
-[Visual hiding and the accessibility tree](CONTRACT.md#visual-hiding-and-the-accessibility-tree).
+[Visual hiding and the accessibility tree](docs/css-reference.md#visual-hiding-and-the-accessibility-tree).
+
+## Define and measure
+
+The redesigned source API accepts `roleDefinitions` containing scoped JSON
+objects or independent local JSON paths. `loadRoleDefinition` reads JSON safely;
+`data-role="scope/root"` establishes an instance and custom roles use the same
+fully qualified attribute without adding ARIA behavior. See the
+[definition reference](docs/definitions.md) and
+[Vue/Svelte/Astro examples](examples/custom-roles/README.md).
+
+`nagi-css measure --config nagi.config.mjs --cwd . --json` reports internal
+styled declarations as Predefined / Defined / Unregistered / Structural, keeping
+surfaces, boundaries and unknowns separate. Predefined names and author-selected
+definitions are reported separately. The [0.6.0 migration guide](docs/migrations/defined-identities.md)
+covers the new APIs and configuration diagnostics; the pinned Vue starter still
+uses 0.5.1 until publication. Maintainers verify candidate tarballs in isolated
+consumers before publishing, as described in the [release guide](docs/RELEASING.md).
+Unresolved behavior bundles remain explicit diagnostics; adopting these APIs
+does not require a UI library to redesign its behavior API. Consumer migration
+findings are assessed separately from analyzer defects and package failures.
 
 ## Documentation
+
+- [Definition model migration](docs/migrations/defined-identities.md)
+- [Definition and measurement specification](docs/definitions.md)
+- [Built-in Anatomy definitions](docs/anatomy-definitions.md)
 
 - [Contract](CONTRACT.md) — the complete naming, selector, ownership, and value rules
 - [FAQ](FAQ.md) — design rationale, tradeoffs, and comparisons

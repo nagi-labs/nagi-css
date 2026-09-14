@@ -322,7 +322,7 @@ test("ESLint reports a layout-only wrapper as a non-failing warning without a fi
   assert.equal(result.output, undefined)
 })
 
-test("ESLint reports an indistinguishable sibling STN branch as a warning", async () => {
+test("ESLint accepts shared STN sibling selectors", async () => {
   const result = await lintEslint(
     path.join(root, "fixtures/peer-variants.vue"),
     {},
@@ -343,13 +343,12 @@ test("ESLint reports an indistinguishable sibling STN branch as a warning", asyn
   const warning = result.messages.find(
     ({ ruleId }) => ruleId === "nagi-css/stn-peer-variant",
   )
-  assert.ok(warning, JSON.stringify(result.messages))
-  assert.equal(warning.severity, 1)
+  assert.equal(warning, undefined)
   assert.equal(result.errorCount, 0)
   assert.equal(result.output, undefined)
 })
 
-test("ESLint rejects a non-STN variant without a same-base peer", async () => {
+test("ESLint accepts static modifiers without same-base peers", async () => {
   const result = await lintEslint(
     path.join(root, "fixtures/carousel.vue"),
     {},
@@ -366,9 +365,8 @@ test("ESLint rejects a non-STN variant without a same-base peer", async () => {
   const error = result.messages.find(
     ({ ruleId }) => ruleId === "nagi-css/variant-requires-peer",
   )
-  assert.ok(error, JSON.stringify(result.messages))
-  assert.equal(error.severity, 2)
-  assert.match(error.message, /-slide/u)
+  assert.equal(error, undefined)
+  assert.equal(result.errorCount, 0)
 })
 
 test("ESLint accepts Svelte and Astro component templates and styles", async () => {
@@ -692,7 +690,7 @@ test("ESLint keeps external layout off surfaces except top-layer or anchored one
   assert.equal(relative.results[0].warnings.length, 0)
 })
 
-test("ESLint rejects selector variants that shadow vocabulary names", async () => {
+test("ESLint does not infer semantic applicability from selector words", async () => {
   const file = path.join(root, "fixtures/shadow-surface.vue")
   const result = await lintStyles(file, testSurface,
     `<template><section class="test-shadow-surface"><p class="p -lead">x</p></section></template>
@@ -701,8 +699,7 @@ test("ESLint rejects selector variants that shadow vocabulary names", async () =
     ({ rule }) => rule === "nagi-css/variant-shadows-vocabulary",
   )
 
-  assert.equal(shadowWarnings.length, 1)
-  assert.match(shadowWarnings[0].text, /-title/)
+  assert.equal(shadowWarnings.length, 0)
 })
 
 test("ESLint rejects template variants that shadow vocabulary names", async () => {
@@ -712,7 +709,7 @@ test("ESLint rejects template variants that shadow vocabulary names", async () =
     overrideConfig: createNagiStandaloneEslintConfigs(testSurface),
   })
   const [result] = await eslint.lintText(
-    `<template><section class="test-shadow-surface"><p class="p -title">x</p></section></template>`,
+    `<template><section class="test-shadow-surface"><div class="unit -text">x</div></section></template>`,
     { filePath: path.join(root, "fixtures/shadow-surface.vue") },
   )
 
@@ -781,10 +778,10 @@ test("ESLint limits anatomy diagnostics to div and span", async () => {
   )
 
   const anatomy = result.messages.filter(
-    ({ ruleId }) => ruleId === "nagi-css/anatomy-allowed",
+    ({ ruleId }) => ruleId === "nagi-css/unregistered-semantic-identity",
   )
   assert.equal(anatomy.length, 1)
-  assert.match(anatomy[0].message, /Class "mystery"/)
+  assert.match(anatomy[0].message, /"mystery"/)
   assert.ok(
     result.messages.some(
       ({ ruleId, message }) =>
@@ -822,7 +819,7 @@ test("ESLint rejects multiple base identities in one compound", async () => {
   )
 })
 
-test("ESLint rejects the legacy zone STN name", async () => {
+test("ESLint treats zone as an unregistered name, not an STN alias", async () => {
   const file = path.join(root, "fixtures/legacy-zone-surface.vue")
   const result = await lintStyles(file, testSurface,
     `<template><section class="test-legacy-zone-surface"><div class="zone" /></section></template>
@@ -830,7 +827,7 @@ test("ESLint rejects the legacy zone STN name", async () => {
 
   assert.ok(
     result.results[0].warnings.some(
-      ({ rule }) => rule === "nagi-css/anatomy-allowed",
+      ({ rule }) => rule === "nagi-css/unregistered-semantic-identity",
     ),
   )
 })

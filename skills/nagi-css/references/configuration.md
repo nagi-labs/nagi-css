@@ -69,20 +69,24 @@ irreducibly deeper can be given headroom by adding a coarser name at the front â
 unaffected. Extending below `g` is not supported.
 
 `severity` is optional and sits in the second, ESLint-integration argument
-because it configures enforcement rather than the vocabulary. Every rule is
-`error` unless listed; `*` sets the fallback; `warn` reports without failing
+because it configures enforcement rather than the vocabulary. Most rules default
+to `error`; `*` sets the fallback; `warn` reports without failing
 the run; `off` removes the rule.
 An unknown rule name is a configuration error, so a typo cannot quietly disable
-a check. Use `warn` to stage adoption in an existing codebase â€” do not leave a
-project there, since an unenforced contract is back to consistency by discipline.
+a check. Unregistered names may remain warnings: registration is useful when
+the meaning is stable, not a prerequisite for using the contract.
 
-Two advisory rules default to `warn` because they do not prove a violation:
+Advisory rules default to `warn` because they do not prove a violation:
 
 - `unverifiable-dynamic-class` reports class names that cannot be checked;
 - `layout-only-wrapper` reports a `div`/`span` that appears to exist only for
   flex/grid layout and may be collapsible after rendered verification.
 
-Raise either to `error` when review is mandatory, or turn it `off` when the gaps
+Unregistered identities, unresolved presence, and deprecated anatomy extensions
+also warn. Invalid, unknown, mismatched, or dynamic `data-role` declarations are
+errors. See [Definitions](definitions.md) for the rule IDs.
+
+Raise a warning to `error` when review is mandatory, or turn it `off` when the gaps
 or candidates are known and accepted. Neither advisory has a speculative
 autofix.
 
@@ -233,7 +237,14 @@ exempts a fallback, so `var(--pv-datepicker-fg, #333)` documents an exposed
 default while `var(--color-text, #333)` is a raw color.
 
 The semantic object also accepts `surfaceRootPrefixes`, `componentClassPrefix`,
-`elementClasses`, `anatomyClasses`, `bannedClasses`, `stateClasses`, `tiers`,
-`declarationMode`, `intrinsicComponents`, and `transparentComponents`. Prefer
-narrow project mappings over growing anatomy vocabulary to accommodate one local
-component.
+`elementClasses`, `bannedClasses`, `stateClasses`, `tiers`, `declarationMode`,
+`intrinsicComponents`, `transparentComponents`, `roleDefinitions`, and
+`definitionsBaseDir`. `bannedClasses` is an explicit project restriction, empty
+by default. Extra legacy `anatomyClasses` strings warn and do not define meaning;
+they will be removed in the next major release. See [Definitions](definitions.md)
+for JSON loading, static scoped-role resolution, presence, and measurement.
+
+The default `anatomyClasses` names are derived from the shipped
+`anatomy-definitions.json`: `text`, `icon`, `media`, `value`, `field`, and
+`actions`. They are Built-in Anatomy and resolve as Defined identities. Adding a
+bare string to `anatomyClasses` does not create an equivalent definition.

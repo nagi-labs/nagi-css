@@ -290,7 +290,7 @@ test("does not grant a blanket document-only name exemption", () => {
     const source = `<template><section class="invalid-name"><div class="${name}" /></section></template>`
     const result = analyzeVueTemplate(source, "/src/components/invalid-name.vue")
     assert.equal(
-      result.violations.some(({ ruleId }) => ruleId === "anatomy-allowed"),
+      result.violations.some(({ ruleId }) => ruleId === "unregistered-semantic-identity"),
       true,
       name,
     )
@@ -324,7 +324,7 @@ test("uses unit as the STN floor without a legacy zone alias", () => {
   assert.deepEqual(shallow.violations, [])
   assert.deepEqual(deep.violations, [])
   assert.equal(
-    legacy.violations.some(({ ruleId }) => ruleId === "anatomy-allowed"),
+    legacy.violations.some(({ ruleId }) => ruleId === "unregistered-semantic-identity"),
     true,
   )
 })
@@ -455,7 +455,7 @@ test("template analysis covers every semantic template rule", () => {
   assert.deepEqual(
     [...ids].sort(),
     [
-      "anatomy-allowed",
+      "unregistered-semantic-identity",
       "component-class-required",
       "dynamic-class-requires-static-anchor",
       "element-class-required",
@@ -466,7 +466,6 @@ test("template analysis covers every semantic template rule", () => {
       "stn-order",
       "stn-reach-g",
       "variant-order",
-      "variant-shadows-vocabulary",
     ].sort(),
   )
 })
@@ -581,19 +580,19 @@ test("keeps element-table identity ahead of additional ARIA semantics", () => {
     roleVariant.violations.some(
       ({ ruleId }) => ruleId === "variant-shadows-vocabulary",
     ),
-    true,
+    false,
   )
   assert.equal(
     mappedRoleVariant.violations.some(
       ({ ruleId }) => ruleId === "variant-shadows-vocabulary",
     ),
-    true,
+    false,
   )
 })
 
 test("rejects variants that shadow vocabulary names", () => {
   const shadowed = analyzeVueTemplate(
-    `<template><section class="shadow-surface"><p class="p -title">x</p></section></template>
+    `<template><section class="shadow-surface"><div class="unit -text">x</div></section></template>
 <style>.shadow-surface { > .p {} }</style>`,
     "/src/components/shadow-surface.vue",
   )
@@ -610,7 +609,7 @@ test("rejects variants that shadow vocabulary names", () => {
   assert.deepEqual(modifier.violations, [])
 })
 
-test("variant shadow check covers banned names, rendered elements, and dynamic literals", () => {
+test("unrelated variant words stay legal while dynamic variants remain state", () => {
   const banned = analyzeVueTemplate(
     `<template><section class="shadow-surface"><div class="unit -wrapper" /></section></template>`,
     "/src/components/shadow-surface.vue",
@@ -631,7 +630,7 @@ test("variant shadow check covers banned names, rendered elements, and dynamic l
   for (const result of [banned, rendered, dynamic]) {
     assert.equal(
       result.violations.some(({ ruleId }) => ruleId === "variant-shadows-vocabulary"),
-      true,
+      false,
     )
   }
   assert.equal(
@@ -1027,7 +1026,7 @@ test("only role names that are also base identities are barred from variants", (
     assert.deepEqual(host(`<div class="unit -${stem}" />`), [], stem)
   }
   // names the vocabulary hands out as a base identity stay barred
-  for (const stem of ["title", "footer", "nav", "media", "unit"]) {
+  for (const stem of ["text", "field", "media"]) {
     assert.deepEqual(
       host(`<div class="seg -${stem}" />`).filter(
         (ruleId) => ruleId === "variant-shadows-vocabulary",
@@ -1254,7 +1253,7 @@ test("reports a layout-only wrapper as a review candidate, not a proven violatio
 
   for (const attributes of [
     'role="group"',
-    'data-part="slides"',
+    'data-region="slides"',
     'ref="track"',
     '@click="activate"',
   ]) {
@@ -1275,7 +1274,7 @@ test("reports a layout-only wrapper as a review candidate, not a proven violatio
   assert.deepEqual(analyze({ sibling: '<h2 class="title">Choices</h2>' }), [])
 })
 
-test("warns when static sibling STN branches cannot be distinguished", () => {
+test("allows static sibling STN branches to share a selector", () => {
   const warnings = (children) =>
     analyzeVueTemplate(
       `<template>
@@ -1291,9 +1290,7 @@ test("warns when static sibling STN branches cannot be distinguished", () => {
     <div class="unit -announcements" />
     <div class="unit" />
   `)
-  assert.equal(oneBare.length, 1)
-  assert.match(oneBare[0].message, /add a unique static variant/u)
-  assert.equal("fix" in oneBare[0], false)
+  assert.equal(oneBare.length, 0)
 
   assert.equal(
     warnings(`
@@ -1307,11 +1304,11 @@ test("warns when static sibling STN branches cannot be distinguished", () => {
       <div class="unit -shared" />
       <div class="unit -shared" />
     `).length,
-    2,
+    0,
   )
 })
 
-test("requires a same-base peer for non-STN variants", () => {
+test("allows meaningful modifiers without requiring same-base peers", () => {
   const redundantVariants = (children) =>
     analyzeVueTemplate(
       `<template>
@@ -1328,10 +1325,7 @@ test("requires a same-base peer for non-STN variants", () => {
       <article class="article -slide" />
     </div>
   `)
-  assert.equal(slide.length, 1)
-  assert.match(slide[0].message, /article/u)
-  assert.match(slide[0].message, /-slide/u)
-  assert.equal("fix" in slide[0], false)
+  assert.equal(slide.length, 0)
 
   assert.deepEqual(redundantVariants('<div class="unit -presence" />'), [])
   assert.deepEqual(
@@ -1366,7 +1360,7 @@ test("requires a same-base peer for non-STN variants", () => {
       },
     ).violations.filter(({ ruleId }) => ruleId === "variant-requires-peer")
 
-  assert.equal(configuredComponent('<NButton class="-primary" />').length, 1)
+  assert.equal(configuredComponent('<NButton class="-primary" />').length, 0)
   assert.deepEqual(
     configuredComponent(
       '<NButton class="-cancel" /><NButton class="-save" />',
@@ -1383,7 +1377,7 @@ test("requires a same-base peer for non-STN variants", () => {
       transparentComponents: ["RouterLink"],
     },
   ).violations.filter(({ ruleId }) => ruleId === "variant-requires-peer")
-  assert.equal(transparent.length, 1)
+  assert.equal(transparent.length, 0)
 })
 
 test("does not require peer variants for repeated or mutually exclusive branches", () => {

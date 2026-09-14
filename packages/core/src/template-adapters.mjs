@@ -259,6 +259,9 @@ function normalizeSvelteElement(node, source) {
     children: normalizeSvelteChildren(node.children, source),
     loc: normalizedLoc(node),
     nagiClassInfo: classInfo,
+    nagiDynamicAttributes: ["role", "data-role"].filter((name) => attributes.some((attribute) =>
+      (name !== "data-role" && attribute.type === "SvelteSpreadAttribute") ||
+      (attribute.type === "SvelteAttribute" && attribute.key?.name === name && !svelteStaticAttribute(attribute, source)))),
     nagiHasClassAttribute: attributes.some(
       (attribute) =>
         (attribute.type === "SvelteAttribute" && attribute.key?.name === "class") ||
@@ -522,6 +525,9 @@ function normalizeAstroElement(node, source, styles) {
     ],
     loc: normalizedLoc(node),
     nagiClassInfo: classInfo,
+    nagiDynamicAttributes: ["role", "data-role"].filter((name) => attributes.some((attribute) =>
+      (name !== "data-role" && attribute.type === "JSXSpreadAttribute") ||
+      (attribute.type === "JSXAttribute" && jsxName(attribute.name) === name && !astroStaticAttribute(attribute)))),
     nagiHasClassAttribute: attributes.some((attribute) => {
       const name = jsxName(attribute.name)
       return (
@@ -565,11 +571,16 @@ export function frameworkForFilename(filename) {
 }
 
 export function parseTemplateDocument(source, filename) {
-  const framework = frameworkForFilename(filename)
-  if (framework === "svelte") return parseSvelteDocument(source, filename)
-  if (framework === "astro") return parseAstroDocument(source, filename)
-  const { descriptor } = parseVue(source, { filename })
-  return { descriptor, framework: "Vue" }
+  try {
+    const framework = frameworkForFilename(filename)
+    if (framework === "svelte") return parseSvelteDocument(source, filename)
+    if (framework === "astro") return parseAstroDocument(source, filename)
+    const { descriptor, errors } = parseVue(source, { filename })
+    if (errors.length) throw new SyntaxError(errors.map((error) => typeof error === "string" ? error : error.message).join("; "))
+    return { descriptor, framework: "Vue" }
+  } catch (error) {
+    throw Object.assign(new SyntaxError(error.message, { cause: error }), { code: "NAGI_TEMPLATE_PARSE" })
+  }
 }
 
 export { astroParser, svelteParser, typescriptParser }

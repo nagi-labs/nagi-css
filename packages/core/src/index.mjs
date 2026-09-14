@@ -1,4 +1,5 @@
 import parseValue from "postcss-value-parser"
+import { ANATOMY_DEFINITIONS, buildDefinitionRegistry } from "./definitions.mjs"
 
 const ELEMENT_CLASSES = {
   a: "link",
@@ -51,8 +52,8 @@ const RENDERED_ELEMENTS = [
   "u", "ul", "var", "video", "wbr",
 ]
 
-// Concrete WAI-ARIA roles are protocol vocabulary: they may be base names on
-// div/span when backed by a matching role attribute, but never variants.
+// WAI-ARIA vocabulary is a provider. A supported, explicit identifying role on
+// div/span supplies a fixed base; variant applicability is resolved per node.
 const ARIA_ROLE_NAMES = [
   "alert", "alertdialog", "application", "article", "banner", "blockquote", "button",
   "caption", "cell", "checkbox", "code", "columnheader", "combobox", "complementary",
@@ -68,7 +69,7 @@ const ARIA_ROLE_NAMES = [
 ]
 
 // Elements the table deliberately leaves without a class of their own.
-// div/span carry no meaning to begin with and go to the Semantics model.
+// div/span have no fixed native identity and use contextual identity resolution.
 // b/i/u/s name a rendering, not a meaning, so self-mapping them would hand out
 // `.b` and `.i` — exactly the "raw visual appearance" the contract rejects.
 // A styled one has no legal class, which is the pressure to use <strong>/<em>;
@@ -115,10 +116,9 @@ const SEMANTIC_TOKENS = Object.freeze({
 // Which family a property draws from, so a diagnostic can name the token the
 // author should have reached for instead of only saying "use a token".
 const DEFAULT_CONFIG = Object.freeze({
-  anatomyClasses: ["actions", "field", "icon", "media", "text", "value"],
-  bannedClasses: [
-    "b", "box", "container", "content-area", "i", "inner", "s", "thing", "u", "wrapper",
-  ],
+  anatomyClasses: ANATOMY_DEFINITIONS.map((entry) => entry.canonicalName),
+  roleDefinitions: [],
+  bannedClasses: [],
   componentClassPrefix: "pv-",
   componentClasses: {},
   componentSlotPrefixes: {},
@@ -415,14 +415,18 @@ const DEFAULT_SEVERITY_KEY = "*"
 // The code may well be correct, so these default to warnings instead of failing
 // a build. Explicit severity configuration can still tighten or disable them.
 const DEFAULT_WARNING_RULES = {
+  "unregistered-semantic-identity": "warn",
+  "unverifiable-presence": "warn",
+  "unverifiable-role-identity": "warn",
+  "deprecated-anatomy-config": "warn",
   "layout-only-wrapper": "warn",
   "stn-peer-variant": "warn",
   "unverifiable-dynamic-class": "warn",
 }
 
-// Per-rule severity. `warn` exists for adopting the contract in an existing
-// codebase; the intended steady state is `error` in CI. Explicit configuration
-// always wins over a rule's own default, so `"*": "error"` tightens everything.
+// Unregistered names and uncertainty may legitimately remain warnings.
+// Explicit configuration always wins over a rule's own default, so
+// `"*": "error"` is an opt-in tightening, not a required end state.
 export function resolveSeverity(severity = {}) {
   const fallback = severity[DEFAULT_SEVERITY_KEY]
   return (ruleId) => severity[ruleId] ?? fallback ?? DEFAULT_WARNING_RULES[ruleId] ?? "error"
@@ -472,19 +476,8 @@ export function buildNagiSets(input) {
   )
   const componentValues = new Set(Object.values(config.componentClasses))
   const componentSlotsByBoundary = new Map()
-  const anatomy = new Set(config.anatomyClasses)
+  const anatomy = new Set(ANATOMY_DEFINITIONS.map((entry) => entry.canonicalName))
   const stn = new Set(config.tiers)
-  const elementNameReverse = new Map()
-
-  for (const [tag, name] of [
-    ...Object.entries(config.elementClasses),
-    ...Object.entries(config.componentClasses),
-  ]) {
-    const base = mappingBase(name)
-    if (!elementNameReverse.has(base)) elementNameReverse.set(base, new Set())
-    elementNameReverse.get(base).add(tag)
-  }
-
   const surfaces = slotSurfaces(config)
 
   for (const [component, boundary] of Object.entries(config.componentClasses)) {
@@ -500,7 +493,6 @@ export function buildNagiSets(input) {
     componentValues,
     componentSlotsByBoundary,
     detachedSlotSurfaces: new Set(config.detachedSlotSurfaces),
-    elementNameReverse,
     elementValues,
     knownNames: new Set([...elementValues, ...componentValues, ...anatomy, ...stn]),
     renderedElements: new Set(RENDERED_ELEMENTS),
@@ -509,26 +501,11 @@ export function buildNagiSets(input) {
     stateClasses: new Set(config.stateClasses),
     stn,
     stnIndex: new Map(config.tiers.map((name, index) => [name, index + 1])),
-    // Names the vocabulary hands out as a base identity. A variant using one of
-    // these is smuggling in a name the author should have used as the base.
-    // ARIA role names are deliberately absent: a role name that is not also a
-    // base identity (`search`, `toolbar`, `status`) says *which area this is*,
-    // not what the element is, and is only rejected when the element carries the
-    // matching role — where it would have been available as a base.
-    variantShadowNames: new Set([
-      ...elementValues,
-      ...componentValues,
-      ...anatomy,
-      ...stn,
-      ...surfaces,
-      ...config.bannedClasses,
-      ...RENDERED_ELEMENTS,
-    ]),
   }
 }
 
 export function validateNagiConfig(config) {
-  const errors = []
+  const errors = [...buildDefinitionRegistry({ ...config, roleNames: ARIA_ROLE_NAMES }).errors]
   const reportCanonicalComponentNameConflicts = (option, entries) => {
     const firstByCanonicalName = new Map()
     for (const [name, value] of entries) {
@@ -688,6 +665,10 @@ export function deriveAllowedSurfaceRootNames(filename, prefixes = []) {
 }
 
 export { DEFAULT_CONFIG, ELEMENT_CLASSES, RENDERED_ELEMENTS, TOKEN_LAYERS }
+export { ARIA_ROLE_NAMES }
+export { ANATOMY_DEFINITIONS, buildDefinitionRegistry, loadRoleDefinition, parseDefinitionJson } from "./definitions.mjs"
+export { createIdentityReport, analyzeComponent } from "./identity-report.mjs"
+export { IDENTITY_RULES } from "./identity-analysis.mjs"
 export {
   analyzeTemplate,
   analyzeVueTemplate,

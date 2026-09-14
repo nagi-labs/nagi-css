@@ -8,9 +8,11 @@ import {
   defineNagiConfig,
   deriveAllowedSurfaceRootNames,
   kebabCase,
-  mappingBase,
   matchesClassPrefix,
+  ARIA_ROLE_NAMES,
 } from "./index.mjs"
+import { buildDefinitionRegistry } from "./definitions.mjs"
+import { resolveIdentities } from "./identity-analysis.mjs"
 import { parseTemplateDocument } from "./template-adapters.mjs"
 
 const STATE_PREFIX_RE = /^(?:is-|has-)/
@@ -218,76 +220,29 @@ function hasStaticAttr(node, name) {
   return (node.props ?? []).some((property) => property.type === 6 && property.name === name)
 }
 
+function hasDynamicAttr(node, name) {
+  if (node.nagiDynamicAttributes?.includes(name)) return true
+  // Vue merges bindings in source order. A later literal role wins over an
+  // earlier spread, but a later spread can still replace that literal.
+  // Dynamic data-role declarations remain forbidden regardless of order.
+  for (const property of [...(node.props ?? [])].reverse()) {
+    if (name === "role" && property.type === 6 && property.name === name) return false
+    if (property.type !== 7 || property.name !== "bind") continue
+    if (name === "data-role") {
+      if (property.arg?.isStatic !== false && property.arg?.content === name) return true
+    } else if (!property.arg || property.arg.isStatic === false || property.arg.content === name) {
+      return true
+    }
+  }
+  return false
+}
+
 function hasDynamicBranchDirective(node) {
   return (node?.props ?? []).some(
     (property) =>
       property.type === 7 &&
       DYNAMIC_BRANCH_DIRECTIVES.has(property.name),
   )
-}
-
-function reviewSiblingStnVariants(children, violations) {
-  const peersByTier = new Map()
-
-  for (const child of children) {
-    if (!child.stnToken || child.dynamicBranch) continue
-    const peers = peersByTier.get(child.stnToken) ?? []
-    peers.push(child)
-    peersByTier.set(child.stnToken, peers)
-  }
-
-  for (const [tier, peers] of peersByTier) {
-    if (peers.length < 2) continue
-
-    for (const peer of peers) {
-      const hasUniqueVariant = peer.variants.some((variant) =>
-        peers.every((other) => other === peer || !other.variants.includes(variant)),
-      )
-      if (hasUniqueVariant) continue
-
-      push(
-        violations,
-        peer,
-        "stn-peer-variant",
-        `Sibling STN branches share "${tier}"; add a unique static variant to distinguish this branch from its peers.`,
-      )
-    }
-  }
-}
-
-function reviewNonStnVariantPeers(tree, violations) {
-  const records = []
-
-  function collect(children) {
-    for (const child of children ?? []) {
-      records.push(child)
-      collect(child.children)
-    }
-  }
-
-  collect(tree)
-
-  const baseCounts = new Map()
-  for (const record of records) {
-    if (record.baseTokens?.length !== 1) continue
-    const [base] = record.baseTokens
-    baseCounts.set(base, (baseCounts.get(base) ?? 0) + 1)
-  }
-
-  for (const record of records) {
-    if (record.stnToken || record.baseTokens?.length !== 1 || record.variants?.length === 0) {
-      continue
-    }
-    const [base] = record.baseTokens
-    if ((baseCounts.get(base) ?? 0) > 1) continue
-
-    push(
-      violations,
-      record,
-      "variant-requires-peer",
-      `Non-STN base "${base}" has no same-base peer in this component, so ${record.variants.length === 1 ? `variant "${record.variants[0]}" is` : `variants "${record.variants.join(" ")}" are`} redundant; remove the variant${record.variants.length === 1 ? "" : "s"} and select "${base}" through the owned structure.`,
-    )
-  }
 }
 
 function collectLiteralClassTokens(node, output) {
@@ -587,8 +542,10 @@ function checkState(token, node, sets, violations) {
 
 export function analyzeTemplate(source, filename, inputConfig = {}) {
   const config = defineNagiConfig(inputConfig)
+  const registry = buildDefinitionRegistry({ ...config, roleNames: ARIA_ROLE_NAMES })
   const sets = buildNagiSets(config)
   const violations = []
+  for (const message of registry.errors) violations.push({ ruleId: "definition-invalid", message, line: 1, column: 1 })
   const surfaceRoots = new Set()
   const roleNames = new Set()
   // Template syntax can establish that a surface is capable of entering the top
@@ -621,6 +578,8 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
       topLayerCapabilities,
       tree: [],
       violations,
+      sourceFile: path.resolve(filename),
+      identities: { nodes: [], scopes: [], registry: [...registry.definitions.values()], used: [], candidates: [] },
     }
   }
 
@@ -646,40 +605,10 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
     !isTransparentWrapper(node, config) &&
     !hasConfiguredComponent(config.intrinsicComponents, node.tag)
   const childSurfaceRoots = new Set()
-  const variantUsages = []
   // Classes the tables would put on elements this template already has. A rule
   // referencing one of these is not dead — the markup is missing the class, which
   // element-class-required already reports.
   const expectedClasses = new Set()
-
-  function collectVariantUsage(node) {
-    if (!node || node.type !== ELEMENT) return
-
-    const info = extractClassInfo(node)
-    const variants = info.staticTokens.filter(isVariant)
-
-    const configuredComponentBase =
-      node.tagType === COMPONENT
-        ? configuredComponentValue(config.componentClasses, node.tag)
-        : null
-    const derivedRoots = isOwnedComponent(node) ? childSurfaceRoot(node.tag) : []
-    const baseTokens = [
-      ...new Set([
-        ...ownedBaseTokens(info.staticTokens, config, sets),
-        ...(configuredComponentBase ? [configuredComponentBase] : []),
-        ...derivedRoots,
-      ]),
-    ]
-    const stnToken = info.staticTokens.find((token) => sets.stnIndex.has(token))
-
-    variantUsages.push({
-      baseTokens,
-      children: [],
-      loc: node.loc,
-      stnToken,
-      variants,
-    })
-  }
 
   function visit(
     node,
@@ -691,8 +620,6 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
     inheritedDynamicBranch = false,
   ) {
     if (!node || node.type !== ELEMENT) return
-
-    collectVariantUsage(node)
 
     const intrinsicTag =
       node.tagType === COMPONENT
@@ -719,7 +646,7 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
         violations,
         node,
         "single-base-identity",
-        `Element has multiple base identity classes: "${baseTokens.join(" ")}"; keep exactly one table-first base and express additional semantics with attributes.`,
+        `Element has multiple base identity classes: "${baseTokens.join(" ")}"; keep exactly one applicable base identity.`,
       )
     }
 
@@ -801,13 +728,14 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
       }
     }
 
-    const role = getStaticAttr(node, "role")
+    const role = getStaticAttr(node, "role")?.trim()
     const acceptsRoleIdentity =
       node.tagType === NATIVE && (node.tag === "div" || node.tag === "span")
     const identifyingRole =
       acceptsRoleIdentity &&
+      !hasDynamicAttr(node, "role") &&
       role &&
-      sets.roleVocabulary.has(role) &&
+      registry.aria.has(role) &&
       !NON_IDENTIFYING_ROLES.has(role)
     const ownedComponent = isOwnedComponent(node)
     const derivedRoots = ownedComponent ? childSurfaceRoot(node.tag) : []
@@ -824,7 +752,7 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
       node.tag !== "div" &&
       node.tag !== "span" &&
       Object.hasOwn(config.elementClasses, node.tag)
-        ? mappingBase(config.elementClasses[node.tag])
+        ? registry.html.get(node.tag)?.canonicalName ?? ""
         : ""
     const requiredComponentIdentity =
       !isSurfaceRoot &&
@@ -852,11 +780,11 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
       !staticTokens.has(role)
     const elementIdentityMismatch =
       requiredElementIdentity &&
-      elementStyledTrigger &&
+      (elementStyledTrigger || staticBaseTokens.length > 0) &&
       !staticTokens.has(requiredElementIdentity)
     const componentIdentityMismatch =
       requiredComponentIdentity &&
-      componentStyledTrigger &&
+      (componentStyledTrigger || staticBaseTokens.length > 0) &&
       !staticTokens.has(requiredComponentIdentity)
     const isUnmappedPresentationalElement =
       !isSurfaceRoot &&
@@ -887,7 +815,7 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
           violations,
           node,
           "role-identity-required",
-          `<${node.tag}> with role="${role}" must use "${role}" as its table-first base identity${staticBaseTokens.length > 0 ? `; found "${staticBaseTokens.join(" ")}"` : ""}.`,
+          `<${node.tag}> with role="${role}" must use "${role}" as its fixed base identity${staticBaseTokens.length > 0 ? `; found "${staticBaseTokens.join(" ")}"` : ""}.`,
           fix,
         )
       }
@@ -934,32 +862,6 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
     }
 
     for (const token of allTokens) {
-      if (!isVariant(token) || sets.stateClasses.has(token)) continue
-      const stem = token.slice(1)
-      // A role name is only unavailable as a variant when this element could have
-      // used it as its base identity — that is, when it carries that role.
-      if (sets.roleVocabulary.has(stem) && !sets.variantShadowNames.has(stem)) {
-        if (role === stem) {
-          push(
-            violations,
-            node,
-            "variant-shadows-vocabulary",
-            `Variant "${token}" names the role this element already declares; use "${stem}" as the base identity instead.`,
-          )
-        }
-        continue
-      }
-      if (sets.variantShadowNames.has(stem)) {
-        push(
-          violations,
-          node,
-          "variant-shadows-vocabulary",
-          `Variant "${token}" shadows the vocabulary name "${stem}"; variants modify an anchor, they do not name what it is.`,
-        )
-      }
-    }
-
-    for (const token of allTokens) {
       if (!sets.banned.has(token)) continue
       if (!acceptsRoleIdentity || deterministicIdentityMismatch) continue
       push(
@@ -968,35 +870,8 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
         "anatomy-allowed",
         sets.renderedElements.has(token)
           ? `Class "${token}" names a rendering rather than a meaning; use a semantic element such as <strong> or <em>, or a variant on the surrounding element.`
-          : `Class "${token}" is a banned generic anatomy name.`,
+          : `Class "${token}" is explicitly banned by this project's configuration.`,
       )
-    }
-
-    for (const token of allTokens) {
-      const isStaticRootIdentity = isMainRoot && identityTokens.includes(token)
-      if (!isStaticRootIdentity && !isSlotSurface) {
-        const arbitrary =
-          !isVariant(token) &&
-          !STATE_PREFIX_RE.test(token) &&
-          !sets.stateClasses.has(token) &&
-          !isLibraryInternal(token, config) &&
-          !sets.knownNames.has(token) &&
-          !sets.banned.has(token) &&
-          !sets.slotSurfaces.has(token)
-        if (
-          arbitrary &&
-          acceptsRoleIdentity &&
-          !deterministicIdentityMismatch &&
-          !(acceptsRoleIdentity && token === role && staticTokens.has(token))
-        ) {
-          push(
-            violations,
-            node,
-            "anatomy-allowed",
-            `Class "${token}" is not an element, component, anatomy, STN, slot-surface, or matching role name.`,
-          )
-        }
-      }
     }
 
     if (requiredElementIdentity) {
@@ -1052,47 +927,6 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
       )
     }
 
-    if (!isSurfaceRoot) {
-      for (const token of allTokens) {
-        if (isVariant(token) || isLibraryInternal(token, config)) continue
-        // Already reported by the Semantics model or the deterministic identity
-        // owner, with a message that explains the replacement.
-        if (sets.banned.has(token)) continue
-        // A div/span carrying the matching role keeps the role name as its base
-        // identity, even when an element shares that spelling (dialog, menu, …).
-        if (acceptsRoleIdentity && token === role && staticTokens.has(token)) continue
-
-        const owners = sets.elementNameReverse.get(token)
-        const requiredForTag =
-          node.tagType === NATIVE && Object.hasOwn(config.elementClasses, node.tag)
-            ? mappingBase(config.elementClasses[node.tag])
-            : ""
-        const borrowsMappedIdentity =
-          owners &&
-          ![...owners].some((owner) => kebabCase(owner) === kebabCase(node.tag))
-        const replacesMappedIdentity =
-          requiredForTag &&
-          token !== requiredForTag &&
-          sets.knownNames.has(token) &&
-          !sets.anatomy.has(token) &&
-          !sets.stn.has(token)
-
-        if (
-          !deterministicIdentityMismatch &&
-          (borrowsMappedIdentity || replacesMappedIdentity)
-        ) {
-          push(
-            violations,
-            node,
-            "reserved-element-name",
-            owners
-              ? `Class "${token}" belongs to ${[...owners].map((tag) => `<${tag}>`).join(" or ")} in the Element Class Table; it cannot identify <${node.tag}>.`
-              : `<${node.tag}> uses the Element Class Table identity "${requiredForTag}", not "${token}".`,
-          )
-        }
-      }
-    }
-
     if (ownedComponent) {
       if (passedThroughOwnedClasses.length > 0) {
         push(
@@ -1117,10 +951,29 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
     )
 
     // The record a selector chain is checked against. Variants are tracked
-    // separately for sibling-role review and left out of base identity matching.
+    // separately for contextual identity review and left out of base identity matching.
     // An owned child carries its derived root at runtime even though nothing is
     // written here.
     const record = {
+      staticBase: staticBaseTokens.length === 1 ? staticBaseTokens[0] : null,
+      invalidBase: baseTokens.length > 1 || deterministicIdentityMismatch,
+      fixedDefinition: requiredElementIdentity ? registry.html.get(node.tag) : identifyingRole ? registry.aria.get(role) : null,
+      platformDefinitions: [
+        ...(node.tagType === NATIVE && registry.html.has(node.tag)
+          ? [registry.html.get(node.tag)]
+          : []),
+        ...(!hasDynamicAttr(node, "role") && role && registry.aria.has(role) && !/\s/u.test(role)
+          ? [registry.aria.get(role)]
+          : []),
+      ],
+      residual: acceptsRoleIdentity,
+      roleUnknown: acceptsRoleIdentity && (hasDynamicAttr(node, "role") || Boolean(role && (!registry.aria.has(role) || /\s/u.test(role)))),
+      scopedRole: getStaticAttr(node, "data-role"),
+      hasScopedRole: hasStaticAttr(node, "data-role"),
+      dynamicScopedRole: hasDynamicAttr(node, "data-role"),
+      scopeBoundary: Boolean(node.nagiScopeBoundary),
+      isSurface: isSurfaceRoot,
+      styled: config.emitPolicy === "always" || [...allTokens].some((token) => styledClasses.has(token)) || Boolean(elementStyledTrigger || componentStyledTrigger || roleStyledTrigger),
       baseTokens: [
         ...new Set([
           ...ownedBaseTokens(info.staticTokens, config, sets),
@@ -1136,12 +989,21 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
       dynamicBranch:
         inheritedDynamicBranch || node.nagiDynamicBranch || hasDynamicBranchDirective(node),
       loc: node.loc,
-      opaque: node.tagType === COMPONENT || node.tag === "slot" || node.nagiOpaqueComponent,
+      opaque: node.tagType === COMPONENT || node.tag === "slot" || node.tag === "template" || node.nagiOpaqueComponent,
+      opaqueKind:
+        node.tag === "Teleport" || node.tag === "teleport"
+          ? "unverifiable"
+          : node.tagType === COMPONENT && !node.nagiOpaqueComponent
+            ? "component"
+            : "unverifiable",
       stnToken,
       tag: node.tag,
       variants: staticVariants,
     }
     siblings.push(record)
+    if ((node.props ?? []).some((property) => property.type === 7 && property.name === "html")) {
+      record.children.push({ children: [], classes: [], opaque: true, opaqueKind: "unverifiable", tag: "", loc: node.loc })
+    }
 
     const stnIndex = stnToken ? sets.stnIndex.get(stnToken) : null
     const context = isSurfaceRoot ? { coarse: [], hasLeaf: false } : surfaceContext
@@ -1183,18 +1045,25 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
           const dynamicBranch =
             inheritedBranch || child?.nagiDynamicBranch || hasDynamicBranchDirective(child)
           if (child?.nagiOpaque) {
-            collectVariantUsage(child)
             record.children.push({
               children: [],
               classes: [],
               dynamic: true,
               dynamicBranch,
               opaque: true,
+              opaqueKind: "unverifiable",
               tag: "",
             })
           } else if (isTransparentWrapper(child, config)) {
-            collectVariantUsage(child)
-            visitChildren(child.children, childDepth, dynamicBranch)
+            const annotated = hasStaticAttr(child, "data-role") || hasDynamicAttr(child, "data-role")
+            if (child.tag === "slot" || annotated) {
+              record.children.push({ children: [], classes: [], opaque: true, tag: "slot",
+                opaqueKind: "unverifiable", scopedRole: getStaticAttr(child, "data-role"),
+                hasScopedRole: hasStaticAttr(child, "data-role"),
+                dynamicScopedRole: hasDynamicAttr(child, "data-role"), loc: child.loc })
+              visitChildren(child.children?.map((item) => ({ ...item, nagiScopeBoundary: true })), childDepth, dynamicBranch)
+            } else visitChildren(child.nagiScopeBoundary
+              ? child.children?.map((item) => ({ ...item, nagiScopeBoundary: true })) : child.children, childDepth, dynamicBranch)
           } else {
             visit(
               child,
@@ -1209,7 +1078,6 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
         }
       }
       visitChildren(node.children, depth + 1)
-      reviewSiblingStnVariants(record.children, violations)
     }
 
     if (isSurfaceRoot && context?.coarse.length > 0 && !context.hasLeaf) {
@@ -1230,7 +1098,12 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
       const dynamicBranch =
         inheritedBranch || child?.nagiDynamicBranch || hasDynamicBranchDirective(child)
       if (isTransparentWrapper(child, config)) {
-        collectVariantUsage(child)
+        if (hasStaticAttr(child, "data-role") || hasDynamicAttr(child, "data-role")) {
+          tree.push({ children: [], classes: [], opaque: true, tag: "slot", loc: child.loc,
+            opaqueKind: "unverifiable", scopedRole: getStaticAttr(child, "data-role"),
+            hasScopedRole: hasStaticAttr(child, "data-role"),
+            dynamicScopedRole: hasDynamicAttr(child, "data-role") })
+        }
         visitRoots(child.children, dynamicBranch)
       } else {
         visit(child, 0, null, null, tree, null, dynamicBranch)
@@ -1238,11 +1111,36 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
     }
   }
   visitRoots(template.children)
-  reviewSiblingStnVariants(tree, violations)
-  reviewNonStnVariantPeers(variantUsages, violations)
+  const identities = resolveIdentities(tree, registry, config, violations)
+  const invalidIdentityRules = new Set(["single-base-identity", "identity-format", "scoped-role-context", "scoped-role-syntax", "dynamic-scoped-role", "unknown-role-scope", "unknown-scoped-role", "scoped-role-identity-required", "redundant-scoped-role", "reserved-element-name",
+    "element-class-required", "role-identity-required", "state-not-class", "stn-floor", "stn-order", "stn-reach-g"])
+  for (const identity of identities.nodes) {
+    const own = violations.filter((entry) => entry.line === identity.line && entry.column === identity.column)
+    identity.diagnostics = own
+    if (own.some((entry) => invalidIdentityRules.has(entry.ruleId))) identity.status = "invalid"
+  }
+  // Never apply a class-only rename/removal while component CSS still uses it.
+  // Adding a missing canonical class and sorting variants preserve selectors.
+  for (const violation of violations) {
+    if (!violation.fix || violation.ruleId === "variant-order") continue
+    if (styleBlocks.length || descriptor.styles.some((style) => /\[\s*class(?:\s|[~|^$*]?=|\])/u.test(style.content))) {
+      delete violation.fix
+      continue
+    }
+    const previous = source.slice(...violation.fix.range)
+    const before = new Set(previous.match(/[^\s"'=]+/gu) ?? [])
+    const after = new Set(violation.fix.text.match(/[^\s"'=]+/gu) ?? [])
+    for (const token of styledClasses) {
+      if (before.has(token) && !after.has(token)) {
+        delete violation.fix
+        break
+      }
+    }
+  }
 
   return {
     childSurfaceRoots,
+    identities,
     expectedClasses,
     expectedRoots,
     roleNames,

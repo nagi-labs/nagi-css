@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "scopes": {
+    "range": {
+      "roles": {
+        "track": { "required": true },
+        "fill": { "required": true },
+        "slider": { "required": true, "native": true }
+      }
+    }
+  }
+}

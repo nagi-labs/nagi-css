@@ -19,9 +19,9 @@
     <h1 class="title">Nagi CSS</h1>
     <p class="p -tagline">CSS, after the wind.</p>
     <p class="p -lead">
-      A structural contract for component CSS that derives class identities
-      and owned selector paths from source, then checks that they stay aligned.
-      It lets class names follow from the source, rather than gather around it.
+      A structural contract for component CSS: reuse applicable definitions,
+      make unregistered meanings visible, and use STN for structure.
+      Lint and measurement share the same analysis of names and owned CSS paths.
     </p>
     <p class="p -meaning">
       <em>Nagi</em> (“NAH-ghee”) is Japanese for the calm after the wind.
@@ -46,19 +46,19 @@
     <span class="text -eyebrow">The idea</span>
     <h2 class="title">Let naming settle</h2>
     <p class="p">
-      Nagi CSS begins with a <strong>bounded canonical form</strong>: given the
-      same component source and project configuration, authors and agents
-      derive the same root, element identities, and owned selector paths. The
-      remaining anatomy and variant choices stay inside an explicit,
-      reviewable vocabulary.
+      Nagi CSS connects four ideas: Surface ownership, a base identity,
+      static variants and attribute state, and CSS that follows owned DOM.
+      Internal identities are Predefined, Defined, Unregistered, or Structural.
+      HTML and explicit ARIA produce Predefined identities; Built-in Anatomy and
+      Custom definitions validate author-selected meanings.
     </p>
     <ul class="list">
       <li class="item">
         <h3 class="title">Derived, not remembered</h3>
         <p class="p">
-          A file name, an element, or a small structural table supplies the
-          identity. The linter checks the result, so consistency does not rest
-          on shared memory.
+          File names and applicable platform mappings supply mechanical names.
+          Built-in Anatomy and Custom definitions make author-selected meanings
+          reusable, with unregistered names visible as warnings.
         </p>
       </li>
       <li class="item">
@@ -80,11 +80,11 @@
 
   <section class="section -naming" id="naming">
     <span class="text -eyebrow">Naming</span>
-    <h2 class="title">One component, named by rule</h2>
+    <h2 class="title">One base, with an explicit basis</h2>
     <p class="p">
-      Little below needs to be invented. Each base identity follows from a
-      lookup or a bounded structural choice, and the linter keeps that
-      derivation attached to the markup.
+      Use a Predefined name when platform evidence fixes it, select a Built-in or
+      Custom Defined name where it applies, use an Unregistered semantic name
+      where needed, or choose STN for structure. Surface roots remain separate.
     </p>
     <div class="unit">
       <figure class="figure -sample">
@@ -124,10 +124,11 @@
         <li class="item -surface">
           <h3 class="title">Surface — from the file name</h3>
           <p class="p"><code class="code">invoice-card</code> is the
-          component file's name, kebab-cased. Never chosen.</p>
+          component file's name, kebab-cased. The author chooses the responsibility;
+          deriving its class is mechanical.</p>
         </li>
         <li class="item -element">
-          <h3 class="title">Elements — from a fixed table</h3>
+          <h3 class="title">Predefined identities — HTML and ARIA</h3>
           <p class="p">Common HTML elements map to one fixed identity: headings
           become <code class="code">title</code>, <code class="code">img</code>
           becomes <code class="code">image</code>, <code class="code">dt</code>
@@ -136,22 +137,25 @@
           not invented.</p>
         </li>
         <li class="item -anatomy">
-          <h3 class="title">UI anatomy — a tiny allowlist</h3>
-          <p class="p">Names for common UI parts that HTML has no tag for:
-          <code class="code">field</code> (form field or composite control),
-          <code class="code">value</code>, <code class="code">actions</code>,
-          <code class="code">media</code>, <code class="code">icon</code>
-          by default — five words go a long way, and the list is configurable
-          per project.</p>
+          <h3 class="title">Defined and Unregistered meanings</h3>
+          <p class="p">Select a Built-in Anatomy definition such as
+          <code class="code">text</code> or <code class="code">icon</code>, or
+          a Custom scoped role with <code class="code">data-role="scope/role"</code>. A name such
+          as <code class="code">popup</code> may remain unregistered with a warning.
+          Group custom definitions by scope and mark each instance with
+          <code class="code">data-role="scope/root"</code>; the root keeps its existing class identity.
+          Standard HTML and ARIA roles keep their normal representation without
+          a redundant custom marker.
+          The <a class="link" href="https://github.com/nagi-labs/nagi-css/blob/main/docs/definitions.md">reference</a>
+          explains context, canonical names and declaration checks.</p>
         </li>
         <li class="item -stn">
           <h3 class="title">Structural Tier Names (STN)</h3>
           <p class="p">A structural ladder (<code class="code">unit</code> ·
           <code class="code">seg</code> · <code class="code">fr</code> ·
           <code class="code">g</code>) for the <code class="code">div</code>s
-          that nothing else fits — the tier is determined by depth, so
-          <code class="code">wrapper</code> and
-          <code class="code">inner</code> never appear.</p>
+          where the author chooses structural naming. Shared sibling tiers need
+          no variants. Structural names are valid choices, not a score to minimize.</p>
         </li>
         <li class="item -variant">
           <h3 class="title">Variants — modifiers, not names</h3>
@@ -293,67 +297,34 @@ export default [
   </section>
 
   <section class="section -evaluation" id="evaluation">
-    <span class="text -eyebrow">Evaluation</span>
-    <h2 class="title">Tested beyond a toy component</h2>
+    <span class="text -eyebrow">Measurement</span>
+    <h2 class="title">Reproduce the identity report</h2>
     <p class="p">
-      To see how the contract behaves beyond a small fixture, we measured
-      <a class="link" href="https://github.com/nagi-labs/nagi-ui">Nagi UI</a>,
-      a larger set of Vue components built with Nagi CSS. Its executable
-      evaluation counts every literal class token, then separates names that
-      are determined or bounded from the local words an author still chooses:
+      The shared analyzer counts styled internal template declarations as Predefined,
+      Defined, Unregistered or Structural. Surfaces, component boundaries, invalid identities
+      and unknowns are separate. Predefined platform names and author-selected
+      Defined names use separate measures.
     </p>
-    <ul class="list -metrics">
-      <li class="item">
-        <strong class="strong">76.8%</strong>
-        <span>contract-determined explicit bases</span>
-        <p class="p">
-          Of 555 explicit base identities, 426 follow directly from the surface,
-          component boundary or slot, ARIA role, STN position, or native element
-          mapping.
-        </p>
-      </li>
-      <li class="item">
-        <strong class="strong">100%</strong>
-        <span>explicit bases need no new vocabulary</span>
-        <p class="p">
-          The other 129 of 555 explicit bases (23.2%) select from four bounded
-          anatomy words. They require a choice and are not counted as
-          contract-determined; together the two categories cover 555 / 555 bases.
-        </p>
-      </li>
-      <li class="item">
-        <strong class="strong">82.4%</strong>
-        <span>determined with implicit components</span>
-        <p class="p">
-          Including 176 component tags whose identities are implicit, 602 / 731
-          identities are contract-determined. All 731 / 731 require no new
-          vocabulary after bounded anatomy is included.
-        </p>
-      </li>
-      <li class="item">
-        <strong class="strong">17.2%</strong>
-        <span>author-named variants</span>
-        <p class="p">
-          Of all 670 explicit class tokens, 115 are variant occurrences whose
-          local word is chosen by the author. Nagi CSS checks their form,
-          ordering, placement, and peer relationship; it does not derive the
-          word.
-        </p>
-      </li>
-    </ul>
     <p class="p">
-      The 100% base result and the 17.2% variant result use different populations:
-      555 base identities versus all 670 explicit class tokens. An occurrence is
-      a use in markup, not a separate invention. The source set includes
-      documentation and preview fixtures, where the variant rate is higher, and
-      excludes package Blueprints. This is one self-hosted repository, not a
-      benchmark or a universal Nagi CSS rate. Read the
-      <a class="link" href="https://github.com/nagi-labs/nagi-ui/blob/main/docs/evaluations/naming-derivation.md">method and limitations</a>,
-      inspect the
-      <a class="link" href="https://github.com/nagi-labs/nagi-ui/blob/main/docs/evaluations/naming-derivation.json">JSON result</a>,
-      or reproduce it with <code class="code">vp run evaluate:naming</code>.
-      The command is checked in Nagi UI's CI. These counts locate the remaining
-      naming choices; they do not measure human cognitive load.
+      The checked Vue, Svelte and Astro naming examples each contain one Predefined
+      and three Defined identities: together P=3, D=9, U=0, T=0, N=12.
+      Definition coverage is 12/12 (100.0%); Predefined rate is 3/12 (25.0%)
+      and Defined rate is 9/12 (75.0%).
+      Three Surface roots are excluded. These are reproducibility fixtures, not
+      evidence of a universal rate, human cognitive load or maintenance time.
+    </p>
+    <pre class="pre"><code class="code">vp run evaluate:identities</code></pre>
+    <p class="p">
+      Run from the repository checkout. The 0.6.0 definition and measure APIs are
+      described in the
+      <a class="link" href="https://github.com/nagi-labs/nagi-css/blob/main/docs/migrations/defined-identities.md">migration guide</a>.
+      Inspect the
+      <a class="link" href="https://github.com/nagi-labs/nagi-css/tree/main/examples/custom-roles">three-framework examples</a>
+      and the <a class="link" href="https://github.com/nagi-labs/nagi-css/blob/main/docs/definitions.md">report specification</a>.
+      Nagi UI's
+      <a class="link" href="https://github.com/nagi-labs/nagi-ui/blob/main/docs/evaluations/naming-derivation.md">separate token-naming evaluation</a>
+      uses different categories and denominators and must not be presented as this coverage measure.
+      No STN reduction target or passing threshold is imposed.
     </p>
   </section>
 
@@ -391,7 +362,7 @@ export default [
     <p class="p">
       The repository ships an agent skill that packages the contract as a
       workflow: what to derive, in what order, and how to verify the result.
-      An agent generates against a deterministic contract; the linter checks
+      An agent selects meanings using definitions; the linter checks
       the result. That loop keeps AI-written CSS inside the same rules applied
       to human-written code.
     </p>

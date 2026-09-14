@@ -1,6 +1,6 @@
 {
   "name": "@nagi-labs/nagi-css-core",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "description": "Shared configuration, vocabulary tables, and component template/style analysis for Nagi CSS.",
   "license": "MIT",
   "repository": {
@@ -19,7 +19,11 @@
     "nagi"
   ],
   "type": "module",
-  "exports": "./src/index.mjs",
+  "exports": {
+    ".": "./src/index.mjs",
+    "./role-definition.schema.json": "./src/role-definition.schema.json",
+    "./anatomy-definitions.json": "./src/anatomy-definitions.json"
+  },
   "files": [
     "src",
     "CHANGELOG.md"

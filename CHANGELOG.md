@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.6.0 — 2026-09-14
+
+- Normalize Predefined, Defined, Unregistered and Structural identities through one registry
+  and per-node analysis shared by ESLint and measurement.
+- Ship `anatomy-definitions.json` for the Built-in Defined identities `text`,
+  `icon`, `media`, `value`, `field`, and `actions`; derive the compatibility
+  `anatomyClasses` list from that data.
+- Add versioned scoped-role JSON definitions, schema, `loadRoleDefinition`,
+  static `data-role="scope/role"` markers, implicit scope roots, native-role
+  reuse, and per-scope required declaration checks with explicit uncertainty.
+- Allow unregistered semantic names with warnings. Deprecated `anatomyClasses`
+  extensions no longer confer Defined status; use described `roleDefinitions`.
+- Remove STN and non-STN peer requirements. Their old rule keys remain deprecated
+  no-ops until the next major release. Variant shadowing and platform-name
+  collisions depend on node/context applicability.
+- Export `analyzeComponent` and `createIdentityReport`; add CLI `measure --json`.
+- Withhold class-only fixes that leave existing CSS selectors stale.
+- Resolve Vue literal ARIA roles after attribute spreads according to source
+  order; retain uncertainty when a later spread can replace the role.
+- Align Contract, examples, configuration and Skill with generated definition
+  references. See [migration](docs/migrations/defined-identities.md).
+
+
 ## 0.5.1 — 2026-09-07
 
 ### Fixed

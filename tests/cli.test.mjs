@@ -23,6 +23,59 @@ async function executeCli(args) {
   return { code, stderr, stdout }
 }
 
+test("measure exposes common JSON records, warnings, and parse failures", async (context) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "nagi-measure-"))
+  context.after(() => fs.rm(directory, { force: true, recursive: true }))
+  const config = path.join(directory, "nagi.config.mjs")
+  const file = path.join(directory, "example.vue")
+  await fs.writeFile(
+    config,
+    'export default { files: ["*.vue"], semantic: { surfaceRootPrefixes: ["app-"], emitPolicy: "always" } }',
+  )
+  await fs.writeFile(
+    file,
+    '<template><div class="app-example"><div class="popup" /><div class="unit" /><button class="button" /></div></template>',
+  )
+  const args = ["measure", "--config", config, "--cwd", directory]
+  const json = await executeCli([...args, "--json"])
+  assert.equal(json.code, 0, json.stderr)
+  const report = JSON.parse(json.stdout)
+  assert.deepEqual([report.P, report.D, report.U, report.T, report.N], [1, 0, 1, 1, 3])
+  assert.equal(report.files[0].nodes[1].classification, "unregistered")
+  assert.equal(report.files[0].diagnostics[0].ruleId, "unregistered-semantic-identity")
+  assert.match((await executeCli(args)).stdout, /Unregistered: 1 \/ 3 = 33.3%/)
+  await fs.writeFile(
+    path.join(directory, "parts.json"),
+    JSON.stringify({
+      version: 1,
+      scopes: { picker: { roles: { popup: { required: true } } } },
+    }),
+  )
+  await fs.writeFile(
+    config,
+    'export default { files: ["*.vue"], semantic: { surfaceRootPrefixes: ["app-"], emitPolicy: "always", roleDefinitions: ["parts.json"] } }',
+  )
+  await fs.writeFile(
+    file,
+    '<template><div class="app-example" data-role="picker/root"><div class="popup" data-role="picker/popup" /></div></template>',
+  )
+  const registered = await executeCli([...args, "--json"])
+  assert.equal(registered.code, 0, registered.stderr)
+  assert.deepEqual(
+    [
+      JSON.parse(registered.stdout).P,
+      JSON.parse(registered.stdout).D,
+      JSON.parse(registered.stdout).U,
+    ],
+    [0, 1, 0],
+  )
+  await fs.writeFile(file, "<template><div></template>")
+  const invalid = await executeCli([...args, "--json"])
+  assert.equal(invalid.code, 1)
+  assert.equal(JSON.parse(invalid.stdout).parseFailures, 1)
+  assert.equal(JSON.parse(invalid.stdout).definitionCoverage.percentage, null)
+})
+
 test("CLI applies only safe fixed-class fixes from an external config", async (context) => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "nagi-css-"))
   context.after(() => fs.rm(directory, { force: true, recursive: true }))
@@ -59,10 +112,7 @@ test("CLI discovers and fixes Svelte and Astro files by default", async (context
 <style>.test-${path.basename(file).startsWith("svelte") ? "svelte" : "astro"}-surface { > .button {} }</style>`,
     )
   }
-  await fs.writeFile(
-    config,
-    `export default { semantic: { surfaceRootPrefixes: ["test-"] } }`,
-  )
+  await fs.writeFile(config, `export default { semantic: { surfaceRootPrefixes: ["test-"] } }`)
 
   const result = await executeCli(["check", "--config", config, "--cwd", directory, "--fix"])
   assert.equal(result.code, 0, result.stderr)
@@ -88,28 +138,25 @@ test("CLI honours per-rule severity, and warnings do not fail the run", async (c
       config,
       `export default { files: ["*.vue"], severity: ${JSON.stringify(severity)}, semantic: { surfaceRootPrefixes: ["test-"] } }`,
     )
-    return executeCli([
-      "check",
-      "--config",
-      config,
-      "--cwd",
-      directory,
-    ])
+    return executeCli(["check", "--config", config, "--cwd", directory])
   }
 
   const errors = await run({})
   assert.equal(errors.code, 1)
-  assert.match(errors.stdout, /anatomy-allowed/)
+  assert.match(errors.stdout, /unregistered-semantic-identity/)
   assert.match(errors.stdout, /owned-dom-direct-child/)
 
   const warnings = await run({ "*": "warn" })
   assert.equal(warnings.code, 0, warnings.stdout)
-  assert.match(warnings.stdout, /anatomy-allowed/)
+  assert.match(warnings.stdout, /unregistered-semantic-identity/)
   assert.match(warnings.stdout, /owned-dom-direct-child/)
 
-  const off = await run({ "anatomy-allowed": "off", "owned-dom-direct-child": "off" })
+  const off = await run({
+    "unregistered-semantic-identity": "off",
+    "owned-dom-direct-child": "off",
+  })
   assert.equal(off.code, 0, off.stdout)
-  assert.doesNotMatch(off.stdout, /anatomy-allowed|owned-dom-direct-child/)
+  assert.doesNotMatch(off.stdout, /unregistered-semantic-identity|owned-dom-direct-child/)
 })
 
 test("CLI rejects an unknown or malformed severity entry", async (context) => {
@@ -121,13 +168,7 @@ test("CLI rejects an unknown or malformed severity entry", async (context) => {
     `export default { severity: { "no-such-rule": "warn", "stn-order": "maybe" }, semantic: { surfaceRootPrefixes: ["test-"] } }`,
   )
 
-  const failure = await executeCli([
-    "check",
-    "--config",
-    config,
-    "--cwd",
-    directory,
-  ])
+  const failure = await executeCli(["check", "--config", config, "--cwd", directory])
 
   assert.equal(failure.code, 2)
   assert.match(failure.stderr, /severity\.no-such-rule is not a Nagi CSS rule/)
@@ -154,13 +195,7 @@ test("CLI resolves token sources against the checked directory, not the config f
     } }`,
   )
 
-  const failure = await executeCli([
-    "check",
-    "--config",
-    config,
-    "--cwd",
-    directory,
-  ])
+  const failure = await executeCli(["check", "--config", config, "--cwd", directory])
 
   assert.equal(failure.code, 1)
   assert.match(failure.stdout, /"--color-edge" is not declared/)

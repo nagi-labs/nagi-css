@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Nagi Scoped Role Definition v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "scopes"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "const": 1 },
+    "scopes": {
+      "type": "object",
+      "propertyNames": { "$ref": "#/$defs/name" },
+      "additionalProperties": { "$ref": "#/$defs/scope" }
+    }
+  },
+  "$defs": {
+    "name": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$" },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["roles"],
+      "properties": {
+        "roles": {
+          "type": "object",
+          "propertyNames": { "$ref": "#/$defs/roleName" },
+          "additionalProperties": { "$ref": "#/$defs/role" }
+        }
+      }
+    },
+    "roleName": {
+      "type": "string",
+      "pattern": "^(?!root$)[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+    },
+    "role": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "required": { "type": "boolean", "default": false },
+        "description": { "type": "string", "pattern": "\\S" },
+        "native": { "type": "boolean", "default": false }
+      }
+    }
+  }
+}
