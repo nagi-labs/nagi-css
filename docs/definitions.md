@@ -1,10 +1,15 @@
-# Scoped role definitions and measurement
+# Scoped roles, purposes, and measurement
 
 This is the definition reference for the [Nagi CSS Contract](../CONTRACT.md).
-HTML and WAI-ARIA already provide standard semantic identities. A component may
+HTML and WAI-ARIA already provide standard semantic roles. A component may
 also need roles whose meaning exists only inside that component, such as a
 Range's track and fill. Scoped role definitions register those additional
 meanings without putting nonstandard tokens in the HTML `role` attribute.
+
+A role describes what an element is and supplies a base class. A purpose
+describes what an element is used for and supplies a variant. Existing HTML
+class mappings do not change: `input` stays `.input`, `h2` stays `.title`, and
+`a` stays `.link`. Owned styles continue to target explicit classes, not tags.
 
 ## Register definition files
 
@@ -76,7 +81,7 @@ must not appear in `roles`.
 static declaration in every statically analyzable instance of its scope.
 
 `native` defaults to `false`. In this contract, native means a standard semantic
-identity supplied by either HTML or WAI-ARIA, not only an HTML element. A native
+role supplied by either HTML or WAI-ARIA, not only an HTML element. A native
 role must have the same canonical name as an entry in Nagi CSS's existing HTML
 or WAI-ARIA registry. A standard spelling can still be a custom role where the
 standard semantic source is not being used: Range's custom `track` role on a
@@ -87,10 +92,74 @@ It explains the role's meaning and is retained in the shared definition registry
 It does not introduce executable requirements or prove correct DOM placement.
 Existing definitions without descriptions remain valid.
 
-The initial schema has no aliases, cardinality ranges, allowed
-element lists, states, child graphs, selector definitions, or conditional
-requirements. Scoped roles describe semantic declarations, not a headless UI
-anatomy API.
+The schema has no aliases, cardinality ranges, states, child graphs, selector
+definitions, or conditional requirements. Scoped declarations do not form a
+general headless UI anatomy API.
+
+## Define purposes
+
+Each scope may contain `roles`, `purposes`, or both. A purpose-only scope needs
+no empty `roles` object. The purpose key names its required variant:
+
+```json
+{
+  "version": 1,
+  "scopes": {
+    "pagination": {
+      "purposes": {
+        "next": {
+          "description": "Navigates to the next page.",
+          "required": true
+        }
+      }
+    },
+    "popover": {
+      "purposes": {
+        "trigger": {
+          "description": "Opens or closes the popover.",
+          "role": { "element": "button" }
+        }
+      }
+    }
+  }
+}
+```
+
+Within their respective roots:
+
+```html
+<a class="link -next" href="/page/2" data-purpose="pagination/next">Next</a>
+<button class="button -trigger" data-purpose="popover/trigger">Options</button>
+```
+
+Without `role`, a purpose does not constrain the base; ordinary Nagi base rules
+still apply. With `role: { "element": "button" }`, it requires that actual HTML
+element, including a configured fixed intrinsic proxy. With
+`role: { "aria": "button" }`, it requires the corresponding explicit or
+statically provable implicit ARIA role. The latter accepts a native button or
+`input type="submit"` without redundant `role="button"`. It never derives an
+ARIA role from a CSS class or from Nagi's HTML class aliases.
+
+ARIA constraints reuse the `aria-query` HTML mappings. Context-dependent rules,
+unresolved attributes, and accessible-name relationships that this analyzer
+cannot establish produce `unverifiable-purpose-role`, not a guessed match.
+This is source validation, not a simulation of the browser accessibility tree.
+HTML and ARIA constraints are distinct; specify exactly one. These constraints
+do not change the existing HTML-to-class mapping.
+
+Purpose names use the same kebab-case grammar; `root` and structural tier names
+are reserved. `description` and `required` have the same meanings as for roles.
+`data-purpose` requires one static `scope/purpose` token and the corresponding
+static `-purpose` class, even without CSS. It cannot establish a scope root.
+Missing variants, wrong targets, and dynamic markers do not satisfy required
+purposes. A role and a separate purpose may be declared on the same element.
+
+Definitions are intentionally small. A casual project can register a role with
+an empty object, or a purpose with only its description. A library can add
+target and required-declaration constraints and publish the same format.
+Behavioral contracts and executable test mappings belong to the UI library;
+Nagi CSS does not execute or certify them. `trigger` denotes a purpose in Nagi's
+examples; `viewport` denotes a named display region and is a custom role.
 
 ## Establish a scope instance
 
@@ -103,7 +172,7 @@ an existing rendered owned element:
 
 The root may be a Surface root or another rendered owned element. It establishes
 the semantic region but never supplies `.root` or replaces the element's current
-base identity. Surface, component, HTML, and WAI-ARIA rules continue to determine
+base role. Surface, component, HTML, and WAI-ARIA rules continue to determine
 that base. A non-rendering template, fragment, slot, or transparent component
 cannot establish a scope root.
 
@@ -124,16 +193,16 @@ bindings, interpolation, computed values, and other dynamic declarations are
 errors and never establish a root or satisfy a required role.
 
 On a residual `div` or `span`, a custom scoped role supplies the ordinary local
-base name: `range/fill` requires `.fill`, without the scope prefix. On a node
-that already has a Surface, component, HTML, or identifying WAI-ARIA identity,
-the scoped role is additional semantic evidence and does not replace that base:
+base name: `range/fill` requires `.fill`, without the scope prefix. On a native
+element, an identifying ARIA node, or a Surface root, a competing custom role
+is rejected with `scoped-role-conflict`. A purpose preserves that node's base:
 
 ```html
-<button class="button" data-role="date-picker/trigger"></button>
+<button class="button -trigger" data-purpose="popover/trigger"></button>
 ```
 
 The marker is a semantic source, not a requirement to style through attribute
-selectors. Component CSS continues to use the ordinary Nagi class identity.
+selectors. Component CSS continues to use the ordinary Nagi class role.
 
 ## Use standard semantics directly
 
@@ -152,7 +221,7 @@ canonical HTML or WAI-ARIA mapping:
 ```
 
 Do not repeat it as `data-role="range/slider"`. The standard source preserves
-the `.slider` identity and satisfies the nearest Range scope's native slider
+the `.slider` role and satisfies the nearest Range scope's native slider
 requirement. A redundant custom marker is reported.
 
 Nagi CSS reuses its existing HTML and WAI-ARIA mappings rather than maintaining
@@ -212,11 +281,14 @@ runtime-conditional. Each scope root is checked independently.
 - Unresolved slot or dynamic content that prevents proving absence is
   `unverifiable-presence`.
 - Dynamic `data-role` is an error and does not count as unresolved evidence.
+- Required purposes use the same owned regions and declaration-only guarantee.
+  A matching `data-purpose`, variant, and target constraint are necessary.
+  A missing purpose reports `required-purpose-missing`.
 - A child component's private DOM is outside the parent's owned region and does
   not satisfy the parent requirement.
 
 These checks do not depend on `emitPolicy`. An unstyled static declaration can
-satisfy presence, while CSS identity checks still apply when the node is styled
+satisfy presence, while CSS role checks still apply when the node is styled
 or otherwise requires a fixed class.
 
 ## Composition
@@ -229,10 +301,30 @@ into the same scope; this avoids load-order-dependent contracts.
 Descriptions participate in equality without rewriting their text. A different
 description, or a description present in only one duplicate, is a conflict rather
 than a load-order-dependent choice of meaning.
+Purposes, their descriptions, required flags, and target constraints also
+participate in scope equality. Distinct purposes may use the same role without
+conflicting; competing declarations of the same purpose are not load-order wins.
 
-## Identity classification and measurement
+## Migration
 
-Internal styled identities remain Predefined, Defined, Unregistered, or
+HTML class mappings, built-in roles, STN, loading, and ownership are unchanged.
+Existing custom-base definitions and `native: true` declarations remain valid.
+Move declarations that merely describe a native element's use from `roles` to
+`purposes`, change `data-role` to `data-purpose`, and add the matching static
+variant. Update selectors and test locators together. A marker left on the wrong
+attribute is diagnosed rather than silently reinterpreted.
+
+The public analysis API now uses `analysis.roles` and `createRoleReport` instead
+of `analysis.identities` and `createIdentityReport`. Internal semantic naming and
+diagnostics use role terminology; ownership/file identity remains a separate
+concept. Renamed rule IDs include `single-base-role`, `role-format`,
+`aria-role-class-required`, `scoped-role-base-required`,
+`unregistered-semantic-role`, and `unverifiable-aria-role`. Update explicit
+severity overrides to the new IDs.
+
+## Role classification and measurement
+
+Internal styled roles remain Predefined, Defined, Unregistered, or
 Structural:
 
 - HTML and explicit identifying WAI-ARIA bases are Predefined.
@@ -246,10 +338,10 @@ reported separately. A node with a standard base may also record the scoped role
 it satisfies without changing its Predefined classification.
 
 ```js
-import { analyzeComponent, createIdentityReport } from "@nagi-labs/nagi-css-core"
+import { analyzeComponent, createRoleReport } from "@nagi-labs/nagi-css-core"
 
 const analysis = analyzeComponent(source, filename, semanticConfig)
-const report = createIdentityReport([analysis])
+const report = createRoleReport([analysis])
 ```
 
 ```sh

@@ -58,7 +58,7 @@ export const STYLE_RULE_IDS = [
   "apply-directive-not-enabled",
   "apply-arbitrary-syntax",
   "selector-mirrors-template",
-  "single-base-identity",
+  "single-base-role",
   "slot-surface-top-level",
   "stacking-token-required",
   "top-layer-z-index",
@@ -90,7 +90,7 @@ export const STYLE_RULE_DESCRIPTIONS = {
   "apply-arbitrary-syntax":
     "Keep arbitrary Tailwind values and properties as visible plain CSS declarations",
   "selector-mirrors-template": "Require selector chains to match the component template",
-  "single-base-identity": "Allow exactly one base identity class per selector compound",
+  "single-base-role": "Allow exactly one base role class per selector compound",
   "slot-surface-top-level": "Keep attached slot surfaces below their UI-library boundary",
   "stacking-token-required": "Require a token for the stacking level of a surface that owns its own",
   "top-layer-z-index": "Reject z-index as a way to order top-layer surfaces",
@@ -100,7 +100,7 @@ export const STYLE_RULE_DESCRIPTIONS = {
   "top-level-surface-only": "Anchor component styles at a surface root",
   "unknown-token": "Require referenced tokens to exist in a configured token source",
   "value-token-required": "Require tokens for color values",
-  "variant-shadows-vocabulary": "Keep variants outside the base-identity vocabulary",
+  "variant-shadows-vocabulary": "Keep variants outside the base-role vocabulary",
 }
 
 // `z-index` belongs here for the same reason as `position` and `margin`: where a
@@ -397,7 +397,7 @@ export function analyzeStyleRoot(root, inputConfig, templateContext = emptyTempl
     return true
   }
 
-  function checkSingleBaseIdentity(rule, nodes) {
+  function checkSingleBaseRole(rule, nodes) {
     const baseTokens = [
       ...new Set(
         nodes
@@ -415,15 +415,15 @@ export function analyzeStyleRoot(root, inputConfig, templateContext = emptyTempl
     if (baseTokens.length < 2) return
     report(
       rule,
-      "single-base-identity",
-      `Selector compound has multiple base identity classes: ".${baseTokens.join(" .")}"; keep exactly one applicable base identity.`,
+      "single-base-role",
+      `Selector compound has multiple base role classes: ".${baseTokens.join(" .")}"; keep exactly one applicable base role.`,
       `.${baseTokens[1]}`,
     )
   }
 
   function checkClassTokens(rule, nodes) {
     if (hasDeepPseudo(nodes)) return
-    checkSingleBaseIdentity(rule, nodes)
+    checkSingleBaseRole(rule, nodes)
     for (const node of classNodesDeep(nodes)) {
       const token = node.value
       if (checkState(rule, token)) continue
@@ -701,7 +701,7 @@ export function analyzeStyleRoot(root, inputConfig, templateContext = emptyTempl
 
   // A container name is an identifier, so the contract derives it like every other
   // one: from the surface and the element that declares it. The element's own base
-  // identity is already the canonical name for that node, so the container name is
+  // roleRecord is already the canonical name for that node, so the container name is
   // that name qualified by the surface it lives in.
   function containerNames(decl) {
     const prop = decl.prop.toLowerCase()
@@ -717,13 +717,13 @@ export function analyzeStyleRoot(root, inputConfig, templateContext = emptyTempl
     // An unresolvable chain cannot say which element declares the container, and a
     // child component's root is not this file's to name.
     if (chain === null) return
-    const identities = chain.at(-1)?.classes ?? []
-    if (identities.length === 0 || identities.some(isOwnedComponentRoot)) return
+    const roles = chain.at(-1)?.classes ?? []
+    if (roles.length === 0 || roles.some(isOwnedComponentRoot)) return
 
     const expected = new Set()
     for (const surfaceRoot of surfaceRoots) {
-      for (const identity of identities) {
-        expected.add(identity === surfaceRoot ? surfaceRoot : `${surfaceRoot}-${identity}`)
+      for (const roleRecord of roles) {
+        expected.add(roleRecord === surfaceRoot ? surfaceRoot : `${surfaceRoot}-${roleRecord}`)
       }
     }
     if (expected.size === 0) return
@@ -803,7 +803,7 @@ export function analyzeStyleRoot(root, inputConfig, templateContext = emptyTempl
       checkMirror(rule, chain)
       checkReachIn(rule, chain)
       checkBareElements(rule, compounds[0])
-      checkSingleBaseIdentity(rule, compounds[0])
+      checkSingleBaseRole(rule, compounds[0])
       for (const node of compounds[0].filter((candidate) => candidate.type === "class")) {
         const token = node.value
         if (checkState(rule, token)) continue
@@ -1033,7 +1033,7 @@ export function analyzeStyleRoot(root, inputConfig, templateContext = emptyTempl
   })
 
   // Cascade layers reorder the cascade, and the contract's structural rules exist so
-  // that the order never needs adjusting: one base identity per compound, `>` chains,
+  // that the order never needs adjusting: one base role per compound, `>` chains,
   // no bare element selectors. A layer inside a surface is an escape hatch back to
   // "make this win", and a component that must lose to its consumer has a public
   // contract for that (custom properties), not a cascade trick. Global layer

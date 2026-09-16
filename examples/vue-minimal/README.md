@@ -46,7 +46,7 @@ In `src/format-controls.vue`, temporarily change the element with
 vp run lint
 ```
 
-Because the `div` has an identifying role, its canonical base identity is
+Because the `div` has an identifying role, its canonical base role is
 `group`. `unit` is not a valid fallback on that element. Restore `group` before
 continuing.
 

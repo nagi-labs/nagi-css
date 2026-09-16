@@ -15,7 +15,7 @@ import {
   validateNagiConfig,
   validateSeverity,
   analyzeComponent,
-  createIdentityReport,
+  createRoleReport,
 } from "@nagi-labs/nagi-css-core"
 
 const knownRuleIds = Object.keys(eslintRules)
@@ -190,7 +190,7 @@ export async function run(
         })
       }
     }
-    const report = createIdentityReport(analyses)
+    const report = createRoleReport(analyses)
     const percentage = (rate) =>
       rate.percentage === null ? "N/A" : `${rate.count} / ${rate.total} = ${rate.percentage}%`
     output.stdout.write(

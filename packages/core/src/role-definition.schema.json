@@ -18,8 +18,13 @@
     "scope": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["roles"],
+      "anyOf": [{ "required": ["roles"] }, { "required": ["purposes"] }],
       "properties": {
+        "purposes": {
+          "type": "object",
+          "propertyNames": { "$ref": "#/$defs/roleName" },
+          "additionalProperties": { "$ref": "#/$defs/purpose" }
+        },
         "roles": {
           "type": "object",
           "propertyNames": { "$ref": "#/$defs/roleName" },
@@ -30,6 +35,24 @@
     "roleName": {
       "type": "string",
       "pattern": "^(?!root$)[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+    },
+    "purpose": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "description": { "type": "string", "pattern": "\\S" },
+        "required": { "type": "boolean", "default": false },
+        "role": {
+          "type": "object",
+          "additionalProperties": false,
+          "minProperties": 1,
+          "maxProperties": 1,
+          "properties": {
+            "element": { "$ref": "#/$defs/name" },
+            "aria": { "$ref": "#/$defs/name" }
+          }
+        }
+      }
     },
     "role": {
       "type": "object",

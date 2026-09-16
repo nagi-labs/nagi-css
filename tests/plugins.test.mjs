@@ -718,7 +718,7 @@ test("ESLint rejects template variants that shadow vocabulary names", async () =
   )
 })
 
-test("ESLint rejects an Element Class Table identity on the wrong tag", async () => {
+test("ESLint rejects an Element Class Table role on the wrong tag", async () => {
   const eslint = new ESLint({
     cwd: root,
     overrideConfigFile: true,
@@ -746,7 +746,7 @@ test("ESLint rejects an Element Class Table identity on the wrong tag", async ()
   )
 })
 
-test("ESLint reports a mistyped native identity under the Element Class Table rule", async () => {
+test("ESLint reports a mistyped native role under the Element Class Table rule", async () => {
   const eslint = new ESLint({
     cwd: root,
     overrideConfigFile: true,
@@ -778,7 +778,7 @@ test("ESLint limits anatomy diagnostics to div and span", async () => {
   )
 
   const anatomy = result.messages.filter(
-    ({ ruleId }) => ruleId === "nagi-css/unregistered-semantic-identity",
+    ({ ruleId }) => ruleId === "nagi-css/unregistered-semantic-role",
   )
   assert.equal(anatomy.length, 1)
   assert.match(anatomy[0].message, /"mystery"/)
@@ -790,7 +790,7 @@ test("ESLint limits anatomy diagnostics to div and span", async () => {
   )
 })
 
-test("ESLint rejects multiple base identities", async () => {
+test("ESLint rejects multiple base roles", async () => {
   const eslint = new ESLint({
     cwd: root,
     overrideConfigFile: true,
@@ -802,11 +802,11 @@ test("ESLint rejects multiple base identities", async () => {
   )
 
   assert.ok(
-    result.messages.some(({ ruleId }) => ruleId === "nagi-css/single-base-identity"),
+    result.messages.some(({ ruleId }) => ruleId === "nagi-css/single-base-role"),
   )
 })
 
-test("ESLint rejects multiple base identities in one compound", async () => {
+test("ESLint rejects multiple base roles in one compound", async () => {
   const file = path.join(root, "fixtures/compound-surface.vue")
   const result = await lintStyles(file, testSurface,
     `<template><section class="test-compound-surface"><li class="item unit" /></section></template>
@@ -814,7 +814,7 @@ test("ESLint rejects multiple base identities in one compound", async () => {
 
   assert.ok(
     result.results[0].warnings.some(
-      ({ rule }) => rule === "nagi-css/single-base-identity",
+      ({ rule }) => rule === "nagi-css/single-base-role",
     ),
   )
 })
@@ -827,7 +827,7 @@ test("ESLint treats zone as an unregistered name, not an STN alias", async () =>
 
   assert.ok(
     result.results[0].warnings.some(
-      ({ rule }) => rule === "nagi-css/unregistered-semantic-identity",
+      ({ rule }) => rule === "nagi-css/unregistered-semantic-role",
     ),
   )
 })

@@ -21,9 +21,9 @@ without passing a base class or reaching into its private DOM. Configured librar
 boundaries and declared slot sub-surfaces retain their existing ownership rules.
 Surface identity is separate from an internal node's classification.
 
-## Base identity
+## Base role
 
-Every styled internal node has one static base identity:
+Every styled internal node has one static base role:
 
 | Classification | Meaning |
 | --- | --- |
@@ -32,8 +32,8 @@ Every styled internal node has one static base identity:
 | Unregistered | The author uses a semantic name without an applicable definition; allowed with a warning by default. |
 | Structural | The author chooses STN to express structure rather than a named UI part. |
 
-HTML and ARIA provide Predefined identities. Built-in Anatomy and Custom provide
-Defined identities. The source is recorded as report detail rather than another
+HTML and ARIA provide Predefined roles. Built-in Anatomy and Custom provide
+Defined roles. The source is recorded as report detail rather than another
 classification. Native and explicit identifying ARIA names retain their own
 applicability conditions. For example, `button` remains Predefined on a native
 button even when it also declares a component-scoped purpose. Built-in Anatomy
@@ -46,7 +46,9 @@ named scope when the meaning is stable, establish an instance with
 `data-role="scope/root"`, and declare a custom role with
 `data-role="scope/popup"`. `data-role` adds no ARIA behavior. On a residual
 `div` or `span`, the local role supplies the ordinary base `.popup`; Surface,
-component, HTML, and WAI-ARIA identities retain priority on other nodes.
+component, HTML, and WAI-ARIA roles retain priority on other nodes. A custom
+role on a native element or identifying ARIA node is a conflict, not an ignored
+base declaration. Use a purpose when describing the use of an existing role.
 
 A scope root may annotate any rendered owned element and never supplies `.root`.
 Nested roots are hard boundaries: a non-root marker must match its nearest root
@@ -66,6 +68,20 @@ siblings may share the same tier and selector.
 A variant is a static purpose, distinction, or modifier that preserves the base.
 Write variants in alphabetical order.
 
+Role means what an element is and determines its base class. Purpose means what
+that element is used for and determines a variant. Register roles under
+`scopes.<scope>.roles` and purposes under `scopes.<scope>.purposes`.
+`data-role="range/fill"` requires `.fill`; `data-purpose="pagination/next"`
+requires `-next` while preserving the normal base. Purpose declarations may
+optionally constrain their target to a specific HTML element or ARIA role.
+They do not implement behavior. A role already includes its meaning: do not
+repeat it as a same-named purpose variant.
+
+Both markers are static, scoped declarations using the nearest `scope/root`.
+They may coexist when a custom role also serves a separate purpose. Purposes do
+not establish roots. Dynamic declarations are errors. Ordinary unregistered
+variants remain valid under the existing variant rules.
+
 ```html
 <button class="button -close">Close</button>
 <button class="button -primary" disabled>Save</button>
@@ -74,7 +90,7 @@ Write variants in alphabetical order.
 ```
 
 There is no business/UI/design word partition. Decide whether the word modifies
-this node's identity. If the node actually represents a popup, prefer `.popup`
+this node's role. If the node actually represents a popup, prefer `.popup`
 over `.unit.-popup`. Lint checks known applicability; it cannot settle this
 semantic judgment from natural-language words alone.
 
@@ -100,7 +116,7 @@ and boundary constraints are specified in [CSS and ownership](css-reference.md).
 - [Definition providers, scope, JSON schema, presence, fixes and measurement](definitions.md)
 - [Generated Built-in Anatomy definitions](anatomy-definitions.md)
 - [Configuration](configuration.md)
-- [Migration from the previous naming model](https://github.com/nagi-labs/nagi-css/blob/main/docs/migrations/defined-identities.md)
+- [Migration from the previous naming model](https://github.com/nagi-labs/nagi-css/blob/main/docs/migrations/defined-roles.md)
 - [Framework setup](https://github.com/nagi-labs/nagi-css/blob/main/docs/getting-started/index.md)
 - [FAQ](https://github.com/nagi-labs/nagi-css/blob/main/FAQ.md)
 
@@ -115,6 +131,6 @@ or that all names could be uniquely derived from the DOM.
 Reuse Predefined names where platform evidence fixes them. Select a Built-in or
 Custom Defined name where its meaning applies. Define missing meanings, or use
 an Unregistered name while keeping it visible. Use STN for structure without a
-part name. Variants modify identities, state lives in attributes, and Surfaces
+part name. Variants modify roles, state lives in attributes, and Surfaces
 express ownership. Nagi uses this contract as the shared model for lint and
 measurement.

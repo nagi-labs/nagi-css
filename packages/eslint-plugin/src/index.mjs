@@ -2,7 +2,7 @@ import vueParser from "vue-eslint-parser"
 
 import {
   analyzeComponent,
-  IDENTITY_RULES,
+  ROLE_RULES,
   astroParser,
   defineNagiConfig,
   resolveSeverity,
@@ -21,7 +21,7 @@ const FIXABLE_RULES = new Set([
   "component-class-required",
   "element-class-required",
   "owned-component-identity",
-  "role-identity-required",
+  "aria-role-class-required",
   "stn-floor",
   "stn-order",
   "surface-root-name",
@@ -30,20 +30,20 @@ const FIXABLE_RULES = new Set([
 
 const ruleDescriptions = {
   ...STYLE_RULE_DESCRIPTIONS,
-  ...IDENTITY_RULES,
+  ...ROLE_RULES,
   "anatomy-allowed": "Reject explicitly configured banned classes",
   "component-class-required": "Require configured static component classes when styled",
   "dynamic-class-requires-static-anchor":
     "Require a static owned class beside every dynamic class binding",
-  "element-class-required": "Enforce the Element Class Table identity when styled",
+  "element-class-required": "Enforce the Element Class Table role when styled",
   "layout-only-wrapper":
     "Review sole-child div or span wrappers that only establish flex or grid layout around one child branch",
-  "reserved-element-name": "Require an applicable definition for a platform identity name",
+  "reserved-element-name": "Require an applicable definition for a platform role name",
   "owned-component-identity":
     "Style an owned child component by its own derived surface root, not a passed class",
-  "role-identity-required":
-    "Require a div or span's Predefined identity from its explicit identifying ARIA role",
-  "single-base-identity": "Allow exactly one base identity class per element",
+  "aria-role-class-required":
+    "Require a div or span's Predefined role from its explicit identifying ARIA role",
+  "single-base-role": "Allow exactly one base role class per element",
   "state-not-class": "Represent runtime state with native, ARIA, or data attributes",
   "surface-root-name":
     "Derive component and page surface names from the configured prefix and component file",
@@ -51,7 +51,7 @@ const ruleDescriptions = {
   "stn-floor": "Start each STN chain at unit or a coarser tier",
   "stn-order": "Keep adjacent STN tiers consecutive",
   "stn-peer-variant":
-    "Deprecated no-op: sibling structural identities may share styles without variants",
+    "Deprecated no-op: sibling structural roles may share styles without variants",
   "stn-reach-g": "Make surfaces above unit reach the g tier",
   "unsupported-style-syntax":
     "Report style blocks the toolchain cannot read instead of skipping them",
@@ -63,7 +63,7 @@ const ruleDescriptions = {
   "variant-requires-peer":
     "Deprecated no-op: a static modifier does not require a peer",
   "variant-shadows-vocabulary":
-    "Report variants naming identities applicable to the same node and context",
+    "Report variants naming roles applicable to the same node and context",
 }
 
 function cachedAnalysis(context, config) {
@@ -156,7 +156,7 @@ rules["valid-config"] = {
 }
 
 const plugin = {
-  meta: { name: "@nagi-labs/eslint-plugin-nagi-css", version: "0.6.0" },
+  meta: { name: "@nagi-labs/eslint-plugin-nagi-css", version: "0.7.0" },
   rules,
 }
 

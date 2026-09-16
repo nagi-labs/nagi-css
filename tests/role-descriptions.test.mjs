@@ -39,15 +39,15 @@ test("description conflicts cannot be resolved by source order", () => {
   }
 })
 
-test("Vue event-only bindings preserve scoped identity while attribute spreads remain unresolved", () => {
+test("Vue event-only bindings preserve scoped role while attribute spreads remain unresolved", () => {
   const source = (binding) => `<template><div class="app-example" data-role="range/root"><span class="fill" data-role="range/fill" ${binding} /></div></template>`
   const config = { surfaceRootPrefixes: ["app-"], roleDefinitions: [definition({ description: "The selected portion." })] }
   const valid = analyzeComponent(source('v-on="events"'), "/example.vue", config)
   assert.deepEqual(valid.violations, [])
-  assert.equal(valid.identities.nodes.find((node) => node.scopedRole === "range/fill").provider, "Custom")
+  assert.equal(valid.roles.nodes.find((node) => node.scopedRole === "range/fill").provider, "Custom")
   for (const binding of ['v-bind="attrs"', ':role="role"', 'v-bind:[name]="value"']) {
     const result = analyzeComponent(source(binding), "/example.vue", config)
-    assert.ok(result.violations.some((entry) => entry.ruleId === "unverifiable-role-identity"))
+    assert.ok(result.violations.some((entry) => entry.ruleId === "unverifiable-aria-role"))
   }
 })
 
@@ -57,11 +57,11 @@ test("Vue resolves a literal role after a spread without trusting the reverse or
   for (const binding of ['v-bind="attrs"', 'v-bind:[name]="value"']) {
     const resolved = analyzeComponent(source(`${binding} role="tablist"`), "/example.vue", config)
     assert.deepEqual(resolved.violations, [])
-    assert.equal(resolved.identities.nodes[1].provider, "ARIA")
+    assert.equal(resolved.roles.nodes[1].provider, "ARIA")
     const unknown = analyzeComponent(source(`role="tablist" ${binding}`), "/example.vue", config)
-    assert.ok(unknown.violations.some((entry) => entry.ruleId === "unverifiable-role-identity"))
+    assert.ok(unknown.violations.some((entry) => entry.ruleId === "unverifiable-aria-role"))
     const mismatch = analyzeComponent(source(`${binding} role="tablist"`, "unit"), "/example.vue", config)
-    assert.ok(mismatch.violations.some((entry) => entry.ruleId === "role-identity-required"))
+    assert.ok(mismatch.violations.some((entry) => entry.ruleId === "aria-role-class-required"))
   }
 })
 

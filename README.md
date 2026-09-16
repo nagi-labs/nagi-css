@@ -19,6 +19,13 @@ Vue, Nuxt, Svelte, and Astro.
 
 ## Install
 
+Role names determine base classes; purposes add static variants without replacing
+the base. For example, `data-role="range/fill"` uses `.fill`, while
+`data-purpose="pagination/next"` uses `.button.-next` or `.link.-next`.
+Projects and libraries can register either kind through the same
+[scoped definition format](docs/definitions.md). Purpose definitions may constrain
+their target HTML element or ARIA role. Existing HTML class names are unchanged.
+
 Requirements:
 
 - Node.js 22.18 or newer
@@ -75,11 +82,11 @@ commands and intentional breakage exercises are in the
 
 ## What it enforces
 
-Surface ownership, base identity, variants/state and CSS structure form one contract:
+Surface ownership, base role, variants/state and CSS structure form one contract:
 
 - the surface root from the configured prefix and component filename;
 - fixed classes from HTML elements and configured UI components;
-- internal identities classified as Predefined, Defined, Unregistered, or Structural;
+- internal roles classified as Predefined, Defined, Unregistered, or Structural;
 - native/ARIA Predefined names and described Built-in Anatomy/Custom definitions;
 - scoped JSON role definitions with optional role descriptions, selected by static `data-role="scope/role"`
   markers, with required declaration checks;
@@ -131,7 +138,7 @@ fully qualified attribute without adding ARIA behavior. See the
 `nagi-css measure --config nagi.config.mjs --cwd . --json` reports internal
 styled declarations as Predefined / Defined / Unregistered / Structural, keeping
 surfaces, boundaries and unknowns separate. Predefined names and author-selected
-definitions are reported separately. The [0.6.0 migration guide](docs/migrations/defined-identities.md)
+definitions are reported separately. The [0.7.0 migration guide](docs/migrations/0.7.md)
 covers the new APIs and configuration diagnostics; the pinned Vue starter still
 uses 0.5.1 until publication. Maintainers verify candidate tarballs in isolated
 consumers before publishing, as described in the [release guide](docs/RELEASING.md).
@@ -141,7 +148,7 @@ findings are assessed separately from analyzer defects and package failures.
 
 ## Documentation
 
-- [Definition model migration](docs/migrations/defined-identities.md)
+- [Definition model migration](docs/migrations/defined-roles.md)
 - [Definition and measurement specification](docs/definitions.md)
 - [Built-in Anatomy definitions](docs/anatomy-definitions.md)
 

@@ -3,7 +3,7 @@
 # CSS and ownership reference
 
 This reference preserves the CSS, token, and ownership rules of the [Contract](contract.md).
-Identity classification and semantic scope are specified in [Definitions](definitions.md).
+Role classification and semantic scope are specified in [Definitions](definitions.md).
 
 ## Technical Requirements
 
@@ -141,7 +141,7 @@ intrinsicComponents: {
 transparentComponents: ["AnimatePresence"],
 ```
 
-An intrinsic proxy receives the mapped Element Class Table identity, and its
+An intrinsic proxy receives the mapped Element Class Table role, and its
 children remain owned DOM. A transparent component contributes no selector depth.
 These mappings are valid only when the library API fixes the rendered shape. A
 polymorphic component whose element is selected dynamically remains opaque; the
@@ -453,7 +453,7 @@ Related components should still be treated as separate styling surfaces unless o
 or a genuinely separate responsibility can justify component extraction. These
 are design review criteria, not automatic split triggers. Naming alone must not
 force file renames, component extraction, or meaningless wrappers. Existing STN
-depth constraints still apply; choose semantic part identities where they
+depth constraints still apply; choose semantic part roles where they
 actually describe the UI, rather than adding structural tiers indefinitely.
 
 Example:
@@ -592,7 +592,7 @@ chosen. The name is the surface, qualified by the element that declares it:
 | declared on | name |
 |---|---|
 | the surface's own rule | the surface root — `app-invoice-card` |
-| an owned element's rule | surface root + that element's base identity — `app-invoice-card-media` |
+| an owned element's rule | surface root + that element's base role — `app-invoice-card-media` |
 
 ```css
 .app-invoice-card {
@@ -609,7 +609,7 @@ chosen. The name is the surface, qualified by the element that declares it:
 }
 ```
 
-The element's base identity is already the canonical name for that node, so this
+The element's base role is already the canonical name for that node, so this
 adds no new vocabulary — it reuses the name the contract had already derived.
 Reported as `container-name-derived`, with the expected name in the message.
 
@@ -646,7 +646,7 @@ preference remains an accessibility obligation regardless.
 ### Cascade layers are not used inside a surface
 
 `@layer` reorders the cascade. Everything in this contract exists so that the order
-never has to be adjusted: one base identity per compound, `>` chains that mirror the
+never has to be adjusted: one base role per compound, `>` chains that mirror the
 template, no bare element selectors, no utilities. Specificity inside a surface is
 flat by construction.
 
@@ -858,7 +858,7 @@ the accessibility tree and does not hide it visually.
 }
 ```
 
-The `status` class is the derived styling identity. The CSS controls visual
+The `status` class is the derived styling role. The CSS controls visual
 presentation; `role` and `aria-live` independently describe accessibility
 semantics.
 

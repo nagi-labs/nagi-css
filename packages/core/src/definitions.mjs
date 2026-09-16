@@ -3,7 +3,7 @@ import path from "node:path"
 import anatomyData from "./anatomy-definitions.json" with { type: "json" }
 
 export const ANATOMY_DEFINITIONS = anatomyData
-export const IDENTITY_NAME = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/u
+export const ROLE_NAME = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/u
 
 // JSON.parse alone silently discards duplicate keys. Validate the token stream
 // first, keeping a separate key set for each object, including nested scopes and
@@ -86,7 +86,7 @@ export function buildDefinitionRegistry(config) {
     Object.entries(config.elementClasses).map(([tag, name]) => [
       tag,
       make("HTML", name, tag, {
-        description: `The configured standard identity for <${tag}>.`,
+        description: `The configured standard role for <${tag}>.`,
       }),
     ]),
   )
@@ -145,21 +145,23 @@ export function buildDefinitionRegistry(config) {
 
     for (const [scopeName, scopeData] of Object.entries(data.scopes)) {
       const where = `scope ${JSON.stringify(scopeName)}`
-      if (!IDENTITY_NAME.test(scopeName) || config.tiers.includes(scopeName)) {
+      if (!ROLE_NAME.test(scopeName) || config.tiers.includes(scopeName)) {
         errors.push(`Invalid or structural scope name ${JSON.stringify(scopeName)}`)
         continue
       }
-      if (!validateObject(scopeData, where, new Set(["roles"]))) continue
-      if (!object(scopeData.roles)) {
-        errors.push(`${where}.roles must be an object`)
+      if (!validateObject(scopeData, where, new Set(["roles", "purposes"]))) continue
+      if ((!object(scopeData.roles) && scopeData.roles !== undefined) ||
+          (!object(scopeData.purposes) && scopeData.purposes !== undefined) ||
+          (scopeData.roles === undefined && scopeData.purposes === undefined)) {
+        errors.push(`${where} must contain a roles or purposes object`)
         continue
       }
 
       const validRoles = {}
-      for (const [roleName, roleData] of Object.entries(scopeData.roles)) {
+      for (const [roleName, roleData] of Object.entries(scopeData.roles ?? {})) {
         const roleWhere = `${where}.roles.${JSON.stringify(roleName)}`
         if (
-          !IDENTITY_NAME.test(roleName) ||
+          !ROLE_NAME.test(roleName) ||
           config.tiers.includes(roleName) ||
           roleName === "root" ||
           roleName === scopeName
@@ -182,7 +184,7 @@ export function buildDefinitionRegistry(config) {
         if (roleData.required !== undefined && typeof roleData.required !== "boolean")
           errors.push(`${roleWhere}.required must be a boolean`)
         if (!standardNames.has(roleName) && roleData.native === true)
-          errors.push(`${roleWhere} declares native: true but has no matching standard identity`)
+          errors.push(`${roleWhere} declares native: true but has no matching standard role`)
         validRoles[roleName] = {
           description: roleData.description ?? null,
           native: roleData.native === true,
@@ -190,7 +192,43 @@ export function buildDefinitionRegistry(config) {
         }
       }
 
-      const signature = normalizedRoles(validRoles)
+      const validPurposes = {}
+      for (const [name, purpose] of Object.entries(scopeData.purposes ?? {})) {
+        const at = `${where}.purposes.${JSON.stringify(name)}`
+        if (!ROLE_NAME.test(name) || name === "root" || config.tiers.includes(name)) {
+          errors.push(`${at}: invalid or reserved purpose name`)
+          continue
+        }
+        if (!validateObject(purpose, at, new Set(["description", "required", "role"]))) continue
+        if (purpose.description !== undefined &&
+            (typeof purpose.description !== "string" || !purpose.description.trim()))
+          errors.push(`${at}.description must be a non-empty string`)
+        if (purpose.required !== undefined && typeof purpose.required !== "boolean")
+          errors.push(`${at}.required must be a boolean`)
+        let role = null
+        if (purpose.role !== undefined) {
+          if (!object(purpose.role) || Object.keys(purpose.role).length !== 1 ||
+              !("element" in purpose.role || "aria" in purpose.role)) {
+            errors.push(`${at}.role must specify exactly one element or aria name`)
+          } else {
+            const [source, name] = Object.entries(purpose.role)[0]
+            if (typeof name !== "string" || !(source === "element" ? html : aria).has(name) ||
+                (source === "aria" && ["generic", "none", "presentation"].includes(name)))
+              errors.push(`${at}.role.${source} must name an existing identifying ${source} source`)
+            else role = { [source]: name }
+          }
+        }
+        validPurposes[name] = {
+          description: purpose.description ?? null,
+          required: purpose.required === true,
+          role,
+        }
+      }
+
+      const signature = JSON.stringify([
+        normalizedRoles(validRoles),
+        Object.entries(validPurposes).sort(([a], [b]) => a.localeCompare(b)),
+      ])
       const existing = scopes.get(scopeName)
       if (existing) {
         if (existing.signature !== signature)
@@ -202,6 +240,7 @@ export function buildDefinitionRegistry(config) {
         id: `Custom:${scopeName}`,
         name: scopeName,
         roles: new Map(),
+        purposes: new Map(),
         signature,
       }
       scopes.set(scopeName, scope)
@@ -213,6 +252,10 @@ export function buildDefinitionRegistry(config) {
           description: roleData.description,
         })
         scope.roles.set(roleName, role)
+      }
+      for (const [name, data] of Object.entries(validPurposes)) {
+        const purpose = make("Purpose", name, scope.id, { scope: scopeName, ...data })
+        scope.purposes.set(name, purpose)
       }
     }
   }

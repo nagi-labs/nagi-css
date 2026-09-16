@@ -2,12 +2,12 @@
 
 # Built-in anatomy definitions
 
-These Built-in definitions apply to residual div/span nodes after Predefined platform identities.
-They produce Defined identities: choosing the right meaning remains an author decision.
+These Built-in definitions apply to residual div/span nodes after Predefined platform roles.
+They produce Defined roles: choosing the right meaning remains an author decision.
 
 ## text
 
-A short textual run or UI copy without a more specific native identity.
+A short textual run or UI copy without a more specific native role.
 
 Examples: A label's visible text; A short hint.
 
@@ -51,4 +51,4 @@ A group of related action controls.
 
 Examples: Dialog action buttons; Card actions.
 
-Exclusions: A single button keeps button; Navigation links with a native nav identity.
+Exclusions: A single button keeps button; Navigation links with a native nav role.

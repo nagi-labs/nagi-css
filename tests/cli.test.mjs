@@ -42,7 +42,7 @@ test("measure exposes common JSON records, warnings, and parse failures", async 
   const report = JSON.parse(json.stdout)
   assert.deepEqual([report.P, report.D, report.U, report.T, report.N], [1, 0, 1, 1, 3])
   assert.equal(report.files[0].nodes[1].classification, "unregistered")
-  assert.equal(report.files[0].diagnostics[0].ruleId, "unregistered-semantic-identity")
+  assert.equal(report.files[0].diagnostics[0].ruleId, "unregistered-semantic-role")
   assert.match((await executeCli(args)).stdout, /Unregistered: 1 \/ 3 = 33.3%/)
   await fs.writeFile(
     path.join(directory, "parts.json"),
@@ -143,20 +143,20 @@ test("CLI honours per-rule severity, and warnings do not fail the run", async (c
 
   const errors = await run({})
   assert.equal(errors.code, 1)
-  assert.match(errors.stdout, /unregistered-semantic-identity/)
+  assert.match(errors.stdout, /unregistered-semantic-role/)
   assert.match(errors.stdout, /owned-dom-direct-child/)
 
   const warnings = await run({ "*": "warn" })
   assert.equal(warnings.code, 0, warnings.stdout)
-  assert.match(warnings.stdout, /unregistered-semantic-identity/)
+  assert.match(warnings.stdout, /unregistered-semantic-role/)
   assert.match(warnings.stdout, /owned-dom-direct-child/)
 
   const off = await run({
-    "unregistered-semantic-identity": "off",
+    "unregistered-semantic-role": "off",
     "owned-dom-direct-child": "off",
   })
   assert.equal(off.code, 0, off.stdout)
-  assert.doesNotMatch(off.stdout, /unregistered-semantic-identity|owned-dom-direct-child/)
+  assert.doesNotMatch(off.stdout, /unregistered-semantic-role|owned-dom-direct-child/)
 })
 
 test("CLI rejects an unknown or malformed severity entry", async (context) => {

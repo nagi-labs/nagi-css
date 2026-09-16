@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nagi CSS — CSS, after the wind</title>
-<meta name="description" content="Nagi CSS is a structural contract that derives class identities and owned selector paths from component source — CSS, after the wind.">
+<meta name="description" content="Nagi CSS is a structural contract that derives class roles and owned selector paths from component source — CSS, after the wind.">
 <link rel="icon" href="nagi-css.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -46,10 +46,10 @@
     <span class="text -eyebrow">The idea</span>
     <h2 class="title">Let naming settle</h2>
     <p class="p">
-      Nagi CSS connects four ideas: Surface ownership, a base identity,
+      Nagi CSS connects four ideas: Surface ownership, a base role,
       static variants and attribute state, and CSS that follows owned DOM.
-      Internal identities are Predefined, Defined, Unregistered, or Structural.
-      HTML and explicit ARIA produce Predefined identities; Built-in Anatomy and
+      Internal roles are Predefined, Defined, Unregistered, or Structural.
+      HTML and explicit ARIA produce Predefined roles; Built-in Anatomy and
       Custom definitions validate author-selected meanings.
     </p>
     <ul class="list">
@@ -128,8 +128,8 @@
           deriving its class is mechanical.</p>
         </li>
         <li class="item -element">
-          <h3 class="title">Predefined identities — HTML and ARIA</h3>
-          <p class="p">Common HTML elements map to one fixed identity: headings
+          <h3 class="title">Predefined roles — HTML and ARIA</h3>
+          <p class="p">Common HTML elements map to one fixed base role: headings
           become <code class="code">title</code>, <code class="code">img</code>
           becomes <code class="code">image</code>, <code class="code">dt</code>
           becomes <code class="code">term</code>, and <code class="code">dd</code>
@@ -137,17 +137,12 @@
           not invented.</p>
         </li>
         <li class="item -anatomy">
-          <h3 class="title">Defined and Unregistered meanings</h3>
-          <p class="p">Select a Built-in Anatomy definition such as
-          <code class="code">text</code> or <code class="code">icon</code>, or
-          a Custom scoped role with <code class="code">data-role="scope/role"</code>. A name such
-          as <code class="code">popup</code> may remain unregistered with a warning.
-          Group custom definitions by scope and mark each instance with
-          <code class="code">data-role="scope/root"</code>; the root keeps its existing class identity.
-          Standard HTML and ARIA roles keep their normal representation without
-          a redundant custom marker.
-          The <a class="link" href="https://github.com/nagi-labs/nagi-css/blob/main/docs/definitions.md">reference</a>
-          explains context, canonical names and declaration checks.</p>
+          <h3 class="title">Built-in and custom meanings</h3>
+          <p class="p">Nagi includes built-in names such as
+          <code class="code">text</code> and <code class="code">icon</code>.
+          You can also define your own component-scoped vocabulary.
+          Roles name bases; purposes name variants.
+          <a class="link" href="https://github.com/nagi-labs/nagi-css/blob/main/docs/definitions.md">How to define roles and purposes →</a></p>
         </li>
         <li class="item -stn">
           <h3 class="title">Structural Tier Names (STN)</h3>
@@ -184,7 +179,7 @@
     </p>
     <p class="p">
       This checked Vue fixture derives its root from
-      <code class="code">profile-card.vue</code>, uses fixed element identities,
+      <code class="code">profile-card.vue</code>, uses fixed element roles,
       and stops at the owned <code class="code">UserAvatar</code> boundary.
     </p>
     <pre class="pre"><code>&lt;article class="app-profile-card"&gt;
@@ -205,7 +200,7 @@
     <p class="p"><strong>Result:</strong> <code class="code">0 errors</code>.</p>
     <ol class="list -diagnostics">
       <li class="item">
-        <h3 class="title">The base identity is guessed</h3>
+        <h3 class="title">The base role is guessed</h3>
         <p class="p"><strong>Violation</strong></p>
         <pre class="pre -violation"><code>&lt;article class="app-user-card"&gt;</code></pre>
         <p class="p"><strong>Diagnostic</strong></p>
@@ -298,26 +293,26 @@ export default [
 
   <section class="section -evaluation" id="evaluation">
     <span class="text -eyebrow">Measurement</span>
-    <h2 class="title">Reproduce the identity report</h2>
+    <h2 class="title">Reproduce the role report</h2>
     <p class="p">
       The shared analyzer counts styled internal template declarations as Predefined,
-      Defined, Unregistered or Structural. Surfaces, component boundaries, invalid identities
+      Defined, Unregistered or Structural. Surfaces, component boundaries, invalid roles
       and unknowns are separate. Predefined platform names and author-selected
       Defined names use separate measures.
     </p>
     <p class="p">
       The checked Vue, Svelte and Astro naming examples each contain one Predefined
-      and three Defined identities: together P=3, D=9, U=0, T=0, N=12.
+      and three Defined roles: together P=3, D=9, U=0, T=0, N=12.
       Definition coverage is 12/12 (100.0%); Predefined rate is 3/12 (25.0%)
       and Defined rate is 9/12 (75.0%).
       Three Surface roots are excluded. These are reproducibility fixtures, not
       evidence of a universal rate, human cognitive load or maintenance time.
     </p>
-    <pre class="pre"><code class="code">vp run evaluate:identities</code></pre>
+    <pre class="pre"><code class="code">vp run evaluate:roles</code></pre>
     <p class="p">
-      Run from the repository checkout. The 0.6.0 definition and measure APIs are
+      Run from the repository checkout. The 0.7.0 definition and measure APIs are
       described in the
-      <a class="link" href="https://github.com/nagi-labs/nagi-css/blob/main/docs/migrations/defined-identities.md">migration guide</a>.
+      <a class="link" href="https://github.com/nagi-labs/nagi-css/blob/main/docs/migrations/0.7.md">migration guide</a>.
       Inspect the
       <a class="link" href="https://github.com/nagi-labs/nagi-css/tree/main/examples/custom-roles">three-framework examples</a>
       and the <a class="link" href="https://github.com/nagi-labs/nagi-css/blob/main/docs/definitions.md">report specification</a>.
@@ -336,7 +331,7 @@ export default [
       deterministic property composition; Panda generates typed atomic styles
       and recipes; CSS Modules provide local class scope. Nagi CSS does not
       replace those guarantees. It keeps ordinary component CSS and instead
-      checks that semantic identities, selectors, and owned DOM paths agree.
+      checks that semantic roles, selectors, and owned DOM paths agree.
       Its experimental Tailwind <code class="code">@apply</code> backend is
       separate from the stable plain-CSS mode.
     </p>

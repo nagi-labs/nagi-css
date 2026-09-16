@@ -82,7 +82,7 @@ Advisory rules default to `warn` because they do not prove a violation:
 - `layout-only-wrapper` reports a `div`/`span` that appears to exist only for
   flex/grid layout and may be collapsible after rendered verification.
 
-Unregistered identities, unresolved presence, and deprecated anatomy extensions
+Unregistered roles, unresolved presence, and deprecated anatomy extensions
 also warn. Invalid, unknown, mismatched, or dynamic `data-role` declarations are
 errors. See [Definitions](definitions.md) for the rule IDs.
 
@@ -246,5 +246,5 @@ for JSON loading, static scoped-role resolution, presence, and measurement.
 
 The default `anatomyClasses` names are derived from the shipped
 `anatomy-definitions.json`: `text`, `icon`, `media`, `value`, `field`, and
-`actions`. They are Built-in Anatomy and resolve as Defined identities. Adding a
+`actions`. They are Built-in Anatomy and resolve as Defined roles. Adding a
 bare string to `anatomyClasses` does not create an equivalent definition.

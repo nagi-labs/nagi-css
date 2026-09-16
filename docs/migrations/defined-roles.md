@@ -1,7 +1,9 @@
-# Migrating to 0.6.0
+# Migrating to defined roles
 
-Version 0.6.0 introduces Predefined, Defined, Unregistered, and Structural
-identities, including the `loadRoleDefinition` and `createIdentityReport` exports.
+Version 0.6.0 introduced Predefined, Defined, Unregistered, and Structural
+classification. Current APIs use `loadRoleDefinition` and `createRoleReport`;
+0.6 used identity terminology for the report API. See [0.7 migration](0.7.md)
+for the role/purpose split and renamed APIs.
 Upgrade the Nagi CSS packages together. During release preparation, install the
 packed candidate packages; do not assume the candidate is already on npm.
 The minimal Vue example remains pinned to 0.5.1 until publication; release
@@ -20,9 +22,9 @@ The repository's `examples/custom-roles` exercises the new definition API.
   rule keys remain accepted as deprecated no-ops until the next major release.
 - `reserved-element-name` and `variant-shadows-vocabulary` use applicability.
   Contextual `track` can coexist with native HTML `track`; fixed native/ARIA
-  identities cannot be overridden by an unregistered name.
+  roles cannot be overridden by an unregistered name.
 - Class-only autofixes do not rename a token still referenced by component CSS.
-- Unresolved ARIA identities now report `unverifiable-role-identity`, including
+- Unresolved ARIA roles now report `unverifiable-aria-role`, including
   attribute spreads on generic elements whose role cannot be determined from
   source. This is a warning by default, not proof of incorrect runtime ARIA.
   An integration using `severity: { "*": "error" }` promotes it to an error,
@@ -35,7 +37,7 @@ The repository's `examples/custom-roles` exercises the new definition API.
   not a prerequisite for using the default warning policy.
 - Earlier derivation evaluations using all tokens, surfaces or implicit
   components as denominators are not comparable to internal Definition coverage.
-  Use `analyzeComponent` / `createIdentityReport`, not an independent dictionary.
+  Use `analyzeComponent` / `createRoleReport`, not an independent dictionary.
 
 ## UI parts, modifiers, and structure
 

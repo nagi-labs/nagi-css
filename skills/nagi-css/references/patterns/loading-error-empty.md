@@ -12,4 +12,4 @@ External config: none. The surface owns each conditional branch.
 
 Invalid: `.-loading` and `.is-error` report `state-not-class`. Correct with
 `aria-busy`, attribute selectors for the live-region roles, or `data-*`
-attributes. The `<p>` branches retain their self-mapped `p` identity.
+attributes. The `<p>` branches retain their self-mapped `p` role.

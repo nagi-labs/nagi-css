@@ -259,8 +259,8 @@ function normalizeSvelteElement(node, source) {
     children: normalizeSvelteChildren(node.children, source),
     loc: normalizedLoc(node),
     nagiClassInfo: classInfo,
-    nagiDynamicAttributes: ["role", "data-role"].filter((name) => attributes.some((attribute) =>
-      (name !== "data-role" && attribute.type === "SvelteSpreadAttribute") ||
+    nagiDynamicAttributes: ["role", "data-role", "data-purpose"].filter((name) => attributes.some((attribute) =>
+      (name === "role" && attribute.type === "SvelteSpreadAttribute") ||
       (attribute.type === "SvelteAttribute" && attribute.key?.name === name && !svelteStaticAttribute(attribute, source)))),
     nagiHasClassAttribute: attributes.some(
       (attribute) =>
@@ -525,8 +525,8 @@ function normalizeAstroElement(node, source, styles) {
     ],
     loc: normalizedLoc(node),
     nagiClassInfo: classInfo,
-    nagiDynamicAttributes: ["role", "data-role"].filter((name) => attributes.some((attribute) =>
-      (name !== "data-role" && attribute.type === "JSXSpreadAttribute") ||
+    nagiDynamicAttributes: ["role", "data-role", "data-purpose"].filter((name) => attributes.some((attribute) =>
+      (name === "role" && attribute.type === "JSXSpreadAttribute") ||
       (attribute.type === "JSXAttribute" && jsxName(attribute.name) === name && !astroStaticAttribute(attribute)))),
     nagiHasClassAttribute: attributes.some((attribute) => {
       const name = jsxName(attribute.name)

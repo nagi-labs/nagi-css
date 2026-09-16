@@ -23,11 +23,11 @@ export function analyzeComponent(source, filename, config = {}) {
   return { ...template, violations }
 }
 
-export function createIdentityReport(analyses) {
+export function createRoleReport(analyses) {
   const files = analyses.map((analysis) => ({
     file: analysis.sourceFile,
-    nodes: analysis.identities?.nodes ?? [],
-    scopes: analysis.identities?.scopes ?? [],
+    nodes: analysis.roles?.nodes ?? [],
+    scopes: analysis.roles?.scopes ?? [],
     diagnostics: analysis.violations.map(({ ruleId, message, line, column, range }) => ({
       ruleId,
       message,
@@ -35,7 +35,7 @@ export function createIdentityReport(analyses) {
       column,
       range,
     })),
-    candidates: analysis.identities?.candidates ?? [],
+    candidates: analysis.roles?.candidates ?? [],
   }))
   const nodes = files.flatMap((file) => file.nodes)
   const styled = nodes.filter((node) => node.styled && node.category === "internal")
@@ -51,28 +51,28 @@ export function createIdentityReport(analyses) {
     total: N,
     percentage: N ? Number(((count / N) * 100).toFixed(1)) : null,
   })
-  const used = new Set(analyses.flatMap((analysis) => analysis.identities?.used ?? []))
+  const used = new Set(analyses.flatMap((analysis) => analysis.roles?.used ?? []))
   const custom = new Map(
     analyses
-      .flatMap((analysis) => analysis.identities?.registry ?? [])
+      .flatMap((analysis) => analysis.roles?.registry ?? [])
       .filter((entry) => entry.provider === "Custom")
       .map((entry) => [entry.id, entry]),
   )
   const builtin = new Map(
     analyses
-      .flatMap((analysis) => analysis.identities?.registry ?? [])
+      .flatMap((analysis) => analysis.roles?.registry ?? [])
       .filter((entry) => entry.provider === "BuiltinAnatomy")
       .map((entry) => [entry.id, entry]),
   )
   return {
-    version: 2,
+    version: 3,
     unit: "static styled internal template declaration",
     P,
     D,
     U,
     T,
     N,
-    parseFailures: analyses.filter((analysis) => !analysis.identities).length,
+    parseFailures: analyses.filter((analysis) => !analysis.roles).length,
     unverifiableNodes: nodes.filter((node) => node.status === "unknown").length,
     unverifiedScopes: files.reduce(
       (count, file) => count + file.scopes.filter((scope) => scope.status !== "resolved").length,
@@ -100,6 +100,13 @@ export function createIdentityReport(analyses) {
       ...entry,
       usage: used.has(entry.id) ? "used" : "unused",
     })),
+    purposeDefinitions: [...new Map(analyses
+      .flatMap((analysis) => analysis.roles?.registry ?? [])
+      .filter((entry) => entry.provider === "Purpose")
+      .map((entry) => [entry.id, entry])).values()].map((entry) => ({
+        ...entry,
+        usage: used.has(entry.id) ? "used" : "unused",
+      })),
     builtinDefinitions: [...builtin.values()].map((entry) => ({
       ...entry,
       usage: used.has(entry.id) ? "used" : "unused",

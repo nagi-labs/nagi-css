@@ -110,11 +110,15 @@ test("the documentation site uses the Nagi CSS logo as its favicon and header ma
   assert.match(logo, /<svg[^>]+viewBox="0 0 64 64"/)
 })
 
-test("the documentation site describes scoped roots and links to existing local content", async () => {
+test("the documentation site introduces vocabulary and links to its definition guide", async () => {
   const html = await fs.readFile(path.join(repository, "docs/index.html"), "utf8")
-  assert.ok(html.includes('data-role="scope/root"'))
-  assert.ok(html.includes('data-role="scope/role"'))
-  assert.ok(html.includes("0.6.0 definition and measure APIs"))
+  assert.ok(html.includes("Built-in and custom meanings"))
+  assert.ok(html.includes("define your own component-scoped vocabulary"))
+  assert.match(html, /href="https:\/\/github\.com\/nagi-labs\/nagi-css\/blob\/main\/docs\/definitions\.md">How to define roles/)
+  const guide = await fs.readFile(path.join(repository, "docs/definitions.md"), "utf8")
+  assert.ok(guide.includes('data-role="range/root"'))
+  assert.ok(guide.includes('data-role="range/fill"'))
+  assert.ok(html.includes("0.7.0 definition and measure APIs"))
   const ids = new Set([...html.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]))
   // Inspect real start tags, not escaped markup displayed in code examples.
   const tags = html.match(/<[a-z][^>]*>/gi) ?? []
@@ -146,7 +150,7 @@ test("the getting-started token file declares exactly the names the table promis
   assert.deepEqual([...declared].sort(), promised)
 })
 
-test("portable agent guidance matches the paragraph and text identities", async () => {
+test("portable agent guidance matches the paragraph and text roles", async () => {
   const [agents, naming, pattern] = await Promise.all([
     fs.readFile(path.join(repository, "AGENTS.md"), "utf8"),
     fs.readFile(path.join(repository, "skills/nagi-css/references/naming-flow.md"), "utf8"),
@@ -170,7 +174,7 @@ test("portable agent guidance matches the paragraph and text identities", async 
   }
   assert.doesNotMatch(agents, /\| `p` \| `text` \|/)
   assert.match(naming, /A prose paragraph is `<p class="p">`/)
-  assert.match(pattern, /self-mapped `p` identity/)
+  assert.match(pattern, /self-mapped `p` role/)
 })
 
 test("Skill and built-in anatomy guidance are generated from canonical sources", () => {

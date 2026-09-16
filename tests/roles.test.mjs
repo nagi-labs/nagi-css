@@ -7,7 +7,7 @@ import { ESLint } from "eslint"
 import {
   analyzeComponent,
   analyzeTemplate,
-  createIdentityReport,
+  createRoleReport,
   defineNagiConfig,
   loadRoleDefinition,
   parseDefinitionJson,
@@ -27,7 +27,7 @@ const range = {
         slider: { required: true, native: true },
       },
     },
-    "date-picker": { roles: { trigger: {} } },
+    "date-picker": { roles: { trigger: {} }, purposes: { trigger: { role: { element: "button" } } } },
     tooltip: { roles: { content: {} } },
   },
 }
@@ -44,18 +44,18 @@ const ids = (result) => result.violations.map((entry) => entry.ruleId)
 test("shared node resolution drives lint severity and measurement", async () => {
   const source = wrap(validRoles + '<span class="text" /><div class="unit" />')
   const result = analyzeComponent(source, "/example.vue", config)
-  const report = createIdentityReport([result])
+  const report = createRoleReport([result])
   assert.deepEqual([report.P, report.D, report.U, report.T, report.N], [1, 3, 0, 1, 5])
   assert.equal(report.surfaces, 1)
   assert.equal(report.providers.Custom, 2)
-  assert.equal(result.identities.nodes.find((node) => node.base === "slider").provider, "ARIA")
+  assert.equal(result.roles.nodes.find((node) => node.base === "slider").provider, "ARIA")
   const linter = new ESLint({
     overrideConfigFile: true,
     overrideConfig: createNagiStandaloneEslintConfigs(config),
   })
   const [lint] = await linter.lintText(source, { filePath: "example.vue" })
   assert.equal(lint.errorCount, 0)
-  assert.equal(resolveSeverity({ "unregistered-semantic-identity": "error" })("unregistered-semantic-identity"), "error")
+  assert.equal(resolveSeverity({ "unregistered-semantic-role": "error" })("unregistered-semantic-role"), "error")
 })
 
 test("plain projects without scoped definitions retain unregistered and structural behavior", () => {
@@ -64,25 +64,25 @@ test("plain projects without scoped definitions retain unregistered and structur
     "/example.vue",
     { surfaceRootPrefixes: ["app-"], emitPolicy: "always" },
   )
-  assert.ok(ids(result).includes("unregistered-semantic-identity"))
-  const report = createIdentityReport([result])
+  assert.ok(ids(result).includes("unregistered-semantic-role"))
+  const report = createRoleReport([result])
   assert.deepEqual([report.D, report.U, report.T], [1, 1, 1])
 })
 
 test("a definition may contain multiple scopes", () => {
   assert.deepEqual(analyze(validRoles).violations, [])
   const datePicker = analyzeComponent(
-    '<template><div class="app-example" data-role="date-picker/root"><button class="button" data-role="date-picker/trigger" /></div></template>',
+    '<template><div class="app-example" data-role="date-picker/root"><button class="button -trigger" data-purpose="date-picker/trigger" /></div></template>',
     "/example.vue",
     config,
   )
   assert.deepEqual(datePicker.violations, [])
 })
 
-test("custom roles are explicit and derive residual base identities", () => {
+test("custom roles are explicit and derive residual base roles", () => {
   const valid = analyze(validRoles)
   assert.deepEqual(valid.violations, [])
-  const fill = valid.identities.nodes.find((node) => node.scopedRole === "range/fill")
+  const fill = valid.roles.nodes.find((node) => node.scopedRole === "range/fill")
   assert.equal(fill.base, "fill")
   assert.equal(fill.classification, "defined")
   assert.equal(fill.provider, "Custom")
@@ -92,14 +92,14 @@ test("custom roles are explicit and derive residual base identities", () => {
     '<div class="unit" data-role="range/fill" />',
     '<div data-role="range/fill" />',
   ]) {
-    assert.ok(ids(analyze(markup)).includes("scoped-role-identity-required"))
+    assert.ok(ids(analyze(markup)).includes("scoped-role-base-required"))
   }
 })
 
-test("scope roots preserve surface and non-surface identities", () => {
+test("scope roots preserve surface and non-surface roles", () => {
   const surface = analyze(validRoles)
-  assert.equal(surface.identities.nodes[0].base, "app-example")
-  assert.equal(surface.identities.nodes[0].definition, null)
+  assert.equal(surface.roles.nodes[0].base, "app-example")
+  assert.equal(surface.roles.nodes[0].definition, null)
 
   const nested = analyzeComponent(
     `<template><div class="app-example"><section class="section" data-role="range/root">${validRoles}</section></div></template>`,
@@ -107,7 +107,7 @@ test("scope roots preserve surface and non-surface identities", () => {
     config,
   )
   assert.deepEqual(nested.violations, [])
-  const root = nested.identities.nodes.find((node) => node.scopedRole === "range/root")
+  const root = nested.roles.nodes.find((node) => node.scopedRole === "range/root")
   assert.equal(root.base, "section")
   assert.equal(root.provider, "HTML")
 })
@@ -170,11 +170,11 @@ test("required custom and native roles are checked per scope instance", () => {
 
 test("native roles use standard semantics without redundant data-role", () => {
   const result = analyze(validRoles)
-  assert.equal(result.identities.scopes[0].scope, "range")
-  const slider = result.identities.nodes.find((node) => node.base === "slider")
+  assert.equal(result.roles.scopes[0].scope, "range")
+  const slider = result.roles.nodes.find((node) => node.base === "slider")
   assert.equal(slider.provider, "ARIA")
   assert.equal(slider.semanticDefinition, "Custom:range/slider")
-  assert.ok(result.identities.used.includes("Custom:range/slider"))
+  assert.ok(result.roles.used.includes("Custom:range/slider"))
 
   const redundant = analyze(
     '<div class="track" data-role="range/track" /><div class="fill" data-role="range/fill" /><div class="slider" role="slider" data-role="range/slider" />',
@@ -182,14 +182,14 @@ test("native roles use standard semantics without redundant data-role", () => {
   assert.ok(ids(redundant).includes("redundant-scoped-role"))
 })
 
-test("native true requires an existing canonical standard identity", () => {
+test("native true requires an existing canonical standard role", () => {
   const invalid = { version: 1, scopes: { range: { roles: { imaginary: { native: true } } } } }
-  assert.ok(validateNagiConfig(defineNagiConfig({ ...config, roleDefinitions: [invalid] })).some((message) => message.includes("no matching standard identity")))
+  assert.ok(validateNagiConfig(defineNagiConfig({ ...config, roleDefinitions: [invalid] })).some((message) => message.includes("no matching standard role")))
   const customTrack = { version: 1, scopes: { range: { roles: { track: {} } } } }
   assert.deepEqual(validateNagiConfig(defineNagiConfig({ ...config, roleDefinitions: [customTrack] })), [])
 })
 
-test("native includes canonical HTML identities as well as WAI-ARIA roles", () => {
+test("native includes canonical HTML roles as well as WAI-ARIA roles", () => {
   const definition = {
     version: 1,
     scopes: { form: { roles: { button: { required: true, native: true } } } },
@@ -201,19 +201,19 @@ test("native includes canonical HTML identities as well as WAI-ARIA roles", () =
   )
   assert.deepEqual(result.violations, [])
   assert.equal(
-    result.identities.nodes.find((node) => node.tag === "button").semanticDefinition,
+    result.roles.nodes.find((node) => node.tag === "button").semanticDefinition,
     "Custom:form/button",
   )
 })
 
-test("semantic HTML keeps its base while carrying a custom scoped role", () => {
+test("semantic HTML keeps its base and rejects a competing custom scoped role", () => {
   const result = analyzeComponent(
     '<template><div class="app-example" data-role="date-picker/root"><button class="button" data-role="date-picker/trigger" /></div></template>',
     "/example.vue",
     config,
   )
-  assert.deepEqual(result.violations, [])
-  const button = result.identities.nodes.find((node) => node.tag === "button")
+  assert.ok(ids(result).includes("scoped-role-conflict"))
+  const button = result.roles.nodes.find((node) => node.tag === "button")
   assert.equal(button.base, "button")
   assert.equal(button.provider, "HTML")
   assert.equal(button.semanticDefinition, "Custom:date-picker/trigger")
@@ -247,7 +247,7 @@ test("owned component boundaries may declare roles without exposing private DOM"
     { ...config, roleDefinitions: [definition] },
   )
   assert.deepEqual(declared.violations, [])
-  const boundary = declared.identities.nodes.find((node) => node.tag === "RangeFill")
+  const boundary = declared.roles.nodes.find((node) => node.tag === "RangeFill")
   assert.equal(boundary.category, "boundary")
   assert.equal(boundary.semanticDefinition, "Custom:range/fill")
 
@@ -289,7 +289,7 @@ test("conditional and repeated role declarations satisfy authored presence", () 
       '<div class="slider" role="slider" />',
   )
   assert.deepEqual(result.violations, [])
-  assert.equal(result.identities.nodes.find((node) => node.role === "fill").conditional, true)
+  assert.equal(result.roles.nodes.find((node) => node.role === "fill").conditional, true)
 })
 
 test("definition loading validates schema shape, names, booleans, and duplicate JSON keys", async (context) => {
@@ -391,7 +391,7 @@ test("the checked-in examples reproduce their documented measurement", async () 
     }),
   )
   for (const result of results) assert.deepEqual(result.violations, [])
-  const report = createIdentityReport(results)
+  const report = createRoleReport(results)
   assert.equal(report.invalid + report.unknown + report.parseFailures, 0)
   for (const document of [new URL("README.md", root), new URL("../docs/index.html", import.meta.url)]) {
     const text = (await fs.readFile(document, "utf8")).replace(/\s+/gu, " ")

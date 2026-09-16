@@ -11,5 +11,5 @@ matching role name as their class anchor.
 
 External config: none. The surface owns the ARIA structure.
 
-Invalid: `button.tab` ignores the fixed `button` identity; `.-active` reports
+Invalid: `button.tab` ignores the fixed `button` role; `.-active` reports
 `state-not-class`. Correct with `.button[role="tab"]` and `aria-selected`.

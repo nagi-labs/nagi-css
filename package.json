@@ -1,6 +1,6 @@
 {
   "name": "nagi-css-workspace",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "private": true,
   "license": "MIT",
   "repository": {
@@ -14,7 +14,7 @@
   "scripts": {
     "docs:generate": "node scripts/generate-definition-docs.mjs",
     "docs:check": "node scripts/generate-definition-docs.mjs --check",
-    "evaluate:identities": "node packages/cli/src/cli.mjs measure --config examples/custom-roles/nagi.config.mjs --cwd . --json",
+    "evaluate:roles": "node packages/cli/src/cli.mjs measure --config examples/custom-roles/nagi.config.mjs --cwd . --json",
     "test": "node --test tests/*.test.mjs",
     "check": "node packages/cli/src/cli.mjs",
     "release:prepare": "node scripts/prepare-release.mjs"

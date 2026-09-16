@@ -3,6 +3,7 @@ import path from "node:path"
 import postcss from "postcss"
 import selectorParser from "postcss-selector-parser"
 
+import { matchesAriaRole } from "./aria-role-matching.mjs"
 import {
   buildNagiSets,
   defineNagiConfig,
@@ -12,7 +13,7 @@ import {
   ARIA_ROLE_NAMES,
 } from "./index.mjs"
 import { buildDefinitionRegistry } from "./definitions.mjs"
-import { resolveIdentities } from "./identity-analysis.mjs"
+import { resolveRoles } from "./role-analysis.mjs"
 import { parseTemplateDocument } from "./template-adapters.mjs"
 
 const STATE_PREFIX_RE = /^(?:is-|has-)/
@@ -228,7 +229,7 @@ function hasDynamicAttr(node, name) {
   for (const property of [...(node.props ?? [])].reverse()) {
     if (name === "role" && property.type === 6 && property.name === name) return false
     if (property.type !== 7 || property.name !== "bind") continue
-    if (name === "data-role") {
+    if (name === "data-role" || name === "data-purpose") {
       if (property.arg?.isStatic !== false && property.arg?.content === name) return true
     } else if (!property.arg || property.arg.isStatic === false || property.arg.content === name) {
       return true
@@ -579,7 +580,7 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
       tree: [],
       violations,
       sourceFile: path.resolve(filename),
-      identities: { nodes: [], scopes: [], registry: [...registry.definitions.values()], used: [], candidates: [] },
+      roles: { nodes: [], scopes: [], registry: [...registry.definitions.values()], used: [], candidates: [] },
     }
   }
 
@@ -645,8 +646,8 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
       push(
         violations,
         node,
-        "single-base-identity",
-        `Element has multiple base identity classes: "${baseTokens.join(" ")}"; keep exactly one applicable base identity.`,
+        "single-base-role",
+        `Element has multiple base role classes: "${baseTokens.join(" ")}"; keep exactly one applicable base role.`,
       )
     }
 
@@ -697,7 +698,7 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
       }
       if (matchingRootTokens.length === 0 || identityTokens.length !== matchingRootTokens.length) {
         const expected = [...expectedRoots].map((token) => `".${token}"`).join(" or ")
-        // Fixable when a single wrong identity class stands in for a single
+        // Fixable when a single wrong surface identity class stands in for a single
         // derivable root name; anything else needs a decision.
         const wrong = identityTokens.filter((token) => !expectedRoots.has(token))
         const fix =
@@ -729,10 +730,10 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
     }
 
     const role = getStaticAttr(node, "role")?.trim()
-    const acceptsRoleIdentity =
+    const acceptsCustomRole =
       node.tagType === NATIVE && (node.tag === "div" || node.tag === "span")
     const identifyingRole =
-      acceptsRoleIdentity &&
+      acceptsCustomRole &&
       !hasDynamicAttr(node, "role") &&
       role &&
       registry.aria.has(role) &&
@@ -746,7 +747,7 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
         )
       : []
     const staticBaseTokens = ownedBaseTokens(info.staticTokens, config, sets)
-    const requiredElementIdentity =
+    const requiredElementRole =
       !isSurfaceRoot &&
       node.tagType === NATIVE &&
       node.tag !== "div" &&
@@ -761,8 +762,8 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
         ? configuredComponentValue(config.componentClasses, node.tag)
         : ""
     const elementStyledTrigger =
-      requiredElementIdentity &&
-      (classRequired(requiredElementIdentity) ||
+      requiredElementRole &&
+      (classRequired(requiredElementRole) ||
         [...allTokens].some((token) => styledClasses.has(token)))
     const componentStyledTrigger =
       requiredComponentIdentity &&
@@ -773,15 +774,15 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
       (config.emitPolicy === "always" ||
         styledClasses.has(role) ||
         info.staticTokens.some((token) => styledClasses.has(token)))
-    const roleIdentityMismatch =
+    const ariaRoleMismatch =
       identifyingRole &&
       !isSurfaceRoot &&
       (roleStyledTrigger || staticBaseTokens.length > 0) &&
       !staticTokens.has(role)
-    const elementIdentityMismatch =
-      requiredElementIdentity &&
+    const elementRoleMismatch =
+      requiredElementRole &&
       (elementStyledTrigger || staticBaseTokens.length > 0) &&
-      !staticTokens.has(requiredElementIdentity)
+      !staticTokens.has(requiredElementRole)
     const componentIdentityMismatch =
       requiredComponentIdentity &&
       (componentStyledTrigger || staticBaseTokens.length > 0) &&
@@ -791,18 +792,18 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
       node.tagType === NATIVE &&
       PRESENTATIONAL_ELEMENTS.has(node.tag) &&
       !Object.hasOwn(config.elementClasses, node.tag)
-    const presentationalIdentityMismatch =
+    const presentationalRoleMismatch =
       isUnmappedPresentationalElement && staticBaseTokens.length > 0
-    const deterministicIdentityMismatch =
-      roleIdentityMismatch ||
-      elementIdentityMismatch ||
+    const deterministicRoleMismatch =
+      ariaRoleMismatch ||
+      elementRoleMismatch ||
       componentIdentityMismatch ||
-      presentationalIdentityMismatch ||
+      presentationalRoleMismatch ||
       passedThroughOwnedClasses.length > 0
 
     if (identifyingRole && !isSurfaceRoot) {
       if (roleStyledTrigger || staticBaseTokens.length > 0) expectedClasses.add(role)
-      if (roleIdentityMismatch) {
+      if (ariaRoleMismatch) {
         const fix =
           staticBaseTokens.length === 1
             ? replaceToken(info, staticBaseTokens[0], role)
@@ -814,14 +815,14 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
         push(
           violations,
           node,
-          "role-identity-required",
-          `<${node.tag}> with role="${role}" must use "${role}" as its fixed base identity${staticBaseTokens.length > 0 ? `; found "${staticBaseTokens.join(" ")}"` : ""}.`,
+          "aria-role-class-required",
+          `<${node.tag}> with role="${role}" must use "${role}" as its fixed base role${staticBaseTokens.length > 0 ? `; found "${staticBaseTokens.join(" ")}"` : ""}.`,
           fix,
         )
       }
     }
 
-    if (acceptsRoleIdentity && role && staticTokens.has(role)) roleNames.add(role)
+    if (acceptsCustomRole && role && staticTokens.has(role)) roleNames.add(role)
 
     for (const token of allTokens) checkState(token, node, sets, violations)
 
@@ -863,7 +864,7 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
 
     for (const token of allTokens) {
       if (!sets.banned.has(token)) continue
-      if (!acceptsRoleIdentity || deterministicIdentityMismatch) continue
+      if (!acceptsCustomRole || deterministicRoleMismatch) continue
       push(
         violations,
         node,
@@ -874,23 +875,23 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
       )
     }
 
-    if (requiredElementIdentity) {
-      expectedClasses.add(requiredElementIdentity)
-      if (elementIdentityMismatch) {
+    if (requiredElementRole) {
+      expectedClasses.add(requiredElementRole)
+      if (elementRoleMismatch) {
         const wrong = staticBaseTokens.filter(
-          (token) => token !== requiredElementIdentity,
+          (token) => token !== requiredElementRole,
         )
         const fix =
           wrong.length === 1 && staticBaseTokens.length === 1
-            ? replaceToken(info, wrong[0], requiredElementIdentity)
+            ? replaceToken(info, wrong[0], requiredElementRole)
             : staticBaseTokens.length === 0
-              ? buildClassFix(node, info, requiredElementIdentity)
+              ? buildClassFix(node, info, requiredElementRole)
               : undefined
         push(
           violations,
           node,
           "element-class-required",
-          `<${node.tag}> must use the static Element Class Table identity "${requiredElementIdentity}"${wrong.length > 0 ? `; found "${wrong.join(" ")}"` : config.emitPolicy === "when-styled" ? " because it is styled" : ""}.`,
+          `<${node.tag}> must use the static Element Class Table role "${requiredElementRole}"${wrong.length > 0 ? `; found "${wrong.join(" ")}"` : config.emitPolicy === "when-styled" ? " because it is styled" : ""}.`,
           fix,
         )
       }
@@ -918,12 +919,12 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
       }
     }
 
-    if (presentationalIdentityMismatch) {
+    if (presentationalRoleMismatch) {
       push(
         violations,
         node,
         "element-class-required",
-        `<${node.tag}> has no Element Class Table identity because it names a rendering; leave it unstyled, use a semantic element such as <strong> or <em>, or put a variant on the surrounding element.`,
+        `<${node.tag}> has no Element Class Table role because it names a rendering; leave it unstyled, use a semantic element such as <strong> or <em>, or put a variant on the surrounding element.`,
       )
     }
 
@@ -951,13 +952,13 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
     )
 
     // The record a selector chain is checked against. Variants are tracked
-    // separately for contextual identity review and left out of base identity matching.
+    // separately for contextual role review and left out of base role matching.
     // An owned child carries its derived root at runtime even though nothing is
     // written here.
     const record = {
       staticBase: staticBaseTokens.length === 1 ? staticBaseTokens[0] : null,
-      invalidBase: baseTokens.length > 1 || deterministicIdentityMismatch,
-      fixedDefinition: requiredElementIdentity ? registry.html.get(node.tag) : identifyingRole ? registry.aria.get(role) : null,
+      invalidBase: baseTokens.length > 1 || deterministicRoleMismatch,
+      fixedDefinition: requiredElementRole ? registry.html.get(node.tag) : identifyingRole ? registry.aria.get(role) : null,
       platformDefinitions: [
         ...(node.tagType === NATIVE && registry.html.has(node.tag)
           ? [registry.html.get(node.tag)]
@@ -966,11 +967,19 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
           ? [registry.aria.get(role)]
           : []),
       ],
-      residual: acceptsRoleIdentity,
-      roleUnknown: acceptsRoleIdentity && (hasDynamicAttr(node, "role") || Boolean(role && (!registry.aria.has(role) || /\s/u.test(role)))),
+      residual: acceptsCustomRole,
+      roleUnknown: acceptsCustomRole && (hasDynamicAttr(node, "role") || Boolean(role && (!registry.aria.has(role) || /\s/u.test(role)))),
       scopedRole: getStaticAttr(node, "data-role"),
       hasScopedRole: hasStaticAttr(node, "data-role"),
       dynamicScopedRole: hasDynamicAttr(node, "data-role"),
+      scopedPurpose: getStaticAttr(node, "data-purpose"),
+      hasScopedPurpose: hasStaticAttr(node, "data-purpose"),
+      dynamicScopedPurpose: hasDynamicAttr(node, "data-purpose"),
+      ariaRoleMatches: Object.fromEntries([...new Set(
+        [...registry.scopes.values()].flatMap((scope) => [...scope.purposes.values()].map((purpose) => purpose.role?.aria).filter(Boolean)),
+      )].map((name) => [name, matchesAriaRole(node, name, {
+        value: getStaticAttr, present: hasStaticAttr, dynamic: hasDynamicAttr,
+      })])),
       scopeBoundary: Boolean(node.nagiScopeBoundary),
       isSurface: isSurfaceRoot,
       styled: config.emitPolicy === "always" || [...allTokens].some((token) => styledClasses.has(token)) || Boolean(elementStyledTrigger || componentStyledTrigger || roleStyledTrigger),
@@ -1055,11 +1064,14 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
               tag: "",
             })
           } else if (isTransparentWrapper(child, config)) {
-            const annotated = hasStaticAttr(child, "data-role") || hasDynamicAttr(child, "data-role")
+            const annotated = ["data-role", "data-purpose"].some((name) => hasStaticAttr(child, name) || hasDynamicAttr(child, name))
             if (child.tag === "slot" || annotated) {
               record.children.push({ children: [], classes: [], opaque: true, tag: "slot",
                 opaqueKind: "unverifiable", scopedRole: getStaticAttr(child, "data-role"),
                 hasScopedRole: hasStaticAttr(child, "data-role"),
+                scopedPurpose: getStaticAttr(child, "data-purpose"),
+                hasScopedPurpose: hasStaticAttr(child, "data-purpose"),
+                dynamicScopedPurpose: hasDynamicAttr(child, "data-purpose"),
                 dynamicScopedRole: hasDynamicAttr(child, "data-role"), loc: child.loc })
               visitChildren(child.children?.map((item) => ({ ...item, nagiScopeBoundary: true })), childDepth, dynamicBranch)
             } else visitChildren(child.nagiScopeBoundary
@@ -1098,10 +1110,13 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
       const dynamicBranch =
         inheritedBranch || child?.nagiDynamicBranch || hasDynamicBranchDirective(child)
       if (isTransparentWrapper(child, config)) {
-        if (hasStaticAttr(child, "data-role") || hasDynamicAttr(child, "data-role")) {
+        if (["data-role", "data-purpose"].some((name) => hasStaticAttr(child, name) || hasDynamicAttr(child, name))) {
           tree.push({ children: [], classes: [], opaque: true, tag: "slot", loc: child.loc,
             opaqueKind: "unverifiable", scopedRole: getStaticAttr(child, "data-role"),
             hasScopedRole: hasStaticAttr(child, "data-role"),
+            scopedPurpose: getStaticAttr(child, "data-purpose"),
+            hasScopedPurpose: hasStaticAttr(child, "data-purpose"),
+            dynamicScopedPurpose: hasDynamicAttr(child, "data-purpose"),
             dynamicScopedRole: hasDynamicAttr(child, "data-role") })
         }
         visitRoots(child.children, dynamicBranch)
@@ -1111,13 +1126,13 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
     }
   }
   visitRoots(template.children)
-  const identities = resolveIdentities(tree, registry, config, violations)
-  const invalidIdentityRules = new Set(["single-base-identity", "identity-format", "scoped-role-context", "scoped-role-syntax", "dynamic-scoped-role", "unknown-role-scope", "unknown-scoped-role", "scoped-role-identity-required", "redundant-scoped-role", "reserved-element-name",
-    "element-class-required", "role-identity-required", "state-not-class", "stn-floor", "stn-order", "stn-reach-g"])
-  for (const identity of identities.nodes) {
-    const own = violations.filter((entry) => entry.line === identity.line && entry.column === identity.column)
-    identity.diagnostics = own
-    if (own.some((entry) => invalidIdentityRules.has(entry.ruleId))) identity.status = "invalid"
+  const roles = resolveRoles(tree, registry, config, violations)
+  const invalidRoleRules = new Set(["single-base-role", "role-format", "scoped-role-context", "scoped-role-syntax", "dynamic-scoped-role", "unknown-role-scope", "unknown-scoped-role", "scoped-role-base-required", "redundant-scoped-role", "reserved-element-name",
+    "element-class-required", "aria-role-class-required", "state-not-class", "stn-floor", "stn-order", "stn-reach-g"])
+  for (const roleRecord of roles.nodes) {
+    const own = violations.filter((entry) => entry.line === roleRecord.line && entry.column === roleRecord.column)
+    roleRecord.diagnostics = own
+    if (own.some((entry) => invalidRoleRules.has(entry.ruleId))) roleRecord.status = "invalid"
   }
   // Never apply a class-only rename/removal while component CSS still uses it.
   // Adding a missing canonical class and sorting variants preserve selectors.
@@ -1140,7 +1155,7 @@ export function analyzeTemplate(source, filename, inputConfig = {}) {
 
   return {
     childSurfaceRoots,
-    identities,
+    roles,
     expectedClasses,
     expectedRoots,
     roleNames,

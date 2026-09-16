@@ -69,7 +69,7 @@ const ARIA_ROLE_NAMES = [
 ]
 
 // Elements the table deliberately leaves without a class of their own.
-// div/span have no fixed native identity and use contextual identity resolution.
+// div/span have no fixed native roleRecord and use contextual roleRecord resolution.
 // b/i/u/s name a rendering, not a meaning, so self-mapping them would hand out
 // `.b` and `.i` — exactly the "raw visual appearance" the contract rejects.
 // A styled one has no legal class, which is the pressure to use <strong>/<em>;
@@ -415,9 +415,9 @@ const DEFAULT_SEVERITY_KEY = "*"
 // The code may well be correct, so these default to warnings instead of failing
 // a build. Explicit severity configuration can still tighten or disable them.
 const DEFAULT_WARNING_RULES = {
-  "unregistered-semantic-identity": "warn",
+  "unregistered-semantic-role": "warn",
   "unverifiable-presence": "warn",
-  "unverifiable-role-identity": "warn",
+  "unverifiable-aria-role": "warn",
   "deprecated-anatomy-config": "warn",
   "layout-only-wrapper": "warn",
   "stn-peer-variant": "warn",
@@ -667,8 +667,8 @@ export function deriveAllowedSurfaceRootNames(filename, prefixes = []) {
 export { DEFAULT_CONFIG, ELEMENT_CLASSES, RENDERED_ELEMENTS, TOKEN_LAYERS }
 export { ARIA_ROLE_NAMES }
 export { ANATOMY_DEFINITIONS, buildDefinitionRegistry, loadRoleDefinition, parseDefinitionJson } from "./definitions.mjs"
-export { createIdentityReport, analyzeComponent } from "./identity-report.mjs"
-export { IDENTITY_RULES } from "./identity-analysis.mjs"
+export { createRoleReport, analyzeComponent } from "./role-report.mjs"
+export { ROLE_RULES } from "./role-analysis.mjs"
 export {
   analyzeTemplate,
   analyzeVueTemplate,

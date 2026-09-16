@@ -290,7 +290,7 @@ test("does not grant a blanket document-only name exemption", () => {
     const source = `<template><section class="invalid-name"><div class="${name}" /></section></template>`
     const result = analyzeVueTemplate(source, "/src/components/invalid-name.vue")
     assert.equal(
-      result.violations.some(({ ruleId }) => ruleId === "unregistered-semantic-identity"),
+      result.violations.some(({ ruleId }) => ruleId === "unregistered-semantic-role"),
       true,
       name,
     )
@@ -324,7 +324,7 @@ test("uses unit as the STN floor without a legacy zone alias", () => {
   assert.deepEqual(shallow.violations, [])
   assert.deepEqual(deep.violations, [])
   assert.equal(
-    legacy.violations.some(({ ruleId }) => ruleId === "unregistered-semantic-identity"),
+    legacy.violations.some(({ ruleId }) => ruleId === "unregistered-semantic-role"),
     true,
   )
 })
@@ -455,7 +455,7 @@ test("template analysis covers every semantic template rule", () => {
   assert.deepEqual(
     [...ids].sort(),
     [
-      "unregistered-semantic-identity",
+      "unregistered-semantic-role",
       "component-class-required",
       "dynamic-class-requires-static-anchor",
       "element-class-required",
@@ -506,7 +506,7 @@ test("does not descend into SVG and MathML internals", () => {
   assert.deepEqual(result.violations, [])
 })
 
-test("keeps a class identity on the MathML root while excluding its internals", () => {
+test("keeps a class role on the MathML root while excluding its internals", () => {
   const valid = analyzeVueTemplate(
     `<template><section class="formula-host"><math class="math"><mrow><mi>x</mi></mrow></math></section></template><style>.formula-host { > .math {} }</style>`,
     "/src/components/formula-host.vue",
@@ -573,7 +573,7 @@ test("keeps element-table identity ahead of additional ARIA semantics", () => {
   )
   assert.deepEqual([...roleInsteadOfElement.roleNames], [])
   assert.equal(
-    multipleBases.violations.some(({ ruleId }) => ruleId === "single-base-identity"),
+    multipleBases.violations.some(({ ruleId }) => ruleId === "single-base-role"),
     true,
   )
   assert.equal(
@@ -664,7 +664,7 @@ test("keeps a role-name identity on div/span that shares an element spelling", (
   )
 })
 
-test("keeps Element Class Table identities on their owning tags", () => {
+test("keeps Element Class Table roles on their owning tags", () => {
   const spanText = analyzeVueTemplate(
     `<template><section class="text-host"><span class="text">Label</span></section></template>
 <style>.text-host { > .text {} }</style>`,
@@ -708,12 +708,12 @@ test("requires an identifying ARIA role before anatomy or STN on div and span", 
 
   for (const result of [stnFallback, anatomyFallback]) {
     assert.equal(
-      result.violations.some(({ ruleId }) => ruleId === "role-identity-required"),
+      result.violations.some(({ ruleId }) => ruleId === "aria-role-class-required"),
       true,
     )
   }
   assert.equal(
-    stnFallback.violations.find(({ ruleId }) => ruleId === "role-identity-required")
+    stnFallback.violations.find(({ ruleId }) => ruleId === "aria-role-class-required")
       ?.fix?.text,
     '"group -fields"',
   )
@@ -1012,7 +1012,7 @@ test("a variant applied by a binding is runtime state", () => {
   assert.deepEqual(staticVariant.violations, [])
 })
 
-test("only role names that are also base identities are barred from variants", () => {
+test("only role names that are also base roles are barred from variants", () => {
   const config = { surfaceRootPrefixes: ["app-"] }
   const host = (markup) =>
     analyzeVueTemplate(
@@ -1021,11 +1021,11 @@ test("only role names that are also base identities are barred from variants", (
       config,
     ).violations.map(({ ruleId }) => ruleId)
 
-  // role names with no base identity behind them say which part of the design this is
+  // role names with no base role behind them say which part of the design this is
   for (const stem of ["search", "toolbar", "status", "tooltip"]) {
     assert.deepEqual(host(`<div class="unit -${stem}" />`), [], stem)
   }
-  // names the vocabulary hands out as a base identity stay barred
+  // names the vocabulary hands out as a base role stay barred
   for (const stem of ["text", "field", "media"]) {
     assert.deepEqual(
       host(`<div class="seg -${stem}" />`).filter(
@@ -1133,7 +1133,7 @@ test("table-first identity owners report mismatches without anatomy diagnostics"
     {
       expected: "group",
       markup: `<div class="heda" role="group" />`,
-      ruleId: "role-identity-required",
+      ruleId: "aria-role-class-required",
       style: `> .group {}`,
     },
   ]
@@ -1184,7 +1184,7 @@ test("every identifying ARIA role owns its div mismatch diagnostic", () => {
 
     assert.deepEqual(
       result.violations.map(({ ruleId }) => ruleId),
-      ["role-identity-required"],
+      ["aria-role-class-required"],
       role,
     )
     assert.equal(result.violations[0].fix?.text, `"${role}"`, role)

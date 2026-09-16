@@ -1,7 +1,7 @@
 [
   {
     "canonicalName": "text",
-    "description": "A short textual run or UI copy without a more specific native identity.",
+    "description": "A short textual run or UI copy without a more specific native role.",
     "examples": ["A label's visible text", "A short hint"],
     "excludes": ["An authored prose paragraph uses p", "A heading uses its native mapping"]
   },
@@ -36,6 +36,6 @@
     "canonicalName": "actions",
     "description": "A group of related action controls.",
     "examples": ["Dialog action buttons", "Card actions"],
-    "excludes": ["A single button keeps button", "Navigation links with a native nav identity"]
+    "excludes": ["A single button keeps button", "Navigation links with a native nav role"]
   }
 ]

@@ -3,12 +3,12 @@
 ## What does Nagi derive, and what does the author choose?
 
 Native mappings, explicit identifying ARIA names and file-derived Surface names
-have mechanical grounds. Internal native/ARIA identities are Predefined.
+have mechanical grounds. Internal native/ARIA roles are Predefined.
 Selecting a Built-in Anatomy or Custom scoped role requires a meaning
 decision. Nagi checks that the chosen name is canonical and applicable; a
 definition does not prove that the author chose the right meaning.
 
-Internal identities are Predefined, Defined, Unregistered, or Structural. See the
+Internal roles are Predefined, Defined, Unregistered, or Structural. See the
 [Contract](CONTRACT.md) and [definition reference](docs/definitions.md).
 
 ## Can I use a name before defining it?
@@ -16,7 +16,7 @@ Internal identities are Predefined, Defined, Unregistered, or Structural. See th
 Yes. A residual `div.popup` gets an unregistered warning, while its CSS paths,
 ownership, state and declarations are still checked. Register a scoped JSON
 definition when the meaning is stable. Never add an empty explanation just to
-raise coverage. Fixed platform identities still apply: a native button cannot
+raise coverage. Fixed platform roles still apply: a native button cannot
 rename its base to popup.
 
 ## Why keep STN?
@@ -50,7 +50,7 @@ Unresolved slots or dynamic content remain unknown. See
 It counts internal styled template declarations as Predefined, Defined,
 Unregistered and Structural. Surface roots, component boundaries, invalid and
 unknown nodes are separate. Built-in Anatomy/Custom selection is Defined, while
-HTML/explicit ARIA identities are Predefined.
+HTML/explicit ARIA roles are Predefined.
 Coverage does not measure human cognitive load, maintenance time, visual
 correctness, or accessibility.
 

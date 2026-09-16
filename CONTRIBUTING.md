@@ -48,7 +48,7 @@ vp exec node packages/cli/src/cli.mjs check \
   and `vp run docs:check` after canonical changes; generated Skill references
   must stay synchronized.
 - Definition and coverage claims must distinguish template declaration presence
-  from runtime behavior and Defined author selection from Predefined identity.
+  from runtime behavior and Defined author selection from Predefined role.
 
 ## Proposing an Element Class Table change
 

@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.7.0 — 2026-09-16
+
+- Separate scoped roles (base classes) from purposes (static variants) with
+  `purposes` definitions and `data-purpose="scope/purpose"` declarations.
+- Allow purposes to constrain their HTML element or explicit/statically
+  provable implicit ARIA role without changing existing HTML class mappings.
+- Validate required purposes, variants, scope ownership, and dynamic markers
+  across Vue, Nuxt, Svelte, and Astro. Report unresolved role constraints.
+- Reject custom roles that silently compete with a native or ARIA base. Migrate
+  those uses to purpose declarations; no extra wrapper is required.
+- Use role terminology in semantic APIs, diagnostics, and documentation:
+  `createRoleReport`, `analysis.roles`, and `ROLE_RULES`. Measurement JSON v3
+  reports purpose definitions separately from base-role coverage.
+- See [migration](docs/migrations/0.7.md) for breaking API and diagnostic changes.
+
 ## 0.6.0 — 2026-09-14
 
 - Normalize Predefined, Defined, Unregistered and Structural identities through one registry
@@ -20,7 +35,7 @@
 - Resolve Vue literal ARIA roles after attribute spreads according to source
   order; retain uncertainty when a later spread can replace the role.
 - Align Contract, examples, configuration and Skill with generated definition
-  references. See [migration](docs/migrations/defined-identities.md).
+  references. See [migration](docs/migrations/defined-roles.md).
 
 
 ## 0.5.1 — 2026-09-07
