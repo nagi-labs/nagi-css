@@ -138,6 +138,13 @@ against these files as well as the definition audits and related browser tests;
 core API probes alone do not exercise the packaged plugin.
 
 Also run the consumer's normal integration and unit checks. Record their results
+and inspect the browser runner's `--list` output before relying on a focused
+selection. Tests registered by a shared package runner may have locations in
+that package rather than the importing spec. Positional spec-file filters can
+exclude those tests. Use suite-title selection with `--grep`, or run the full
+suite, and confirm that the shared Contract cases are actually listed and run.
+
+Record normal integration and unit results
 separately from the focused checks: passing the pilot scopes is not a passing
 result for all Blueprints. In particular, migrate deprecated vocabulary
 configuration and review newly visible uncertainty diagnostics in integrations

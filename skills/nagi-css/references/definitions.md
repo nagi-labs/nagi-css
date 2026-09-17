@@ -66,9 +66,9 @@ Definitions group roles under their semantic scope:
   "scopes": {
     "range": {
       "roles": {
-        "track": { "required": true },
-        "fill": { "required": true, "description": "The portion representing the selected value." },
-        "slider": { "required": true, "native": true }
+        "track": { "declaration": "required" },
+        "fill": { "declaration": "required", "description": "The portion representing the selected value." },
+        "slider": { "declaration": "required", "native": true }
       }
     }
   }
@@ -79,8 +79,22 @@ Scope and role names are lowercase kebab-case. They cannot use an STN tier. A
 scope cannot define a local role with the same name, and `root` is reserved and
 must not appear in `roles`.
 
-`required` defaults to `false`. A required role needs at least one matching
-static declaration in every statically analyzable instance of its scope.
+`layer` defaults to `"implementation"`; `"contract"` explicitly identifies shared
+contract vocabulary. This metadata does not change class derivation, ownership,
+or declaration checks. It does not select an implementation or certify tests.
+
+`declaration` defaults to `"optional"`. Use `"required"` to require at least one
+matching static declaration in every statically analyzable scope instance.
+Both layers accept either declaration setting, for both roles and purposes.
+An optional declaration still follows all naming and ownership rules when used.
+A required declaration may be conditional: it does not require constant DOM
+presence or visibility, and does not prove behavior is implemented.
+
+The legacy boolean `required` remains a compatibility input: `true` means
+`declaration: "required"`, and `false` means `declaration: "optional"`.
+Prefer `declaration` in new definitions. Supplying contradictory values is an
+error. Omitted defaults and explicit defaults compose identically; differing
+layers or declaration settings are conflicting definitions.
 
 `native` defaults to `false`. In this contract, native means a standard semantic
 role supplied by either HTML or WAI-ARIA, not only an HTML element. A native
@@ -111,7 +125,7 @@ no empty `roles` object. The purpose key names its required variant:
       "purposes": {
         "next": {
           "description": "Navigates to the next page.",
-          "required": true
+          "declaration": "required"
         }
       }
     },
@@ -150,7 +164,7 @@ HTML and ARIA constraints are distinct; specify exactly one. These constraints
 do not change the existing HTML-to-class mapping.
 
 Purpose names use the same kebab-case grammar; `root` and structural tier names
-are reserved. `description` and `required` have the same meanings as for roles.
+are reserved. `description`, `layer`, and `declaration` have the same meanings as for roles.
 `data-purpose` requires one static `scope/purpose` token and the corresponding
 static `-purpose` class, even without CSS. It cannot establish a scope root.
 Missing variants, wrong targets, and dynamic markers do not satisfy required
@@ -303,7 +317,7 @@ into the same scope; this avoids load-order-dependent contracts.
 Descriptions participate in equality without rewriting their text. A different
 description, or a description present in only one duplicate, is a conflict rather
 than a load-order-dependent choice of meaning.
-Purposes, their descriptions, required flags, and target constraints also
+Purposes, their descriptions, layers, declaration settings, and target constraints also
 participate in scope equality. Distinct purposes may use the same role without
 conflicting; competing declarations of the same purpose are not load-order wins.
 

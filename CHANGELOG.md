@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.8.0 — 2026-09-17
+
+- Add independent role/purpose metadata: `layer` defaults to `implementation`,
+  and `declaration` defaults to `optional`. Explicit `contract` vocabulary does
+  not imply a required declaration.
+- Prefer `declaration: "required"` for static template declaration checks. Keep
+  the legacy boolean `required` as a compatibility input and reject conflicts.
+- See [migration](docs/migrations/0.8.md) for defaults and validation boundaries.
+
 ## 0.7.0 — 2026-09-16
 
 - Separate scoped roles (base classes) from purposes (static variants) with

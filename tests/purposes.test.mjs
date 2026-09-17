@@ -10,7 +10,7 @@ const definition = {
     carousel: {
       roles: { viewport: {}, fill: {} },
       purposes: {
-        next: { required: true, description: "Advances to the next item." },
+        next: { declaration: "required", description: "Advances to the next item." },
         trigger: { role: { element: "button" } },
         select: { role: { aria: "button" } },
         position: { role: { aria: "slider" } },

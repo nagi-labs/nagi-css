@@ -129,6 +129,13 @@ selector rather than an `-assistive` or `-sr-only` class. See
 ## Define and measure
 
 The redesigned source API accepts `roleDefinitions` containing scoped JSON
+objects with optional `layer` and `declaration` fields on roles and purposes.
+They default independently to `"implementation"` and `"optional"`. Use
+`declaration: "required"` for static declaration checks, not runtime visibility
+or behavioral guarantees. The legacy boolean `required` remains a compatibility
+input; contradictory settings are rejected.
+
+`roleDefinitions` accepts
 objects or independent local JSON paths. `loadRoleDefinition` reads JSON safely;
 `data-role="scope/root"` establishes an instance and custom roles use the same
 fully qualified attribute without adding ARIA behavior. See the

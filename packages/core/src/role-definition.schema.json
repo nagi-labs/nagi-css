@@ -3,32 +3,65 @@
   "title": "Nagi Scoped Role Definition v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["version", "scopes"],
+  "required": [
+    "version",
+    "scopes"
+  ],
   "properties": {
-    "$schema": { "type": "string" },
-    "version": { "const": 1 },
+    "$schema": {
+      "type": "string"
+    },
+    "version": {
+      "const": 1
+    },
     "scopes": {
       "type": "object",
-      "propertyNames": { "$ref": "#/$defs/name" },
-      "additionalProperties": { "$ref": "#/$defs/scope" }
+      "propertyNames": {
+        "$ref": "#/$defs/name"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/scope"
+      }
     }
   },
   "$defs": {
-    "name": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$" },
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+    },
     "scope": {
       "type": "object",
       "additionalProperties": false,
-      "anyOf": [{ "required": ["roles"] }, { "required": ["purposes"] }],
+      "anyOf": [
+        {
+          "required": [
+            "roles"
+          ]
+        },
+        {
+          "required": [
+            "purposes"
+          ]
+        }
+      ],
       "properties": {
         "purposes": {
           "type": "object",
-          "propertyNames": { "$ref": "#/$defs/roleName" },
-          "additionalProperties": { "$ref": "#/$defs/purpose" }
+          "propertyNames": {
+            "$ref": "#/$defs/roleName"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/purpose"
+          }
         },
         "roles": {
           "type": "object",
-          "propertyNames": { "$ref": "#/$defs/roleName" },
-          "additionalProperties": { "$ref": "#/$defs/role" }
+          "propertyNames": {
+            "$ref": "#/$defs/roleName"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/role"
+          }
         }
       }
     },
@@ -40,28 +73,157 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "description": { "type": "string", "pattern": "\\S" },
-        "required": { "type": "boolean", "default": false },
+        "description": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "required": {
+          "type": "boolean",
+          "deprecated": true,
+          "description": "Compatibility alias for declaration. Prefer declaration."
+        },
         "role": {
           "type": "object",
           "additionalProperties": false,
           "minProperties": 1,
           "maxProperties": 1,
           "properties": {
-            "element": { "$ref": "#/$defs/name" },
-            "aria": { "$ref": "#/$defs/name" }
+            "element": {
+              "$ref": "#/$defs/name"
+            },
+            "aria": {
+              "$ref": "#/$defs/name"
+            }
+          }
+        },
+        "layer": {
+          "enum": [
+            "contract",
+            "implementation"
+          ],
+          "default": "implementation"
+        },
+        "declaration": {
+          "enum": [
+            "required",
+            "optional"
+          ],
+          "default": "optional"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "required"
+            ],
+            "properties": {
+              "required": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "declaration": {
+                "const": "required"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "required"
+            ],
+            "properties": {
+              "required": {
+                "const": false
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "declaration": {
+                "const": "optional"
+              }
+            }
           }
         }
-      }
+      ]
     },
     "role": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "required": { "type": "boolean", "default": false },
-        "description": { "type": "string", "pattern": "\\S" },
-        "native": { "type": "boolean", "default": false }
-      }
+        "required": {
+          "type": "boolean",
+          "deprecated": true,
+          "description": "Compatibility alias for declaration. Prefer declaration."
+        },
+        "description": {
+          "type": "string",
+          "pattern": "\\S"
+        },
+        "native": {
+          "type": "boolean",
+          "default": false
+        },
+        "layer": {
+          "enum": [
+            "contract",
+            "implementation"
+          ],
+          "default": "implementation"
+        },
+        "declaration": {
+          "enum": [
+            "required",
+            "optional"
+          ],
+          "default": "optional"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "required"
+            ],
+            "properties": {
+              "required": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "declaration": {
+                "const": "required"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "required"
+            ],
+            "properties": {
+              "required": {
+                "const": false
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "declaration": {
+                "const": "optional"
+              }
+            }
+          }
+        }
+      ]
     }
   }
 }

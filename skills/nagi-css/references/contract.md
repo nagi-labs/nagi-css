@@ -120,6 +120,13 @@ and boundary constraints are specified in [CSS and ownership](css-reference.md).
 - [Framework setup](https://github.com/nagi-labs/nagi-css/blob/main/docs/getting-started/index.md)
 - [FAQ](https://github.com/nagi-labs/nagi-css/blob/main/FAQ.md)
 
+Roles and purposes default independently to `layer: "implementation"` and
+`declaration: "optional"`. `layer: "contract"` records shared vocabulary; it
+does not imply a required declaration or alter naming. `declaration: "required"`
+requests static declaration checks, not constant visibility or behavioral proof.
+The legacy boolean `required` remains a compatibility input; contradictory
+`required` and `declaration` settings are errors.
+
 Required roles mean matching declarations in each statically analyzable scope
 instance, not visibility in every runtime state. Standard roles use their normal
 HTML or WAI-ARIA representation instead of redundant `data-role` markup. Unknown

@@ -55,7 +55,7 @@ const normalizedRoles = (roles) =>
         .sort(([left], [right]) => left.localeCompare(right))
         .map(([name, role]) => [
           name,
-          { native: role.native === true, required: role.required === true, description: role.description ?? null },
+          { native: role.native === true, declaration: role.declaration, layer: role.layer, description: role.description ?? null },
         ]),
     ),
   )
@@ -64,6 +64,19 @@ export function buildDefinitionRegistry(config) {
   const definitions = new Map()
   const scopes = new Map()
   const errors = []
+  const declarationFields = (data, where) => {
+    if (data.layer !== undefined && !["contract", "implementation"].includes(data.layer))
+      errors.push(`${where}.layer must be contract or implementation`)
+    if (data.declaration !== undefined && !["required", "optional"].includes(data.declaration))
+      errors.push(`${where}.declaration must be required or optional`)
+    if (data.required !== undefined && typeof data.required !== "boolean")
+      errors.push(`${where}.required must be a boolean`)
+    if (data.required !== undefined && data.declaration !== undefined &&
+        data.declaration !== (data.required ? "required" : "optional"))
+      errors.push(`${where}.required conflicts with declaration; use declaration only`)
+    const declaration = data.declaration ?? (data.required === true ? "required" : "optional")
+    return { layer: data.layer ?? "implementation", declaration, required: declaration === "required" }
+  }
   const add = (entry) => {
     definitions.set(entry.id, entry)
     return entry
@@ -175,20 +188,18 @@ export function buildDefinitionRegistry(config) {
           )
           continue
         }
-        if (!validateObject(roleData, roleWhere, new Set(["native", "required", "description"]))) continue
+        if (!validateObject(roleData, roleWhere, new Set(["native", "required", "description", "layer", "declaration"]))) continue
         if (roleData.description !== undefined &&
             (typeof roleData.description !== "string" || !roleData.description.trim()))
           errors.push(`${roleWhere}.description must be a non-empty string`)
         if (roleData.native !== undefined && typeof roleData.native !== "boolean")
           errors.push(`${roleWhere}.native must be a boolean`)
-        if (roleData.required !== undefined && typeof roleData.required !== "boolean")
-          errors.push(`${roleWhere}.required must be a boolean`)
         if (!standardNames.has(roleName) && roleData.native === true)
           errors.push(`${roleWhere} declares native: true but has no matching standard role`)
         validRoles[roleName] = {
           description: roleData.description ?? null,
           native: roleData.native === true,
-          required: roleData.required === true,
+          ...declarationFields(roleData, roleWhere),
         }
       }
 
@@ -199,12 +210,10 @@ export function buildDefinitionRegistry(config) {
           errors.push(`${at}: invalid or reserved purpose name`)
           continue
         }
-        if (!validateObject(purpose, at, new Set(["description", "required", "role"]))) continue
+        if (!validateObject(purpose, at, new Set(["description", "required", "role", "layer", "declaration"]))) continue
         if (purpose.description !== undefined &&
             (typeof purpose.description !== "string" || !purpose.description.trim()))
           errors.push(`${at}.description must be a non-empty string`)
-        if (purpose.required !== undefined && typeof purpose.required !== "boolean")
-          errors.push(`${at}.required must be a boolean`)
         let role = null
         if (purpose.role !== undefined) {
           if (!object(purpose.role) || Object.keys(purpose.role).length !== 1 ||
@@ -220,7 +229,7 @@ export function buildDefinitionRegistry(config) {
         }
         validPurposes[name] = {
           description: purpose.description ?? null,
-          required: purpose.required === true,
+          ...declarationFields(purpose, at),
           role,
         }
       }
@@ -249,6 +258,8 @@ export function buildDefinitionRegistry(config) {
           scope: scopeName,
           native: roleData.native,
           required: roleData.required,
+          declaration: roleData.declaration,
+          layer: roleData.layer,
           description: roleData.description,
         })
         scope.roles.set(roleName, role)
