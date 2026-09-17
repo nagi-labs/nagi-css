@@ -72,6 +72,7 @@ that element is used for and determines a variant. Register roles under
 `data-role="range/fill"` requires `.fill`; `data-purpose="pagination/next"`
 requires `-next` while preserving the normal base. Purpose declarations may
 optionally constrain their target to a specific HTML element or ARIA role.
+Use `on: { element: "button" }` or `on: { aria: "button" }` for that constraint.
 They do not implement behavior. A role already includes its meaning: do not
 repeat it as a same-named purpose variant.
 

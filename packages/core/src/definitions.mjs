@@ -210,20 +210,24 @@ export function buildDefinitionRegistry(config) {
           errors.push(`${at}: invalid or reserved purpose name`)
           continue
         }
-        if (!validateObject(purpose, at, new Set(["description", "required", "role", "layer", "declaration"]))) continue
+        if (!validateObject(purpose, at, new Set(["description", "required", "on", "role", "layer", "declaration"]))) continue
         if (purpose.description !== undefined &&
             (typeof purpose.description !== "string" || !purpose.description.trim()))
           errors.push(`${at}.description must be a non-empty string`)
         let role = null
-        if (purpose.role !== undefined) {
-          if (!object(purpose.role) || Object.keys(purpose.role).length !== 1 ||
-              !("element" in purpose.role || "aria" in purpose.role)) {
-            errors.push(`${at}.role must specify exactly one element or aria name`)
+        if (Object.hasOwn(purpose, "on") && Object.hasOwn(purpose, "role"))
+          errors.push(`${at} must not specify both on and its legacy role alias; use on only`)
+        const field = Object.hasOwn(purpose, "on") ? "on" : "role"
+        const target = purpose[field]
+        if (target !== undefined) {
+          if (!object(target) || Object.keys(target).length !== 1 ||
+              !("element" in target || "aria" in target)) {
+            errors.push(`${at}.${field} must specify exactly one element or aria name`)
           } else {
-            const [source, name] = Object.entries(purpose.role)[0]
+            const [source, name] = Object.entries(target)[0]
             if (typeof name !== "string" || !(source === "element" ? html : aria).has(name) ||
                 (source === "aria" && ["generic", "none", "presentation"].includes(name)))
-              errors.push(`${at}.role.${source} must name an existing identifying ${source} source`)
+              errors.push(`${at}.${field}.${source} must name an existing identifying ${source} source`)
             else role = { [source]: name }
           }
         }

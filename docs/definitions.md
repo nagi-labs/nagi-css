@@ -131,7 +131,7 @@ no empty `roles` object. The purpose key names its required variant:
       "purposes": {
         "trigger": {
           "description": "Opens or closes the popover.",
-          "role": { "element": "button" }
+          "on": { "element": "button" }
         }
       }
     }
@@ -146,13 +146,19 @@ Within their respective roots:
 <button class="button -trigger" data-purpose="popover/trigger">Options</button>
 ```
 
-Without `role`, a purpose does not constrain the base; ordinary Nagi base rules
-still apply. With `role: { "element": "button" }`, it requires that actual HTML
+Without `on`, a purpose does not constrain the base; ordinary Nagi base rules
+still apply. With `on: { "element": "button" }`, it requires that actual HTML
 element, including a configured fixed intrinsic proxy. With
-`role: { "aria": "button" }`, it requires the corresponding explicit or
+`on: { "aria": "button" }`, it requires the corresponding explicit or
 statically provable implicit ARIA role. The latter accepts a native button or
 `input type="submit"` without redundant `role="button"`. It never derives an
 ARIA role from a CSS class or from Nagi's HTML class aliases.
+
+`on` restricts where a purpose may be declared; it does not assign a role or
+behavior. The previous `role` field is a compatibility alias. Do not specify
+both fields on one purpose, even with equal values. Definitions using either
+spelling compose identically after normalization. Existing normalized registry
+records retain their `role` field for API compatibility.
 
 ARIA constraints reuse the `aria-query` HTML mappings. Context-dependent rules,
 unresolved attributes, and accessible-name relationships that this analyzer

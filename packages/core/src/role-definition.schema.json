@@ -83,18 +83,12 @@
           "description": "Compatibility alias for declaration. Prefer declaration."
         },
         "role": {
-          "type": "object",
-          "additionalProperties": false,
-          "minProperties": 1,
-          "maxProperties": 1,
-          "properties": {
-            "element": {
-              "$ref": "#/$defs/name"
-            },
-            "aria": {
-              "$ref": "#/$defs/name"
-            }
-          }
+          "$ref": "#/$defs/purposeTarget",
+          "deprecated": true,
+          "description": "Compatibility alias for on. Specify only one of on and role."
+        },
+        "on": {
+          "$ref": "#/$defs/purposeTarget"
         },
         "layer": {
           "enum": [
@@ -112,6 +106,14 @@
         }
       },
       "allOf": [
+        {
+          "not": {
+            "required": [
+              "on",
+              "role"
+            ]
+          }
+        },
         {
           "if": {
             "required": [
@@ -151,6 +153,20 @@
           }
         }
       ]
+    },
+    "purposeTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "maxProperties": 1,
+      "properties": {
+        "element": {
+          "$ref": "#/$defs/name"
+        },
+        "aria": {
+          "$ref": "#/$defs/name"
+        }
+      }
     },
     "role": {
       "type": "object",

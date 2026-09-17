@@ -130,6 +130,9 @@ selector rather than an `-assistive` or `-sr-only` class. See
 
 The redesigned source API accepts `roleDefinitions` containing scoped JSON
 objects with optional `layer` and `declaration` fields on roles and purposes.
+Purposes may use `on: { element: "button" }` or `on: { aria: "button" }` to
+restrict their target; `on` does not assign HTML or ARIA semantics. The previous
+`role` key remains a compatibility alias; do not specify both keys.
 They default independently to `"implementation"` and `"optional"`. Use
 `declaration: "required"` for static declaration checks, not runtime visibility
 or behavioral guarantees. The legacy boolean `required` remains a compatibility

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.0 — 2026-09-18
+
+- Name the purpose target constraint `on`, distinguishing it from role vocabulary.
+- Retain the former `role` key as a compatibility alias; reject using both keys
+  on one purpose. HTML/ARIA matching, classes, diagnostics, and metadata defaults
+  are unchanged. See [migration](docs/migrations/0.9.md).
+
 ## 0.8.0 — 2026-09-17
 
 - Add independent role/purpose metadata: `layer` defaults to `implementation`,

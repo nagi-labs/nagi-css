@@ -11,11 +11,11 @@ const definition = {
       roles: { viewport: {}, fill: {} },
       purposes: {
         next: { declaration: "required", description: "Advances to the next item." },
-        trigger: { role: { element: "button" } },
-        select: { role: { aria: "button" } },
-        position: { role: { aria: "slider" } },
-        caption: { role: { aria: "heading" } },
-        annotation: { role: { aria: "note" } },
+        trigger: { on: { element: "button" } },
+        select: { on: { aria: "button" } },
+        position: { on: { aria: "slider" } },
+        caption: { on: { aria: "heading" } },
+        annotation: { on: { aria: "note" } },
         text: {},
       },
     },
@@ -120,11 +120,11 @@ test("purpose constraints and composition are validated without source-order dep
   const validate = (defs) => validateNagiConfig(defineNagiConfig({ ...config, roleDefinitions: defs }))
   assert.deepEqual(validate([definition, structuredClone(definition)]), [])
   const conflict = structuredClone(definition)
-  conflict.scopes.carousel.purposes.next.role = { element: "button" }
+  conflict.scopes.carousel.purposes.next.on = { element: "button" }
   for (const defs of [[definition, conflict], [conflict, definition]]) assert.ok(validate(defs).some((message) => message.includes("Conflicting")))
   for (const purpose of [
-    { role: {} }, { role: "button" }, { role: { element: "button", aria: "button" } },
-    { role: { element: "imaginary" } }, { role: { aria: "imaginary" } }, { role: { aria: "generic" } },
+    { on: {} }, { on: "button" }, { on: { element: "button", aria: "button" } },
+    { on: { element: "imaginary" } }, { on: { aria: "imaginary" } }, { on: { aria: "generic" } },
     { required: "true" }, { description: " " }, { unknown: true },
   ]) assert.ok(validate([{ version: 1, scopes: { carousel: { purposes: { next: purpose } } } }]).length, JSON.stringify(purpose))
 })
@@ -155,4 +155,55 @@ test("Vue Nuxt Svelte Astro and ESLint share purpose validation", async () => {
 test("dynamic ARIA constraints remain unverifiable rather than being inferred from CSS", () => {
   const result = analyze(next + '<button class="button -select" :role="kind" data-purpose="carousel/select" />')
   assert.ok(rules(result).includes("unverifiable-purpose-role"))
+})
+
+test("on and its legacy role alias normalize identically without changing analysis", () => {
+  const legacy = structuredClone(definition)
+  for (const purpose of Object.values(legacy.scopes.carousel.purposes)) {
+    if (purpose.on) { purpose.role = purpose.on; delete purpose.on }
+  }
+  const validate = (defs) => validateNagiConfig(defineNagiConfig({ ...config, roleDefinitions: defs }))
+  for (const defs of [[definition, legacy], [legacy, definition]]) assert.deepEqual(validate(defs), [])
+  for (const file of ["/example.vue", "/components/example.vue", "/example.svelte", "/example.astro"]) {
+    for (const node of [
+      '<button class="button -trigger" data-purpose="carousel/trigger" />',
+      '<div class="button -trigger" role="button" data-purpose="carousel/trigger" />',
+      '<input class="input -select" type="submit" data-purpose="carousel/select" />',
+      '<button class="button -select" :role="kind" data-purpose="carousel/select" />',
+    ]) {
+      const source = file.endsWith("vue") ? `<template>${wrap(next + node)}</template>` : wrap(next + node)
+      const current = analyzeComponent(source, file, config)
+      const previous = analyzeComponent(source, file, { ...config, roleDefinitions: [legacy] })
+      assert.deepEqual(current, previous, file)
+    }
+  }
+})
+
+test("on rejects invalid values and mixing both spellings without silently ignoring a constraint", () => {
+  const validate = (purpose) => validateNagiConfig(defineNagiConfig({ ...config, roleDefinitions: [
+    { version: 1, scopes: { carousel: { purposes: { trigger: purpose } } } },
+  ] }))
+  for (const on of [null, false, [], {}, "button", { other: "button" }, { element: "button", aria: "button" }, { aria: "none" }]) {
+    assert.ok(validate({ on }).some((message) => message.includes(".on")), JSON.stringify(on))
+  }
+  for (const role of [{ element: "button" }, { aria: "button" }, null]) {
+    assert.ok(validate({ on: { element: "button" }, role }).some((message) => message.includes("both on")))
+  }
+  assert.ok(validate({ role: { element: "imaginary" } }).some((message) => message.includes(".role.element")))
+})
+
+test("on preserves metadata defaults and required constrained declarations", () => {
+  const constrained = structuredClone(definition)
+  constrained.scopes.carousel.purposes.trigger = {
+    on: { element: "button" }, layer: "contract", declaration: "required",
+  }
+  const options = { ...config, roleDefinitions: [constrained] }
+  const valid = analyzeComponent(`<template>${wrap(next + '<button class="button -trigger" data-purpose="carousel/trigger" />')}</template>`, "/example.vue", options)
+  assert.deepEqual(valid.violations, [])
+  const record = valid.roles.registry.find((entry) => entry.provider === "Purpose" && entry.canonicalName === "trigger")
+  assert.equal(record.layer, "contract")
+  assert.equal(record.declaration, "required")
+  assert.deepEqual(record.role, { element: "button" })
+  const missing = analyzeComponent(`<template>${wrap(next)}</template>`, "/example.vue", options)
+  assert.ok(rules(missing).includes("required-purpose-missing"))
 })

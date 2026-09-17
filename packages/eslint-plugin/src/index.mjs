@@ -156,7 +156,7 @@ rules["valid-config"] = {
 }
 
 const plugin = {
-  meta: { name: "@nagi-labs/eslint-plugin-nagi-css", version: "0.8.0" },
+  meta: { name: "@nagi-labs/eslint-plugin-nagi-css", version: "0.9.0" },
   rules,
 }
 
